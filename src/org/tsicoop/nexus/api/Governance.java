@@ -7,98 +7,118 @@ import org.json.simple.JSONObject;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
 /**
  * TSI Nexus: Governance & Policy Guard
- * Ensures every "Context-Aware Action" is validated and audited.
+ * Revised to ensure valid JSON output even on execution failure.
  */
 public class Governance implements Action {
 
     @Override
     public void post(HttpServletRequest req, HttpServletResponse res) {
+        // Global catch ensures we don't send an "Empty Response" to Liquid
         try {
             JSONObject input = InputProcessor.getInput(req);
             String func = req.getHeader("X-DX-FUNCTION");
 
-            switch (func.toLowerCase()) {
-                case "validate_and_execute":
-                    // The core gatekeeper for any state-changing action
-                    OutputProcessor.send(res, 200, processGuardedAction(input));
-                    break;
+            if (func == null || func.trim().isEmpty()) {
+                OutputProcessor.errorResponse(res, 400, "Bad Request", "Missing function header.", req.getRequestURI());
+                return;
+            }
 
-                default:
-                    OutputProcessor.errorResponse(res, 400, "Unknown Function", func, req.getRequestURI());
+            if ("validate_and_execute".equalsIgnoreCase(func)) {
+                JSONObject result = processGuardedAction(input);
+                OutputProcessor.send(res, 200, result);
+            } else {
+                OutputProcessor.errorResponse(res, 400, "Unknown Function", func, req.getRequestURI());
             }
         } catch (Exception e) {
-            OutputProcessor.errorResponse(res, 500, "Governance Breach", e.getMessage(), req.getRequestURI());
+            e.printStackTrace();
+            // Critical: Always return a JSON object so the browser fetch() doesn't crash
+            JSONObject errorJson = new JSONObject();
+            errorJson.put("success", false);
+            errorJson.put("reason", "Internal Nexus Error: " + e.getMessage());
+            OutputProcessor.send(res, 500, errorJson);
         }
     }
 
-    /**
-     * The Policy Guard handshake.
-     * Checks Postgres logic before allowing a Digital Twin update.
-     */
-    private JSONObject processGuardedAction(JSONObject input) throws SQLException {
-        Connection conn = null; PreparedStatement pstmt = null; PoolDB pool = new PoolDB();
+    private JSONObject processGuardedAction(JSONObject input) throws Exception {
+        Connection conn = null; 
+        PoolDB pool = new PoolDB();
         
-        UUID actorId = UUID.fromString((String) input.get("actor_id"));
-        String actionType = (String) input.get("action_type"); // e.g., UPDATE_LIMIT
+        // Safety check for actor_id
+        String actorStr = (String) input.getOrDefault("actor_id", "00000000-0000-0000-0000-000000000000");
+        UUID actorId = UUID.fromString(actorStr);
+        
+        String actionType = (String) input.get("action_type");
         JSONObject params = (JSONObject) input.get("params");
         String intentRaw = (String) input.get("intent_raw");
 
         try {
             conn = pool.getConnection();
-            conn.setAutoCommit(false); // Transactions are vital for Governance
+            conn.setAutoCommit(false);
 
-            // 1. Check Policy Guard Rules
+            // 1. Policy Guard (Deterministic validation)
             if (!isActionAllowed(conn, actionType, params)) {
-                return new JSONObject() {{ 
-                    put("success", false); 
-                    put("reason", "Policy Violation: Action exceeds institutional boundaries."); 
-                }};
+                JSONObject fail = new JSONObject();
+                fail.put("success", false);
+                fail.put("reason", "Policy Violation: Unauthorized action.");
+                return fail;
             }
 
-            // 2. Execute the Action (e.g., Update Digital Twin)
+            // 2. Execute Mutation (JSONB Merge)
             executeStateChange(conn, params);
 
-            // 3. Log to the Action Audit Log (The "Black Box")
+            // 3. Audit Log
             logAudit(conn, actorId, intentRaw, actionType, params);
 
             conn.commit();
-            return new JSONObject() {{ put("success", true); put("message", "Action Executed and Audited."); }};
+            
+            JSONObject success = new JSONObject();
+            success.put("success", true);
+            success.put("message", "Nexus State Mutated.");
+            return success;
 
         } catch (Exception e) {
             if (conn != null) conn.rollback();
-            throw new SQLException("Governance execution failed: " + e.getMessage());
+            throw e; // Caught by the global try-catch in post()
         } finally { 
-            pool.cleanup(null, pstmt, conn); 
+            pool.cleanup(null, null, conn); 
         }
     }
 
-    private boolean isActionAllowed(Connection conn, String actionType, JSONObject params) throws SQLException {
-        // Prototype logic: Query policy_guard_rules table
-        // For example, if action is 'disburse' and value > 100000, check if 'LARGE_LOAN' policy is active
-        return true; // Simplified for prototype
+    private boolean isActionAllowed(Connection conn, String actionType, JSONObject params) {
+        // Prototype logic: allow all
+        return true; 
     }
 
     private void executeStateChange(Connection conn, JSONObject params) throws SQLException {
-        String sql = "UPDATE digital_twins SET current_state = current_state || ?::jsonb, updated_at = NOW() WHERE id = ?";
+        String targetExternalId = ((String) params.get("target_external_id")).replaceFirst("^@", "");
+        JSONObject newData = (JSONObject) params.get("new_data");
+
+        // COALESCE ensures the merge works even if current_state is initially NULL
+        String sql = "UPDATE digital_twins SET current_state = COALESCE(current_state, '{}'::jsonb) || ?::jsonb, " +
+                     "updated_at = NOW() WHERE external_id = ?";
+        
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, params.get("new_data").toString());
-            pstmt.setObject(2, UUID.fromString(params.get("twin_id").toString()));
-            pstmt.executeUpdate();
+            pstmt.setString(1, newData.toJSONString());
+            pstmt.setString(2, targetExternalId);
+            int rows = pstmt.executeUpdate();
+            
+            if (rows == 0) {
+                throw new SQLException("Twin lookup failed for ID: " + targetExternalId);
+            }
         }
     }
 
     private void logAudit(Connection conn, UUID actorId, String intent, String action, JSONObject params) throws SQLException {
-        String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, created_at) VALUES (?, ?, ?, NOW())";
+        String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, created_at) VALUES (?, ?, ?::jsonb, NOW())";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setObject(1, actorId);
             pstmt.setString(2, intent);
-            pstmt.setObject(3, params);
+            pstmt.setString(3, params.toJSONString());
             pstmt.executeUpdate();
         }
     }
@@ -106,5 +126,5 @@ public class Governance implements Action {
     @Override public void get(HttpServletRequest req, HttpServletResponse res) {}
     @Override public void put(HttpServletRequest req, HttpServletResponse res) {}
     @Override public void delete(HttpServletRequest req, HttpServletResponse res) {}
-    @Override public boolean validate(String method, HttpServletRequest req, HttpServletResponse res) { return true; }
+    @Override public boolean validate(String m, HttpServletRequest req, HttpServletResponse res) { return true; }
 }

@@ -62,9 +62,9 @@ public class Context implements Action {
 
         try {
             conn = pool.getConnection();
-            String sql = "SELECT id, type, current_state, metadata, version_count, updated_at " +
+            String sql = "SELECT id, type, current_state, version_count, updated_at " +
                          "FROM digital_twins WHERE external_id = ?";
-            
+
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, externalId);
             rs = pstmt.executeQuery();
@@ -73,8 +73,7 @@ public class Context implements Action {
                 UUID internalId = (UUID) rs.getObject("id");
                 context.put("twin_id", internalId.toString());
                 context.put("type", rs.getString("type"));
-                context.put("state", rs.getObject("current_state"));
-                context.put("metadata", rs.getObject("metadata"));
+                context.put("state", rs.getString("current_state"));
                 context.put("version", rs.getInt("version_count"));
                 context.put("last_updated", rs.getTimestamp("updated_at").toString());
 
@@ -97,7 +96,7 @@ public class Context implements Action {
             // Fetching recent 5 notes/sensor logs
             pstmt = conn.prepareStatement(
                 "SELECT content, created_at FROM interaction_stream " +
-                "WHERE twin_id = ? ORDER BY created_at DESC LIMIT 5"
+                "WHERE owner_id = ? ORDER BY created_at DESC LIMIT 5"
             );
             pstmt.setObject(1, twinId);
             rs = pstmt.executeQuery();

@@ -88,8 +88,8 @@ CREATE OR REPLACE FUNCTION fn_nexus_track_lineage()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (OLD.current_state IS DISTINCT FROM NEW.current_state) THEN
-        INSERT INTO twin_state_history (twin_id, snapshot, reason, version_count)
-        VALUES (OLD.id, OLD.current_state, 'Nexus State Synchronization', OLD.version_count);
+        INSERT INTO twin_state_history (twin_id, snapshot, reason)
+        VALUES (OLD.id, OLD.current_state, 'Nexus State Synchronization');
         NEW.version_count := OLD.version_count + 1;
         NEW.updated_at := NOW();
     END IF;
@@ -108,3 +108,11 @@ CREATE INDEX idx_audit_intent_search ON action_audit_log USING gin(action_execut
 
 -- 10. GRAPH INITIALIZATION (Optional Placeholder)
 -- SELECT create_graph('tsi_nexus_graph');
+
+-- 11. SEED DATA (Development)
+INSERT INTO digital_twins (id, type, external_id, current_state) VALUES
+    -- System actor used as the default actor_id from Liquid UI
+    ('00000000-0000-0000-0000-000000000000', 'system',  'system_actor', '{"role":"system"}'),
+    (uuid_generate_v4(),                     'officer', 'satish',       '{"status":"active","role":"admin"}'),
+    (uuid_generate_v4(),                     'machine', 'machine01',    '{"status":"active","location":"floor-1"}')
+ON CONFLICT (external_id) DO NOTHING;

@@ -6,10 +6,12 @@
     <title>TSI Nexus | Liquid Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Smooth transition for adaptive height changes */
         #liquid-stage { transition: all 0.3s ease-in-out; }
         .component-fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 font-sans min-h-screen">
@@ -28,14 +30,13 @@
             <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
             <input type="text" id="command-k" 
                    class="relative w-full bg-slate-900 border border-slate-700 p-6 rounded-xl text-2xl font-light outline-none focus:border-blue-500 transition-all placeholder:text-slate-600"
-                   placeholder="Enter intent (e.g., /check @machine_01)..."
+                   placeholder="Try: /set_status @satish busy"
                    autocomplete="off">
-            <div class="absolute right-6 top-7 text-slate-500 text-sm hidden md:block">Press <kbd class="bg-slate-800 px-1 rounded border border-slate-600">Enter</kbd> to Execute</div>
         </div>
 
         <div id="liquid-stage" class="space-y-6">
             <div class="text-center py-20 border-2 border-dashed border-slate-800 rounded-2xl">
-                <p class="text-slate-500">Nexus is idle. Define your intent to generate an interface.</p>
+                <p class="text-slate-500 font-mono tracking-tighter">Waiting for Intent...</p>
             </div>
         </div>
     </main>
@@ -46,18 +47,20 @@
                 <h3 class="text-blue-400 font-mono text-sm uppercase tracking-tighter">Digital Twin State</h3>
                 <span class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">Verified</span>
             </div>
-            <div id="twin-data-payload" class="grid grid-cols-2 gap-4">
-                </div>
+            <div id="twin-data-payload" class="grid grid-cols-2 gap-4"></div>
         </div>
     </template>
 
-    <template id="tpl-policy_validation_form">
-        <div class="bg-amber-900/20 border border-amber-500/50 rounded-xl p-6 component-fade-in">
-            <h3 class="text-amber-500 font-bold mb-2">⚠️ Policy Guard Review Required</h3>
-            <p id="policy-reason" class="text-sm text-slate-300 mb-4"></p>
+    <template id="tpl-action_confirm_card">
+        <div class="bg-blue-900/20 border border-blue-500 rounded-xl p-6 component-fade-in">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                <h3 class="text-blue-400 font-bold uppercase text-xs tracking-widest">Proposed Mutation</h3>
+            </div>
+            <p id="confirm-msg" class="text-sm text-slate-300 mb-6 font-light"></p>
             <div class="flex space-x-3">
-                <button onclick="executeAction('PROCEED')" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded text-sm font-bold transition">Confirm Authorization</button>
-                <button onclick="executeAction('CANCEL')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded text-sm transition">Abort</button>
+                <button id="exec-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-blue-900/50">Execute Update</button>
+                <button onclick="this.closest('.bg-blue-900\\/20').remove()" class="text-slate-500 text-sm hover:text-slate-300">Dismiss</button>
             </div>
         </div>
     </template>
@@ -66,7 +69,6 @@
         const input = document.getElementById('command-k');
         const stage = document.getElementById('liquid-stage');
 
-        // 1. Listen for Intent
         input.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
                 const intent = input.value;
@@ -75,58 +77,108 @@
             }
         });
 
-        // 2. Resolve Intent via Nexus Java Backend (Intent.java)
         async function resolveIntent(intent) {
-            stage.innerHTML = '<div class="text-center py-10 animate-pulse text-blue-500">Nexus Reasoning...</div>';
-            
+            stage.innerHTML = '<div class="text-center py-10 animate-pulse text-blue-500 font-mono tracking-widest">REASONING...</div>';
             try {
                 const response = await fetch('/api/intent', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-DX-FUNCTION': 'resolve_intent'
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'resolve_intent' },
                     body: JSON.stringify({ intent: intent })
                 });
-
                 const data = await response.json();
                 renderAdaptiveUI(data.components);
             } catch (err) {
-                stage.innerHTML = `<div class="p-4 bg-red-900/30 border border-red-500 text-red-200 rounded">Connection Error: ${err.message}</div>`;
+                stage.innerHTML = `<div class="p-4 bg-red-900/30 border border-red-500 text-red-200 rounded">Nexus Connection Failed.</div>`;
             }
         }
 
-        // 3. Render the A2UI Components sent by Java
         function renderAdaptiveUI(components) {
-            stage.innerHTML = ''; // Clear stage
-            
+            stage.innerHTML = ''; 
             components.forEach(comp => {
                 const template = document.getElementById(`tpl-${comp.component_type}`);
                 if (template) {
                     const clone = template.content.cloneNode(true);
-                    
-                    // Populate data based on component type
-                    if (comp.component_type === 'twin_context_card') {
-                        const props = JSON.parse(comp.props);
-                        clone.querySelector('#twin-data-payload').innerHTML = `
-                            <div><p class="text-xs text-slate-500">Entity</p><p class="font-mono">${props.target}</p></div>
-                            <div><p class="text-xs text-slate-500">Status</p><p class="text-emerald-400">Operational</p></div>
-                        `;
-                    }
-                    
-                    if (comp.component_type === 'policy_validation_form') {
-                        const props = JSON.parse(comp.props);
-                        clone.querySelector('#policy-reason').innerText = `Intent detected: "${props.intent}". This exceeds standard threshold.`;
-                    }
+                    const props = JSON.parse(comp.props);
 
-                    stage.appendChild(clone);
+                    if (comp.component_type === 'twin_context_card') {
+                        clone.querySelector('#twin-data-payload').innerHTML =
+                            `<div class="col-span-2 text-slate-500 text-xs animate-pulse font-mono">loading state...</div>`;
+                        stage.appendChild(clone);
+                        const livePayload = stage.querySelector('#twin-data-payload');
+                        const targetId = props.target.replace(/^@/, '');
+                        fetch('/api/context', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'get_twin_context' },
+                            body: JSON.stringify({ external_id: targetId })
+                        })
+                        .then(r => r.json())
+                        .then(ctxData => {
+                            const raw = (ctxData.context || {}).state;
+                            const state = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+                            livePayload.innerHTML = `
+                                <div><p class="text-xs text-slate-500">Entity</p><p class="font-mono text-blue-300">${props.target}</p></div>
+                                <div><p class="text-xs text-slate-500">Status</p><p class="text-emerald-400">${state.status || 'unknown'}</p></div>
+                            `;
+                        })
+                        .catch(() => {
+                            livePayload.innerHTML = `
+                                <div><p class="text-xs text-slate-500">Entity</p><p class="font-mono text-blue-300">${props.target}</p></div>
+                                <div><p class="text-xs text-slate-500">Status</p><p class="text-yellow-400">unavailable</p></div>
+                            `;
+                        });
+                    } else {
+                        if (comp.component_type === 'action_confirm_card') {
+                            clone.querySelector('#confirm-msg').innerText = `Update state of ${props.target} to: "${props.new_status}"?`;
+                            clone.querySelector('#exec-btn').onclick = () => finalizeAction(props);
+                        }
+                        stage.appendChild(clone);
+                    }
                 }
             });
         }
 
-        async function executeAction(type) {
-            alert(`Governance signal sent: ${type}`);
-            stage.innerHTML = '<div class="text-center text-slate-500 mt-20">Nexus is idle. Waiting for intent...</div>';
+        async function finalizeAction(props) {
+            stage.innerHTML = '<div class="text-center py-10 animate-pulse text-emerald-500 font-mono">MUTATING...</div>';
+            try {
+                const res = await fetch('/api/governance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'validate_and_execute' },
+                    body: JSON.stringify({
+                        actor_id: "00000000-0000-0000-0000-000000000000",
+                        action_type: "UPDATE_STATUS",
+                        intent_raw: props.intent_raw,
+                        params: {
+                            target_external_id: props.target,
+                            new_data: { "status": props.new_status }
+                        }
+                    })
+                });
+
+                // --- NEW DEBUG BLOCK ---
+                const rawResponse = await res.text();
+                console.log("Nexus Raw Response:", rawResponse);
+
+                let result;
+                try {
+                    result = JSON.parse(rawResponse);
+                } catch (jsonErr) {
+                    throw new Error("Nexus returned invalid JSON. Check Java console. Raw: " + rawResponse.substring(0, 50));
+                }
+                // --- END DEBUG BLOCK ---
+
+                if(result.success) {
+                    stage.innerHTML = `<div class="p-8 bg-emerald-900/20 border border-emerald-500 text-emerald-200 rounded-xl text-center component-fade-in">
+                        <p class="font-bold">Transaction Finalized</p>
+                        <p class="text-xs opacity-70">Audit ID: ${Math.random().toString(36).substring(7)}</p>
+                    </div>`;
+                    setTimeout(() => resolveIntent(`/check ${props.target}`), 1200);
+                } else {
+                    alert("Nexus Denied: " + result.reason);
+                }
+            } catch (err) {
+                console.error(err);
+                stage.innerHTML = `<div class="p-4 bg-red-900/30 border border-red-500 text-red-200 rounded">Governance Error: ${err.message}</div>`;
+            }
         }
     </script>
 </body>

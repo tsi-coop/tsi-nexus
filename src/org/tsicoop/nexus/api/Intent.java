@@ -46,7 +46,7 @@ public class Intent implements Action {
 
     /**
      * Maps natural language strings to UI Components.
-     * In the prototype, this uses pattern matching; in production, this calls the Local LLM.
+     * Collapses Intent into Adaptive UI schema.
      */
     private JSONObject resolveToAdaptiveUI(String intent) {
         JSONObject response = new JSONObject();
@@ -54,26 +54,39 @@ public class Intent implements Action {
 
         String cleanIntent = intent.toLowerCase().trim();
 
-        // Use Case A: Health/Context Check
-        if (cleanIntent.startsWith("/check") || cleanIntent.contains("@")) {
-            String targetId = extractTarget(cleanIntent);
-            components.add(createComponent("twin_context_card", "{\"target\":\"" + targetId + "\"}"));
-            components.add(createComponent("interaction_timeline", "{\"target\":\"" + targetId + "\"}"));
+        // 1. Action Pattern: State Mutation (/set_status @target value)
+        if (cleanIntent.startsWith("/set_status")) {
+            String[] parts = cleanIntent.split(" ");
+            if (parts.length >= 3) {
+                JSONObject props = new JSONObject();
+                props.put("target", parts[1]);      // e.g., @satish
+                props.put("new_status", parts[2]);  // e.g., busy
+                props.put("intent_raw", cleanIntent);
+                
+                // Return the confirmation card to bridge to Governance
+                components.add(createComponent("action_confirm_card", props.toJSONString()));
+            }
         } 
         
-        // Use Case B: Financial/Policy Action
+        // 2. Query Pattern: Health/Context Check (@target or /check)
+        else if (cleanIntent.startsWith("/check") || cleanIntent.contains("@")) {
+            String targetId = extractTarget(cleanIntent);
+            components.add(createComponent("twin_context_card", "{\"target\":\"" + targetId + "\"}"));
+        } 
+        
+        // 3. Governance Pattern: Financial/Policy Action
         else if (cleanIntent.contains("limit") || cleanIntent.contains("disburse")) {
             components.add(createComponent("policy_validation_form", "{\"intent\":\"" + cleanIntent + "\"}"));
         } 
         
-        // Default: Conversational/Search
+        // 4. Default: Search / Semantic Interaction
         else {
             components.add(createComponent("nexus_search_results", "{\"query\":\"" + cleanIntent + "\"}"));
         }
 
         response.put("success", true);
         response.put("intent_captured", cleanIntent);
-        response.put("components", components); // Liquid renders these in order
+        response.put("components", components); 
         return response;
     }
 
@@ -93,8 +106,8 @@ public class Intent implements Action {
     private String extractTarget(String intent) {
         if (intent.contains("@")) {
             int start = intent.indexOf("@");
-            int end = intent.indexOf(" ", start);
-            return (end == -1) ? intent.substring(start) : intent.substring(start, end);
+            int spaceEnd = intent.indexOf(" ", start);
+            return (spaceEnd == -1) ? intent.substring(start) : intent.substring(start, spaceEnd);
         }
         return "unknown";
     }
@@ -105,7 +118,7 @@ public class Intent implements Action {
     
     @Override 
     public boolean validate(String method, HttpServletRequest req, HttpServletResponse res) {
-        //return InputProcessor.validate(req, res);
+        // Prototype bypass - in production, validate JWT or Handshake Token
         return true;
     }
 }
