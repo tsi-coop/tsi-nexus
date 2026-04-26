@@ -1,0 +1,68 @@
+# TSI Privacy Vault - Universal Docker Compose (Public Release)
+
+x-db-credentials: &db-credentials
+  POSTGRES_DB: "${POSTGRES_DB:-tsi_nexus}"
+  POSTGRES_USER: "${POSTGRES_USER:-tsi_admin}"
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWD:-secure_dev_password}"
+
+services:
+  # 1. PostgreSQL Database Service
+  database:
+    image: pgvector/pgvector:pg15
+    container_name: tsi_nexus_db
+    restart: unless-stopped
+    environment:
+      <<: *db-credentials
+    ports:
+      - "${DB_PORT_MAP:-5435:5432}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tsi_internal
+
+  # 2. Java Jetty Web Application Service
+  server:
+    # Uses the IMAGE_NAME from .env, defaults to latest if not set
+    # image: "${IMAGE_NAME:-tsicoop/tsi-nexus:latest}"    
+    # DEVELOPERS: To build from local source, uncomment the block below
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    user: "root"
+    container_name: tsi_nexus_server
+    restart: unless-stopped
+    
+    ports:
+      - "${APP_PORT_MAP:-8084:8080}"
+    
+    environment:
+      POSTGRES_HOST: "jdbc:postgresql://database:5432"
+      POSTGRES_DB: "${POSTGRES_DB:-tsi_nexus}"
+      POSTGRES_USER: "${POSTGRES_USER:-tsi_admin}"
+      POSTGRES_PASSWD: "${POSTGRES_PASSWD:-secure_dev_password}"
+      TSI_EXPORT_PATH: "${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}"
+    
+    volumes:
+      - "tsi_reports_data:${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}:rw"
+    
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - tsi_internal
+
+# Infrastructure Definitions
+networks:
+  tsi_internal:
+    driver: bridge
+
+volumes:
+  postgres_data:      
+  tsi_reports_data:
