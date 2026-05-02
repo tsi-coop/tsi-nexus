@@ -281,6 +281,11 @@
                         <div class="text-slate-700 font-medium mt-6 bg-slate-50 p-6 rounded-xl border border-slate-100 shadow-inner">
                            ${result.data ? renderAnalysisData(result.data, props.action_type) : (result.reason || result.message)}
                         </div>
+                        ${result.narrative ? `
+                        <div class="mt-4 p-6 bg-blue-50/50 rounded-xl border border-blue-100 text-left">
+                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em] mb-3">Intelligence</p>
+                            <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">${result.narrative}</p>
+                        </div>` : ''}
                     </div>`;
                     
                     if (props.action_type === 'DISBURSE') {

@@ -48,6 +48,8 @@ services:
       POSTGRES_USER: "${POSTGRES_USER:-tsi_admin}"
       POSTGRES_PASSWD: "${POSTGRES_PASSWD:-secure_dev_password}"
       TSI_EXPORT_PATH: "${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}"
+      VLLM_URL: "${VLLM_URL}"
+      VLLM_MODEL: "${VLLM_MODEL:-google/gemma-3-12b-it}"
     
     volumes:
       - "tsi_reports_data:${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}:rw"

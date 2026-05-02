@@ -11,6 +11,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -144,12 +146,19 @@ public class Governance implements Action {
                     String query = rs.getString("query_logic");
                     String label = rs.getString("error_message");
                     JSONArray rows = new JSONArray();
+                    String t1 = null, t2 = null, targetId = null;
+                    if ("COMPARE".equalsIgnoreCase(action)) {
+                        t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
+                        t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
+                    } else {
+                        targetId = ((String) params.get("target_external_id")).replaceFirst("^@", "");
+                    }
                     try (PreparedStatement analysisPstmt = conn.prepareStatement(query)) {
                         if ("COMPARE".equalsIgnoreCase(action)) {
-                            analysisPstmt.setString(1, ((String) params.get("target_1")).replaceFirst("^@", ""));
-                            analysisPstmt.setString(2, ((String) params.get("target_2")).replaceFirst("^@", ""));
+                            analysisPstmt.setString(1, t1);
+                            analysisPstmt.setString(2, t2);
                         } else {
-                            analysisPstmt.setString(1, ((String) params.get("target_external_id")).replaceFirst("^@", ""));
+                            analysisPstmt.setString(1, targetId);
                         }
                         try (ResultSet dataRs = analysisPstmt.executeQuery()) {
                             ResultSetMetaData meta = dataRs.getMetaData();
@@ -163,10 +172,23 @@ public class Governance implements Action {
                             }
                         }
                     }
+
+                    // Gather member contexts for narrative generation
+                    JSONArray memberContexts = new JSONArray();
+                    if ("COMPARE".equalsIgnoreCase(action)) {
+                        memberContexts.addAll(fetchMemberContexts(conn, t1));
+                        memberContexts.addAll(fetchMemberContexts(conn, t2));
+                    } else {
+                        memberContexts.addAll(fetchMemberContexts(conn, targetId));
+                    }
+
+                    String narrative = Intelligence.generateNarrative(action, rows, memberContexts);
+
                     JSONObject result = new JSONObject();
                     result.put("success", true);
                     result.put("reason", label);
                     result.put("data", rows);
+                    if (narrative != null && !narrative.isEmpty()) result.put("narrative", narrative);
                     return result;
                 }
             }
@@ -176,6 +198,54 @@ public class Governance implements Action {
         result.put("reason", "Analysis complete.");
         result.put("data", new JSONArray());
         return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<JSONObject> fetchMemberContexts(Connection conn, String targetExternalId) throws SQLException {
+        String memberSql =
+            "WITH target AS (SELECT id FROM digital_twins WHERE external_id = ?)," +
+            "hop1 AS (SELECT DISTINCT CASE WHEN r.from_twin_id = t.id THEN r.to_twin_id ELSE r.from_twin_id END AS node_id " +
+            "         FROM target t JOIN twin_relationships r ON r.from_twin_id = t.id OR r.to_twin_id = t.id)," +
+            "hop2 AS (SELECT DISTINCT CASE WHEN r.from_twin_id = h.node_id THEN r.to_twin_id ELSE r.from_twin_id END AS node_id " +
+            "         FROM hop1 h JOIN twin_relationships r ON r.from_twin_id = h.node_id OR r.to_twin_id = h.node_id " +
+            "         WHERE (CASE WHEN r.from_twin_id = h.node_id THEN r.to_twin_id ELSE r.from_twin_id END) " +
+            "               NOT IN (SELECT id FROM target))," +
+            "all_reach AS (SELECT node_id FROM hop1 UNION SELECT node_id FROM hop2) " +
+            "SELECT m.id, m.external_id, m.current_state " +
+            "FROM all_reach ar JOIN digital_twins m ON m.id = ar.node_id AND m.type = 'member'";
+
+        List<JSONObject> members = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(memberSql)) {
+            pstmt.setString(1, targetExternalId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject member = new JSONObject();
+                    member.put("external_id", rs.getString("external_id"));
+                    member.put("state", rs.getString("current_state"));
+                    member.put("recent_interactions", fetchMemberInteractions(conn, (UUID) rs.getObject("id")));
+                    members.add(member);
+                }
+            }
+        }
+        return members;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONArray fetchMemberInteractions(Connection conn, UUID memberId) throws SQLException {
+        JSONArray interactions = new JSONArray();
+        String sql = "SELECT content, created_at FROM interaction_stream WHERE owner_id = ? ORDER BY created_at DESC LIMIT 5";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setObject(1, memberId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject entry = new JSONObject();
+                    entry.put("content", rs.getString("content"));
+                    entry.put("timestamp", rs.getTimestamp("created_at").toString());
+                    interactions.add(entry);
+                }
+            }
+        }
+        return interactions;
     }
 
     private void executeStateChange(Connection conn, JSONObject params) throws SQLException {
