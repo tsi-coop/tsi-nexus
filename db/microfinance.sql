@@ -86,6 +86,49 @@ VALUES ('ANALYZE-E', 'ANALYZE', 'Portfolio Quality Drill-down',
         'Analysis Complete: Visualizing entity performance.',
         'ANALYTICS');
 
+-- 6. INTERACTION STREAM (Event History per Twin)
+INSERT INTO interaction_stream (owner_id, content, created_at) VALUES
+-- satish_01: healthy borrower
+((SELECT id FROM digital_twins WHERE external_id='satish_01'), 'Loan application submitted for ₹5,000 working capital.', NOW() - INTERVAL '90 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_01'), 'KYC documents verified. Aadhaar and PAN confirmed.', NOW() - INTERVAL '88 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_01'), 'Loan disbursed: ₹5,000 to primary account.', NOW() - INTERVAL '85 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_01'), 'Repayment received: ₹1,600. Ahead of schedule.', NOW() - INTERVAL '55 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_01'), 'Field visit by Rahul. Business in good standing.', NOW() - INTERVAL '40 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_01'), 'Repayment received: ₹1,600. Balance: ₹1,800.', NOW() - INTERVAL '25 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_01'), 'Pre-closure request submitted. Final payment pending.', NOW() - INTERVAL '5 days'),
+
+-- anita_02: NPA case
+((SELECT id FROM digital_twins WHERE external_id='anita_02'), 'Loan application submitted for ₹3,000 inventory purchase.', NOW() - INTERVAL '120 days'),
+((SELECT id FROM digital_twins WHERE external_id='anita_02'), 'KYC verified. Group co-guarantee accepted.', NOW() - INTERVAL '118 days'),
+((SELECT id FROM digital_twins WHERE external_id='anita_02'), 'Loan disbursed: ₹3,000 to primary account.', NOW() - INTERVAL '115 days'),
+((SELECT id FROM digital_twins WHERE external_id='anita_02'), 'Repayment received: ₹500. Partial — cited business disruption.', NOW() - INTERVAL '85 days'),
+((SELECT id FROM digital_twins WHERE external_id='anita_02'), 'Missed repayment. Follow-up call attempted, no response.', NOW() - INTERVAL '55 days'),
+((SELECT id FROM digital_twins WHERE external_id='anita_02'), 'Account flagged NPA. Recovery proceedings initiated.', NOW() - INTERVAL '30 days'),
+((SELECT id FROM digital_twins WHERE external_id='anita_02'), 'Field visit by Rahul. Borrower contacted, committed to restructuring.', NOW() - INTERVAL '10 days'),
+
+-- rohan_03: active but KYC pending
+((SELECT id FROM digital_twins WHERE external_id='rohan_03'), 'Loan application submitted for ₹4,500 equipment upgrade.', NOW() - INTERVAL '75 days'),
+((SELECT id FROM digital_twins WHERE external_id='rohan_03'), 'KYC partially submitted. Aadhaar verified, PAN pending.', NOW() - INTERVAL '73 days'),
+((SELECT id FROM digital_twins WHERE external_id='rohan_03'), 'Loan disbursed conditionally pending full KYC completion.', NOW() - INTERVAL '70 days'),
+((SELECT id FROM digital_twins WHERE external_id='rohan_03'), 'Repayment received: ₹2,200. Consistent payer.', NOW() - INTERVAL '40 days'),
+((SELECT id FROM digital_twins WHERE external_id='rohan_03'), 'Reminder sent: PAN submission overdue.', NOW() - INTERVAL '20 days'),
+((SELECT id FROM digital_twins WHERE external_id='rohan_03'), 'Repayment received: ₹2,200. KYC still outstanding.', NOW() - INTERVAL '10 days'),
+
+-- meena_04: top performer
+((SELECT id FROM digital_twins WHERE external_id='meena_04'), 'Loan application submitted for ₹6,000 seasonal stock.', NOW() - INTERVAL '60 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_04'), 'KYC fully verified. Documents complete.', NOW() - INTERVAL '59 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_04'), 'Loan disbursed: ₹6,000 to primary account.', NOW() - INTERVAL '55 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_04'), 'Repayment received: ₹3,000. 50% cleared within 30 days.', NOW() - INTERVAL '25 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_04'), 'Repayment received: ₹2,950. Loan near closure. Eligible for top-up.', NOW() - INTERVAL '8 days'),
+
+-- rahul_01: officer activity log
+((SELECT id FROM digital_twins WHERE external_id='rahul_01'), 'Monthly portfolio review completed. 1 NPA flagged (anita_02).', NOW() - INTERVAL '30 days'),
+((SELECT id FROM digital_twins WHERE external_id='rahul_01'), 'Field visits completed: satish_01 and anita_02. Reports filed.', NOW() - INTERVAL '10 days'),
+
+-- sara_02: officer activity log
+((SELECT id FROM digital_twins WHERE external_id='sara_02'), 'Quarterly review: both borrowers current. No exceptions.', NOW() - INTERVAL '15 days'),
+((SELECT id FROM digital_twins WHERE external_id='sara_02'), 'meena_04 flagged for top-up loan eligibility.', NOW() - INTERVAL '8 days');
+
 -- ACTION: COMPARE (Benchmarking two Entities)
 -- Same two-hop traversal as ANALYZE, carrying root_id so members are aggregated per target.
 INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode)

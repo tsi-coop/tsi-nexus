@@ -93,9 +93,13 @@
                 </div>
             </div>
             <div class="state-grid grid grid-cols-2 gap-y-10 gap-x-8 mb-12"></div>
-            <div class="bg-slate-50/80 rounded-2xl p-6 border border-slate-100">
+            <div class="bg-slate-50/80 rounded-2xl p-6 border border-slate-100 mb-4">
                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">Graph Topology</h4>
                 <div class="graph-links flex flex-wrap gap-3"></div>
+            </div>
+            <div class="interaction-stream-wrap hidden bg-slate-50/80 rounded-2xl p-6 border border-slate-100">
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">Interaction Stream</h4>
+                <div class="interaction-stream space-y-4"></div>
             </div>
         </div>
     </template>
@@ -186,6 +190,16 @@
                                 </span>
                             `).join('');
                             safeSet(container.querySelector('.graph-links'), linksHtml, 'html');
+                        }
+                        const interactions = ctx.recent_interactions;
+                        if (interactions && interactions.length > 0) {
+                            const streamHtml = interactions.map(i => `
+                                <div class="flex items-start gap-4">
+                                    <span class="text-[10px] font-black text-slate-300 whitespace-nowrap pt-0.5 w-20 shrink-0">${new Date(i.timestamp).toLocaleDateString('en-GB', {day:'2-digit', month:'short'})}</span>
+                                    <span class="text-sm text-slate-600 leading-snug">${i.content}</span>
+                                </div>`).join('');
+                            safeSet(container.querySelector('.interaction-stream'), streamHtml, 'html');
+                            container.querySelector('.interaction-stream-wrap').classList.remove('hidden');
                         }
                     } catch (e) { console.error("Context Error", e); }
                     
