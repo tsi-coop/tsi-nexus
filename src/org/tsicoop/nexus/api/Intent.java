@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,35 +46,47 @@ public class Intent implements Action {
 
         // 1. DISAMBIGUATION / CONTEXT LOOKUP (@target)
         // If the user mentions an entity, always trigger a Context Card.
-        // The Nexus 'Context' API will determine if it's a Customer, Machine, or Doctor.
         if (cleanIntent.contains("@")) {
-            String target = extractTarget(cleanIntent);
-            // Polymorphic Card: Renders differently based on Twin Type (FSM State)
-            components.add(createComponent("universal_context_card", "{\"target\":\"" + target + "\"}"));
+            List<String> targets = extractAllTargets(cleanIntent);
+            for (String target : targets) {
+                components.add(createComponent("universal_context_card", "{\"target\":\"" + target + "\"}"));
+            }
         }
 
         // 2. UNIVERSAL COMMAND PATTERN (/command @target value)
-        // This collapses all verbs: /disburse, /repair, /admit, /set_status
         if (cleanIntent.startsWith("/")) {
-            String[] parts = cleanIntent.split("\\s+", 3);
+            String[] parts = cleanIntent.split("\\s+");
             if (parts.length >= 2) {
-                String actionVerb = parts[0].substring(1).toUpperCase(); // e.g., DISBURSE
-                String target = parts[1];
-                String value = (parts.length > 2) ? parts[2] : "";
-
+                String actionVerb = parts[0].substring(1).toUpperCase(); // e.g., DISBURSE, ANALYZE, COMPARE
+                
                 JSONObject props = new JSONObject();
                 props.put("action_type", actionVerb);
-                props.put("target", target);
-                props.put("value", value);
                 props.put("intent_raw", cleanIntent);
+
+                // MULTI-TARGET EXTRACTION FOR COMPARISON
+                if ("COMPARE".equalsIgnoreCase(actionVerb)) {
+                    List<String> targets = extractAllTargets(cleanIntent);
+                    if (targets.size() >= 2) {
+                        props.put("target_1", targets.get(0));
+                        props.put("target_2", targets.get(1));
+                    }
+                } else {
+                    // STANDARD SINGLE TARGET EXTRACTION (DISBURSE, ANALYZE)
+                    String target = extractTarget(cleanIntent);
+                    String value = "";
+                    // Simple logic to find the numeric value if present
+                    for (String part : parts) {
+                        if (part.matches("\\d+")) value = part;
+                    }
+                    props.put("target_external_id", target);
+                    props.put("value", value);
+                }
                 
-                // Returns a 'Handshake' component that binds to the Governance Pillar
                 components.add(createComponent("universal_action_confirm", props.toJSONString()));
             }
         } 
         
         // 3. SEMANTIC SEARCH / KNOWLEDGE RETRIEVAL
-        // If it's not a command or specific target, treat it as a natural language query.
         else if (!cleanIntent.contains("@") && !cleanIntent.startsWith("/")) {
             JSONObject props = new JSONObject();
             props.put("query", cleanIntent);
@@ -96,15 +110,24 @@ public class Intent implements Action {
     }
 
     /**
-     * Uses Regex to extract handles (e.g., @satish or @machine_01).
+     * Uses Regex to extract the first handle.
      */
     private String extractTarget(String intent) {
+        List<String> targets = extractAllTargets(intent);
+        return targets.isEmpty() ? "unknown" : targets.get(0);
+    }
+
+    /**
+     * Extracts all handles (e.g., @branch_east @branch_west) for comparisons.
+     */
+    private List<String> extractAllTargets(String intent) {
+        List<String> targets = new ArrayList<>();
         Pattern pattern = Pattern.compile("@([\\w\\.]+)");
         Matcher matcher = pattern.matcher(intent);
-        if (matcher.find()) {
-            return "@" + matcher.group(1);
+        while (matcher.find()) {
+            targets.add("@" + matcher.group(1));
         }
-        return "unknown";
+        return targets;
     }
 
     @Override public void get(HttpServletRequest req, HttpServletResponse res) {}

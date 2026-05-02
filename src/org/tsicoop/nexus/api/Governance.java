@@ -3,11 +3,13 @@ package org.tsicoop.nexus.api;
 import org.tsicoop.nexus.framework.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.UUID;
 
@@ -52,8 +54,14 @@ public class Governance implements Action {
             conn = pool.getConnection();
             conn.setAutoCommit(false);
 
+            // Read-only analytics: execute query and return result label as success
+            if ("ANALYZE".equalsIgnoreCase(actionType) || "COMPARE".equalsIgnoreCase(actionType)) {
+                JSONObject result = executeAnalysis(conn, actionType, params);
+                conn.commit();
+                return result;
+            }
+
             // 1. DYNAMIC POLICY GUARD
-            // This replaces hardcoded 'if' statements with database-driven rules.
             String violation = checkPolicyManifest(conn, actionType, params);
             if (violation != null) {
                 JSONObject fail = new JSONObject();
@@ -63,14 +71,13 @@ public class Governance implements Action {
             }
 
             // 2. UNIVERSAL STATE MUTATION
-            // Uses the JSONB merge operator (||) to update the Digital Twin state.
             executeStateChange(conn, params);
 
             // 3. AUDIT LOGGING
             logAudit(conn, UUID.fromString(actorStr), intentRaw, actionType, params);
 
             conn.commit();
-            
+
             JSONObject success = new JSONObject();
             success.put("success", true);
             success.put("message", "Action Authorized & Finalized.");
@@ -88,9 +95,6 @@ public class Governance implements Action {
      * The Policy Engine: Executes SQL guardrails defined in the policy_manifest table.
      */
     private String checkPolicyManifest(Connection conn, String action, JSONObject params) throws SQLException {
-        String targetId = ((String) params.get("target_external_id")).replaceFirst("^@", "");
-        
-        // Fetch rules assigned to this specific action type (e.g., DISBURSE, REPAIR)
         String sql = "SELECT query_logic, error_message FROM policy_manifest WHERE action_type = ? AND is_active = TRUE";
         
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -100,11 +104,24 @@ public class Governance implements Action {
                     String query = rs.getString("query_logic");
                     String error = rs.getString("error_message");
 
-                    // Run the guardrail query against the current state/graph
                     try (PreparedStatement guardPstmt = conn.prepareStatement(query)) {
-                        guardPstmt.setString(1, targetId);
+                        // Logic safely scoped by action type to avoid NullPointerExceptions
+                        if ("COMPARE".equalsIgnoreCase(action)) {
+                            String t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
+                            String t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
+                            guardPstmt.setString(1, t1);
+                            guardPstmt.setString(2, t2);
+                        } else {
+                            Object targetObj = params.get("target_external_id");
+                            if (targetObj == null) {
+                                throw new SQLException("Target ID is missing for action: " + action);
+                            }
+                            String targetId = ((String) targetObj).replaceFirst("^@", "");
+                            guardPstmt.setString(1, targetId);
+                        }
+
                         try (ResultSet guardRs = guardPstmt.executeQuery()) {
-                            // If the query returns ANY count > 0, the policy is violated.
+                            // Standard guardrails block if any count > 0 is returned
                             if (guardRs.next() && guardRs.getInt(1) > 0) {
                                 return error;
                             }
@@ -116,11 +133,57 @@ public class Governance implements Action {
         return null; // Passes all guardrails
     }
 
+    @SuppressWarnings("unchecked")
+    private JSONObject executeAnalysis(Connection conn, String action, JSONObject params) throws SQLException {
+        String sql = "SELECT query_logic, error_message FROM policy_manifest WHERE action_type = ? AND is_active = TRUE LIMIT 1";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, action.toUpperCase());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String query = rs.getString("query_logic");
+                    String label = rs.getString("error_message");
+                    JSONArray rows = new JSONArray();
+                    try (PreparedStatement analysisPstmt = conn.prepareStatement(query)) {
+                        if ("COMPARE".equalsIgnoreCase(action)) {
+                            analysisPstmt.setString(1, ((String) params.get("target_1")).replaceFirst("^@", ""));
+                            analysisPstmt.setString(2, ((String) params.get("target_2")).replaceFirst("^@", ""));
+                        } else {
+                            analysisPstmt.setString(1, ((String) params.get("target_external_id")).replaceFirst("^@", ""));
+                        }
+                        try (ResultSet dataRs = analysisPstmt.executeQuery()) {
+                            ResultSetMetaData meta = dataRs.getMetaData();
+                            int colCount = meta.getColumnCount();
+                            while (dataRs.next()) {
+                                JSONObject row = new JSONObject();
+                                for (int i = 1; i <= colCount; i++) {
+                                    row.put(meta.getColumnName(i), dataRs.getObject(i));
+                                }
+                                rows.add(row);
+                            }
+                        }
+                    }
+                    JSONObject result = new JSONObject();
+                    result.put("success", true);
+                    result.put("reason", label);
+                    result.put("data", rows);
+                    return result;
+                }
+            }
+        }
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("reason", "Analysis complete.");
+        result.put("data", new JSONArray());
+        return result;
+    }
+
     private void executeStateChange(Connection conn, JSONObject params) throws SQLException {
+        // Skip mutation for read-only actions (Analytics/Comparison)
+        if (params.get("new_data") == null) return;
+
         String targetId = ((String) params.get("target_external_id")).replaceFirst("^@", "");
         JSONObject newData = (JSONObject) params.get("new_data");
 
-        // Atomic JSONB merge: preserves existing fields while updating/adding new ones.
         String sql = "UPDATE digital_twins SET current_state = COALESCE(current_state, '{}'::jsonb) || ?::jsonb, " +
                      "updated_at = NOW(), version_count = version_count + 1 WHERE external_id = ?";
         

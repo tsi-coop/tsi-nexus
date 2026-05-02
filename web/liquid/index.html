@@ -37,6 +37,11 @@
         .component-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         .accent-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        
+        /* Premium Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="font-sans antialiased min-h-screen">
@@ -134,7 +139,6 @@
             }
         }
 
-        // Helper to safely update text/html
         const safeSet = (el, val, mode = 'text') => {
             if (!el) return;
             if (mode === 'html') el.innerHTML = val;
@@ -148,7 +152,7 @@
                 if (!template) continue;
 
                 const clone = template.content.cloneNode(true);
-                const container = clone.querySelector('div'); // The root card div
+                const container = clone.querySelector('div'); 
                 const props = JSON.parse(comp.props);
 
                 if (comp.component_type === 'universal_context_card') {
@@ -186,7 +190,13 @@
                     } catch (e) { console.error("Context Error", e); }
                     
                 } else if (comp.component_type === 'universal_action_confirm') {
-                    safeSet(container.querySelector('.action-desc'), `Execute ${props.action_type} for ${props.target} with value "${props.value}"?`);
+                    // Logic to display relevant labels based on action type
+                    if (props.action_type === 'COMPARE') {
+                        safeSet(container.querySelector('.action-desc'), `Benchmark ${props.target_1} against ${props.target_2}?`);
+                    } else {
+                        safeSet(container.querySelector('.action-desc'), `Execute ${props.action_type} for ${props.target_external_id} with value "${props.value}"?`);
+                    }
+                    
                     const execBtn = container.querySelector('.exec-btn');
                     if (execBtn) execBtn.onclick = () => finalizeAction(props);
                 }
@@ -195,31 +205,73 @@
             }
         }
 
+        function renderAnalysisData(data, actionType) {
+            if (!data || data.length === 0) return '<p class="text-slate-400 italic text-sm">No data returned for this entity.</p>';
+            if (actionType === 'ANALYZE') {
+                const row = data[0];
+                return Object.entries(row).filter(([k]) => k !== 'external_id').map(([k, v]) => `
+                    <div class="flex justify-between items-center py-4 border-b border-slate-100 last:border-0">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">${k.replace(/_/g, ' ')}</span>
+                        <span class="text-2xl font-black text-slate-800">${v ?? '—'}${k.includes('rate') ? '%' : ''}</span>
+                    </div>`).join('');
+            }
+            if (actionType === 'COMPARE') {
+                const cols = Object.keys(data[0]).filter(k => k !== 'external_id');
+                return `<table class="w-full text-sm">
+                    <thead><tr>
+                        <th class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400 pb-3">Entity</th>
+                        ${cols.map(c => `<th class="text-right text-[10px] font-black uppercase tracking-widest text-slate-400 pb-3">${c.replace(/_/g, ' ')}</th>`).join('')}
+                    </tr></thead>
+                    <tbody>${data.map(row => `
+                        <tr class="border-t border-slate-100">
+                            <td class="py-3 font-bold text-slate-700">${row.external_id}</td>
+                            ${cols.map(c => `<td class="py-3 text-right font-black text-slate-800">${row[c] ?? '—'}${c.includes('rate') ? '%' : ''}</td>`).join('')}
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            }
+            return '';
+        }
+
         async function finalizeAction(props) {
             stage.innerHTML = '<div class="text-center py-24 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.6em]">GOVERNANCE CHECK</div>';
+            
+            // Critical Fix: Aligning parameters to match Governance.java expectations
+            const requestBody = {
+                action_type: props.action_type,
+                intent_raw: props.intent_raw,
+                params: {
+                    target_external_id: props.target_external_id, 
+                    target_1: props.target_1,
+                    target_2: props.target_2,
+                    new_data: props.value ? { [props.action_type.toLowerCase() + "_amount"]: props.value } : null
+                }
+            };
+
             try {
                 const res = await fetch('/api/governance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'validate_and_execute' },
-                    body: JSON.stringify({
-                        action_type: props.action_type,
-                        intent_raw: props.intent_raw,
-                        params: {
-                            target_external_id: props.target,
-                            new_data: { [props.action_type.toLowerCase() + "_val"]: props.value }
-                        }
-                    })
+                    body: JSON.stringify(requestBody)
                 });
+                
                 const result = await res.json();
+                
                 if(result.success) {
                     stage.innerHTML = `<div class="p-20 bg-white border border-blue-100 rounded-3xl text-center component-fade-in shadow-2xl">
                         <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
                             <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                         </div>
-                        <p class="font-black text-2xl text-slate-900 tracking-tight mb-2 text-blue-600">Mutation Authorized</p>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em]">State Synchronized via Nexus</p>
+                        <p class="font-black text-2xl text-slate-900 tracking-tight mb-2 text-blue-600">
+                            ${(props.action_type === 'ANALYZE' || props.action_type === 'COMPARE') ? 'Analysis Generated' : 'Mutation Authorized'}
+                        </p>
+                        <div class="text-slate-700 font-medium mt-6 bg-slate-50 p-6 rounded-xl border border-slate-100 shadow-inner">
+                           ${result.data ? renderAnalysisData(result.data, props.action_type) : (result.reason || result.message)}
+                        </div>
                     </div>`;
-                    setTimeout(() => resolveIntent(`@${props.target.replace(/^@/, '')}`), 2000);
+                    
+                    if (props.action_type === 'DISBURSE') {
+                        setTimeout(() => resolveIntent(`@${props.target_external_id.replace(/^@/, '')}`), 3500);
+                    }
                 } else {
                     stage.innerHTML = `<div class="p-12 border-l-[12px] border-red-500 bg-white text-slate-900 rounded-2xl component-fade-in shadow-2xl">
                         <h4 class="text-red-600 font-black text-[11px] uppercase tracking-[0.4em] mb-4">Governance Denial</h4>
@@ -229,7 +281,9 @@
                         </div>
                     </div>`;
                 }
-            } catch (err) { stage.innerHTML = `<div class="p-8 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">Nexus Error: ${err.message}</div>`; }
+            } catch (err) { 
+                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">Nexus Error: ${err.message}</div>`; 
+            }
         }
     </script>
 </body>
