@@ -6,15 +6,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * TSI Nexus: Intent Resolver (The A2UI Bridge)
- * Translates natural language intent into adaptive UI components and actions.
+ * TSI Nexus: Universal Intent Resolver
+ * The bridge between Natural Language/Commands and the Liquid Interface.
+ * Designed to be vertical-agnostic: handles any entity type or action via metadata.
  */
 public class Intent implements Action {
 
@@ -24,64 +22,61 @@ public class Intent implements Action {
             JSONObject input = InputProcessor.getInput(req);
             String func = req.getHeader("X-DX-FUNCTION");
 
-            if (func == null || func.trim().isEmpty()) {
-                OutputProcessor.errorResponse(res, 400, "Bad Request", "Missing function header.", req.getRequestURI());
-                return;
-            }
-
-            switch (func.toLowerCase()) {
-                case "resolve_intent":
-                    // The primary entry point for the Command-K bar
-                    String rawIntent = (String) input.get("intent");
-                    OutputProcessor.send(res, 200, resolveToAdaptiveUI(rawIntent));
-                    break;
-
-                default:
-                    OutputProcessor.errorResponse(res, 400, "Unknown Function", func, req.getRequestURI());
+            if ("resolve_intent".equalsIgnoreCase(func)) {
+                String rawIntent = (String) input.get("intent");
+                OutputProcessor.send(res, 200, resolveToAdaptiveUI(rawIntent));
+            } else {
+                OutputProcessor.errorResponse(res, 400, "Bad Request", "Invalid function header.", req.getRequestURI());
             }
         } catch (Exception e) {
-            OutputProcessor.errorResponse(res, 500, "Internal Intent Error", e.getMessage(), req.getRequestURI());
+            OutputProcessor.errorResponse(res, 500, "Intent Resolution Failed", e.getMessage(), req.getRequestURI());
         }
     }
 
     /**
-     * Maps natural language strings to UI Components.
-     * Collapses Intent into Adaptive UI schema.
+     * Maps intent to UI components.
+     * Uses a polymorphic approach: The UI behaves differently based on the 'type' of the twin.
      */
     private JSONObject resolveToAdaptiveUI(String intent) {
         JSONObject response = new JSONObject();
         JSONArray components = new JSONArray();
+        String cleanIntent = intent.trim();
 
-        String cleanIntent = intent.toLowerCase().trim();
+        // 1. DISAMBIGUATION / CONTEXT LOOKUP (@target)
+        // If the user mentions an entity, always trigger a Context Card.
+        // The Nexus 'Context' API will determine if it's a Customer, Machine, or Doctor.
+        if (cleanIntent.contains("@")) {
+            String target = extractTarget(cleanIntent);
+            // Polymorphic Card: Renders differently based on Twin Type (FSM State)
+            components.add(createComponent("universal_context_card", "{\"target\":\"" + target + "\"}"));
+        }
 
-        // 1. Action Pattern: State Mutation (/set_status @target value)
-        if (cleanIntent.startsWith("/set_status")) {
-            String[] parts = cleanIntent.split(" ");
-            if (parts.length >= 3) {
+        // 2. UNIVERSAL COMMAND PATTERN (/command @target value)
+        // This collapses all verbs: /disburse, /repair, /admit, /set_status
+        if (cleanIntent.startsWith("/")) {
+            String[] parts = cleanIntent.split("\\s+", 3);
+            if (parts.length >= 2) {
+                String actionVerb = parts[0].substring(1).toUpperCase(); // e.g., DISBURSE
+                String target = parts[1];
+                String value = (parts.length > 2) ? parts[2] : "";
+
                 JSONObject props = new JSONObject();
-                props.put("target", parts[1]);      // e.g., @satish
-                props.put("new_status", parts[2]);  // e.g., busy
+                props.put("action_type", actionVerb);
+                props.put("target", target);
+                props.put("value", value);
                 props.put("intent_raw", cleanIntent);
                 
-                // Return the confirmation card to bridge to Governance
-                components.add(createComponent("action_confirm_card", props.toJSONString()));
+                // Returns a 'Handshake' component that binds to the Governance Pillar
+                components.add(createComponent("universal_action_confirm", props.toJSONString()));
             }
         } 
         
-        // 2. Query Pattern: Health/Context Check (@target or /check)
-        else if (cleanIntent.startsWith("/check") || cleanIntent.contains("@")) {
-            String targetId = extractTarget(cleanIntent);
-            components.add(createComponent("twin_context_card", "{\"target\":\"" + targetId + "\"}"));
-        } 
-        
-        // 3. Governance Pattern: Financial/Policy Action
-        else if (cleanIntent.contains("limit") || cleanIntent.contains("disburse")) {
-            components.add(createComponent("policy_validation_form", "{\"intent\":\"" + cleanIntent + "\"}"));
-        } 
-        
-        // 4. Default: Search / Semantic Interaction
-        else {
-            components.add(createComponent("nexus_search_results", "{\"query\":\"" + cleanIntent + "\"}"));
+        // 3. SEMANTIC SEARCH / KNOWLEDGE RETRIEVAL
+        // If it's not a command or specific target, treat it as a natural language query.
+        else if (!cleanIntent.contains("@") && !cleanIntent.startsWith("/")) {
+            JSONObject props = new JSONObject();
+            props.put("query", cleanIntent);
+            components.add(createComponent("nexus_semantic_results", props.toJSONString()));
         }
 
         response.put("success", true);
@@ -91,7 +86,7 @@ public class Intent implements Action {
     }
 
     /**
-     * Helper to wrap UI schema for the Liquid frontend.
+     * Generates the UI Schema for the Liquid Interface.
      */
     private JSONObject createComponent(String type, String propsJson) {
         JSONObject comp = new JSONObject();
@@ -101,13 +96,13 @@ public class Intent implements Action {
     }
 
     /**
-     * Crude extraction of @mention for the prototype.
+     * Uses Regex to extract handles (e.g., @satish or @machine_01).
      */
     private String extractTarget(String intent) {
-        if (intent.contains("@")) {
-            int start = intent.indexOf("@");
-            int spaceEnd = intent.indexOf(" ", start);
-            return (spaceEnd == -1) ? intent.substring(start) : intent.substring(start, spaceEnd);
+        Pattern pattern = Pattern.compile("@([\\w\\.]+)");
+        Matcher matcher = pattern.matcher(intent);
+        if (matcher.find()) {
+            return "@" + matcher.group(1);
         }
         return "unknown";
     }
@@ -115,10 +110,5 @@ public class Intent implements Action {
     @Override public void get(HttpServletRequest req, HttpServletResponse res) {}
     @Override public void put(HttpServletRequest req, HttpServletResponse res) {}
     @Override public void delete(HttpServletRequest req, HttpServletResponse res) {}
-    
-    @Override 
-    public boolean validate(String method, HttpServletRequest req, HttpServletResponse res) {
-        // Prototype bypass - in production, validate JWT or Handshake Token
-        return true;
-    }
+    @Override public boolean validate(String m, HttpServletRequest req, HttpServletResponse res) { return true; }
 }

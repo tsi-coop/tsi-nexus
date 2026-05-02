@@ -13,9 +13,9 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 /**
- * TSI Nexus: Context Resolver
- * Responsible for assembling the "Institutional Memory" for a Digital Twin.
- * Bridges the State Store, Interaction Stream (Vectors), and History.
+ * TSI Nexus: Universal Context Resolver
+ * Assembles the "Institutional Memory" by weaving together the State Store (Postgres),
+ * the Social/Industrial Graph (Relationships), and the Interaction Stream (History).
  */
 public class Context implements Action {
 
@@ -25,45 +25,38 @@ public class Context implements Action {
             JSONObject input = InputProcessor.getInput(req);
             String func = req.getHeader("X-DX-FUNCTION");
 
-            if (func == null || func.trim().isEmpty()) {
-                OutputProcessor.errorResponse(res, 400, "Bad Request", "Missing function header.", req.getRequestURI());
-                return;
+            if ("get_twin_context".equalsIgnoreCase(func)) {
+                String externalId = (String) input.get("external_id");
+                // Clean the @ prefix if present
+                String cleanId = externalId.startsWith("@") ? externalId.substring(1) : externalId;
+                OutputProcessor.send(res, 200, assembleFullContext(cleanId));
+            } else {
+                OutputProcessor.errorResponse(res, 400, "Bad Request", "Missing or invalid function.", req.getRequestURI());
             }
-
-            switch (func.toLowerCase()) {
-                case "get_twin_context":
-                    // Assembles the full "Institutional Memory" for a twin
-                    String externalId = (String) input.get("external_id");
-                    OutputProcessor.send(res, 200, assembleFullContext(externalId));
-                    break;
-
-                case "get_interaction_history":
-                    // Fetches recent semantic notes/chats for a twin
-                    String twinId = (String) input.get("twin_id");
-                    OutputProcessor.send(res, 200, fetchInteractionStream(UUID.fromString(twinId)));
-                    break;
-
-                default:
-                    OutputProcessor.errorResponse(res, 400, "Unknown Function", func, req.getRequestURI());
-            }
-        } catch (SQLException e) {
-            OutputProcessor.errorResponse(res, 500, "Database Error", e.getMessage(), req.getRequestURI());
         } catch (Exception e) {
-            OutputProcessor.errorResponse(res, 500, "Internal Error", e.getMessage(), req.getRequestURI());
+            OutputProcessor.errorResponse(res, 500, "Context Retrieval Failed", e.getMessage(), req.getRequestURI());
         }
     }
 
     /**
-     * The "Collapse" Method: Joins Live State, History Count, and Metadata.
+     * The "Graph-Walk" Method.
+     * Fetches the Twin's state and its immediate network of relationships.
      */
     private JSONObject assembleFullContext(String externalId) throws SQLException {
         Connection conn = null; PreparedStatement pstmt = null; ResultSet rs = null; PoolDB pool = new PoolDB();
+        JSONObject response = new JSONObject();
         JSONObject context = new JSONObject();
 
         try {
             conn = pool.getConnection();
-            String sql = "SELECT id, type, current_state, version_count, updated_at " +
-                         "FROM digital_twins WHERE external_id = ?";
+            
+            // Universal Query: Joins the Twin with its Graph Relationships
+            // Uses a Left Join to ensure we get the twin even if it has no links yet.
+            String sql = "SELECT t.id, t.type, t.current_state, t.updated_at, " +
+                         "(SELECT json_agg(json_build_object('type', r.relationship_type, 'to', t2.external_id)) " +
+                          "FROM twin_relationships r JOIN digital_twins t2 ON r.to_twin_id = t2.id " +
+                          "WHERE r.from_twin_id = t.id) as out_links " +
+                         "FROM digital_twins t WHERE t.external_id = ?";
 
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, externalId);
@@ -72,51 +65,53 @@ public class Context implements Action {
             if (rs.next()) {
                 UUID internalId = (UUID) rs.getObject("id");
                 context.put("twin_id", internalId.toString());
+                context.put("target", "@" + externalId);
                 context.put("type", rs.getString("type"));
                 context.put("state", rs.getString("current_state"));
-                context.put("version", rs.getInt("version_count"));
                 context.put("last_updated", rs.getTimestamp("updated_at").toString());
+                
+                // Attach Graph Data (The 'Links' that define institutional role)
+                context.put("graph_links", rs.getString("out_links"));
 
-                // Nested Data: Attach recent semantic memory
-                context.put("recent_interactions", fetchInteractionStream(internalId));
+                // Attach Interaction Stream (The 'History' that builds trust)
+                context.put("recent_interactions", fetchInteractionStream(conn, internalId));
+                
+                response.put("success", true);
+                response.put("context", context);
+            } else {
+                response.put("success", false);
+                response.put("reason", "Entity not found in Institutional Memory.");
             }
-        } finally { pool.cleanup(rs, pstmt, conn); }
-        
-        return new JSONObject() {{ put("success", true); put("context", context); }};
+        } finally {
+            pool.cleanup(rs, pstmt, conn);
+        }
+        return response;
     }
 
     /**
-     * Fetches the Interaction Stream (The Unstructured Memory Pillar).
+     * Fetches recent semantic history for this specific node.
      */
-    private JSONArray fetchInteractionStream(UUID twinId) throws SQLException {
+    private JSONArray fetchInteractionStream(Connection conn, UUID twinId) throws SQLException {
         JSONArray logs = new JSONArray();
-        Connection conn = null; PreparedStatement pstmt = null; ResultSet rs = null; PoolDB pool = new PoolDB();
-        try {
-            conn = pool.getConnection();
-            // Fetching recent 5 notes/sensor logs
-            pstmt = conn.prepareStatement(
-                "SELECT content, created_at FROM interaction_stream " +
-                "WHERE owner_id = ? ORDER BY created_at DESC LIMIT 5"
-            );
+        String sql = "SELECT content, created_at FROM interaction_stream " +
+                     "WHERE owner_id = ? ORDER BY created_at DESC LIMIT 5";
+        
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setObject(1, twinId);
-            rs = pstmt.executeQuery();
-            while (rs.next()) {
-                JSONObject entry = new JSONObject();
-                entry.put("content", rs.getString("content"));
-                entry.put("timestamp", rs.getTimestamp("created_at").toString());
-                logs.add(entry);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject entry = new JSONObject();
+                    entry.put("content", rs.getString("content"));
+                    entry.put("timestamp", rs.getTimestamp("created_at").toString());
+                    logs.add(entry);
+                }
             }
-        } finally { pool.cleanup(rs, pstmt, conn); }
+        }
         return logs;
     }
 
     @Override public void get(HttpServletRequest req, HttpServletResponse res) {}
     @Override public void put(HttpServletRequest req, HttpServletResponse res) {}
     @Override public void delete(HttpServletRequest req, HttpServletResponse res) {}
-    
-    @Override 
-    public boolean validate(String method, HttpServletRequest req, HttpServletResponse res) {
-        //return InputProcessor.validate(req, res);
-        return true;
-    }
+    @Override public boolean validate(String m, HttpServletRequest req, HttpServletResponse res) { return true; }
 }

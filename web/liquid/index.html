@@ -3,64 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSI Nexus | Liquid Interface</title>
+    <title>Liquid | Adaptive Enterprise Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        #liquid-stage { transition: all 0.3s ease-in-out; }
-        .component-fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
+        :root {
+            --liquid-blue: #3b82f6; 
+            --nexus-dark: #0f172a;  
+            --tsi-yellow: #ffca28;  
+            --tsi-red: #ef5350;     
         }
+        body { 
+            background-color: #f8fafc; 
+            color: var(--nexus-dark); 
+            background-image: radial-gradient(#e2e8f0 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+        }
+        .liquid-logo {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, var(--liquid-blue), #60a5fa);
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            animation: morph 6s ease-in-out infinite;
+            border: 2px solid white;
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
+        }
+        @keyframes morph {
+            0%, 100% { border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; }
+            50% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+        }
+        .nexus-border {
+            border-left: 8px solid var(--liquid-blue);
+            border-right: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+        }
+        .component-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .accent-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-200 font-sans min-h-screen">
+<body class="font-sans antialiased min-h-screen">
 
-    <header class="border-b border-slate-800 p-4 flex justify-between items-center bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div class="flex items-center space-x-3">
-            <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-            <h1 class="text-sm font-bold tracking-widest uppercase text-slate-400">TSI Nexus // Sovereign Core</h1>
-        </div>
-        <div id="connection-status" class="text-xs text-slate-500 italic">Institutional Memory Active</div>
+    <header class="max-w-4xl mx-auto px-4 pt-16 pb-12 flex flex-col items-center text-center">
+        <div class="liquid-logo mb-6"></div>
+        <h1 class="text-5xl font-black tracking-tighter text-slate-900 italic leading-none mb-4">Liquid</h1>
+        <p class="text-slate-500 text-xs font-black tracking-[0.2em] uppercase max-w-md border-y border-slate-200 py-4">
+            Adaptive Interface for Intelligent Enterprise
+        </p>
     </header>
 
-    <main class="container mx-auto max-w-4xl px-4 py-12">
-        
-        <div class="relative group mb-12">
-            <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
+    <main class="container mx-auto max-w-2xl px-4">
+        <div class="relative mb-16">
+            <div class="absolute -left-3 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-lg shadow-[0_0_15px_rgba(59,130,246,0.4)]"></div>
             <input type="text" id="command-k" 
-                   class="relative w-full bg-slate-900 border border-slate-700 p-6 rounded-xl text-2xl font-light outline-none focus:border-blue-500 transition-all placeholder:text-slate-600"
-                   placeholder="Try: /set_status @satish busy"
+                   class="w-full bg-white border border-slate-200 p-8 rounded-2xl text-2xl font-light outline-none focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-slate-300 shadow-xl shadow-slate-200/40"
+                   placeholder="Express Intent..."
                    autocomplete="off">
+            <div class="absolute right-8 top-1/2 -translate-y-1/2 flex items-center space-x-3">
+                <span class="accent-dot bg-[--tsi-yellow]"></span>
+                <span class="accent-dot bg-[--tsi-red]"></span>
+                <span class="text-[10px] font-black text-slate-400 tracking-widest uppercase ml-3">Nexus Active</span>
+            </div>
         </div>
 
-        <div id="liquid-stage" class="space-y-6">
-            <div class="text-center py-20 border-2 border-dashed border-slate-800 rounded-2xl">
-                <p class="text-slate-500 font-mono tracking-tighter">Waiting for Intent...</p>
+        <div id="liquid-stage" class="space-y-10 pb-32">
+            <div class="text-center py-24 opacity-20">
+                <div class="inline-block border-2 border-slate-300 rounded-full px-8 py-2">
+                    <p class="text-[10px] uppercase tracking-[0.5em] font-black text-slate-500">Awaiting Signal</p>
+                </div>
             </div>
         </div>
     </main>
 
-    <template id="tpl-twin_context_card">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 component-fade-in shadow-xl">
-            <div class="flex justify-between items-start mb-4">
-                <h3 class="text-blue-400 font-mono text-sm uppercase tracking-tighter">Digital Twin State</h3>
-                <span class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">Verified</span>
+    <template id="tpl-universal_context_card">
+        <div class="bg-white nexus-border rounded-2xl p-10 shadow-lg component-fade-in">
+            <div class="flex justify-between items-start mb-10">
+                <div>
+                    <h2 class="target-handle text-3xl font-black text-slate-900 tracking-tight mb-1">@target</h2>
+                    <div class="flex items-center space-x-2">
+                        <span class="twin-type text-[11px] font-black uppercase tracking-[0.2em] text-blue-600">TYPE</span>
+                        <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Sovereign Node</span>
+                    </div>
+                </div>
+                <div class="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100">
+                    <div class="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+                </div>
             </div>
-            <div id="twin-data-payload" class="grid grid-cols-2 gap-4"></div>
+            <div class="state-grid grid grid-cols-2 gap-y-10 gap-x-8 mb-12"></div>
+            <div class="bg-slate-50/80 rounded-2xl p-6 border border-slate-100">
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">Graph Topology</h4>
+                <div class="graph-links flex flex-wrap gap-3"></div>
+            </div>
         </div>
     </template>
 
-    <template id="tpl-action_confirm_card">
-        <div class="bg-blue-900/20 border border-blue-500 rounded-xl p-6 component-fade-in">
-            <div class="flex items-center space-x-3 mb-4">
-                <div class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
-                <h3 class="text-blue-400 font-bold uppercase text-xs tracking-widest">Proposed Mutation</h3>
-            </div>
-            <p id="confirm-msg" class="text-sm text-slate-300 mb-6 font-light"></p>
-            <div class="flex space-x-3">
-                <button id="exec-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-blue-900/50">Execute Update</button>
-                <button onclick="this.closest('.bg-blue-900\\/20').remove()" class="text-slate-500 text-sm hover:text-slate-300">Dismiss</button>
+    <template id="tpl-universal_action_confirm">
+        <div class="bg-slate-900 text-white rounded-3xl p-12 shadow-2xl component-fade-in relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-blue-600 to-indigo-600"></div>
+            <h3 class="text-blue-400 font-black text-[11px] uppercase tracking-[0.5em] mb-6">Governance Handshake</h3>
+            <p class="action-desc text-3xl font-light leading-tight mb-12 text-slate-100">Proposed action...</p>
+            <div class="flex items-center space-x-8">
+                <button class="exec-btn bg-blue-600 text-white px-12 py-5 rounded-2xl text-sm font-black hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/20">Authorize Mutation</button>
+                <button onclick="this.closest('.component-fade-in').remove()" class="text-slate-500 text-xs font-black uppercase tracking-widest hover:text-white transition-colors">Dismiss</button>
             </div>
         </div>
     </template>
@@ -70,15 +112,15 @@
         const stage = document.getElementById('liquid-stage');
 
         input.addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
-                const intent = input.value;
+            if (e.key === 'Enter' && input.value.trim()) {
+                const val = input.value;
                 input.value = '';
-                await resolveIntent(intent);
+                await resolveIntent(val);
             }
         });
 
         async function resolveIntent(intent) {
-            stage.innerHTML = '<div class="text-center py-10 animate-pulse text-blue-500 font-mono tracking-widest">REASONING...</div>';
+            stage.innerHTML = '<div class="text-center py-16 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.4em]">RESOLVING INTENT...</div>';
             try {
                 const response = await fetch('/api/intent', {
                     method: 'POST',
@@ -88,97 +130,106 @@
                 const data = await response.json();
                 renderAdaptiveUI(data.components);
             } catch (err) {
-                stage.innerHTML = `<div class="p-4 bg-red-900/30 border border-red-500 text-red-200 rounded">Nexus Connection Failed.</div>`;
+                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-700 border-l-8 border-red-500 rounded-xl shadow-lg font-bold">Nexus Connection Failed</div>`;
             }
         }
 
-        function renderAdaptiveUI(components) {
-            stage.innerHTML = ''; 
-            components.forEach(comp => {
-                const template = document.getElementById(`tpl-${comp.component_type}`);
-                if (template) {
-                    const clone = template.content.cloneNode(true);
-                    const props = JSON.parse(comp.props);
+        // Helper to safely update text/html
+        const safeSet = (el, val, mode = 'text') => {
+            if (!el) return;
+            if (mode === 'html') el.innerHTML = val;
+            else el.innerText = val;
+        };
 
-                    if (comp.component_type === 'twin_context_card') {
-                        clone.querySelector('#twin-data-payload').innerHTML =
-                            `<div class="col-span-2 text-slate-500 text-xs animate-pulse font-mono">loading state...</div>`;
-                        stage.appendChild(clone);
-                        const livePayload = stage.querySelector('#twin-data-payload');
-                        const targetId = props.target.replace(/^@/, '');
-                        fetch('/api/context', {
+        async function renderAdaptiveUI(components) {
+            stage.innerHTML = ''; 
+            for (const comp of components) {
+                const template = document.getElementById(`tpl-${comp.component_type}`);
+                if (!template) continue;
+
+                const clone = template.content.cloneNode(true);
+                const container = clone.querySelector('div'); // The root card div
+                const props = JSON.parse(comp.props);
+
+                if (comp.component_type === 'universal_context_card') {
+                    safeSet(container.querySelector('.target-handle'), props.target);
+
+                    try {
+                        const resCtx = await fetch('/api/context', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'get_twin_context' },
-                            body: JSON.stringify({ external_id: targetId })
-                        })
-                        .then(r => r.json())
-                        .then(ctxData => {
-                            const raw = (ctxData.context || {}).state;
-                            const state = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
-                            livePayload.innerHTML = `
-                                <div><p class="text-xs text-slate-500">Entity</p><p class="font-mono text-blue-300">${props.target}</p></div>
-                                <div><p class="text-xs text-slate-500">Status</p><p class="text-emerald-400">${state.status || 'unknown'}</p></div>
-                            `;
-                        })
-                        .catch(() => {
-                            livePayload.innerHTML = `
-                                <div><p class="text-xs text-slate-500">Entity</p><p class="font-mono text-blue-300">${props.target}</p></div>
-                                <div><p class="text-xs text-slate-500">Status</p><p class="text-yellow-400">unavailable</p></div>
-                            `;
+                            body: JSON.stringify({ external_id: props.target })
                         });
-                    } else {
-                        if (comp.component_type === 'action_confirm_card') {
-                            clone.querySelector('#confirm-msg').innerText = `Update state of ${props.target} to: "${props.new_status}"?`;
-                            clone.querySelector('#exec-btn').onclick = () => finalizeAction(props);
+                        const data = await resCtx.json();
+                        const ctx = data.context;
+
+                        safeSet(container.querySelector('.twin-type'), ctx.type);
+                        
+                        const state = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
+                        const gridHtml = Object.entries(state).map(([k, v]) => `
+                            <div class="group">
+                                <p class="text-[10px] uppercase font-black text-slate-300 tracking-widest mb-2 group-hover:text-blue-500 transition-colors">${k}</p>
+                                <p class="text-lg font-bold text-slate-800">${v}</p>
+                            </div>
+                        `).join('');
+                        safeSet(container.querySelector('.state-grid'), gridHtml, 'html');
+
+                        const links = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
+                        if(links && links.length > 0) {
+                            const linksHtml = links.map(l => `
+                                <span class="bg-white border border-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl shadow-sm hover:border-blue-300 transition-colors">
+                                    ${l.type} <span class="text-blue-500 mx-1">→</span> ${l.to}
+                                </span>
+                            `).join('');
+                            safeSet(container.querySelector('.graph-links'), linksHtml, 'html');
                         }
-                        stage.appendChild(clone);
-                    }
+                    } catch (e) { console.error("Context Error", e); }
+                    
+                } else if (comp.component_type === 'universal_action_confirm') {
+                    safeSet(container.querySelector('.action-desc'), `Execute ${props.action_type} for ${props.target} with value "${props.value}"?`);
+                    const execBtn = container.querySelector('.exec-btn');
+                    if (execBtn) execBtn.onclick = () => finalizeAction(props);
                 }
-            });
+
+                stage.appendChild(clone);
+            }
         }
 
         async function finalizeAction(props) {
-            stage.innerHTML = '<div class="text-center py-10 animate-pulse text-emerald-500 font-mono">MUTATING...</div>';
+            stage.innerHTML = '<div class="text-center py-24 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.6em]">GOVERNANCE CHECK</div>';
             try {
                 const res = await fetch('/api/governance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'validate_and_execute' },
                     body: JSON.stringify({
-                        actor_id: "00000000-0000-0000-0000-000000000000",
-                        action_type: "UPDATE_STATUS",
+                        action_type: props.action_type,
                         intent_raw: props.intent_raw,
                         params: {
                             target_external_id: props.target,
-                            new_data: { "status": props.new_status }
+                            new_data: { [props.action_type.toLowerCase() + "_val"]: props.value }
                         }
                     })
                 });
-
-                // --- NEW DEBUG BLOCK ---
-                const rawResponse = await res.text();
-                console.log("Nexus Raw Response:", rawResponse);
-
-                let result;
-                try {
-                    result = JSON.parse(rawResponse);
-                } catch (jsonErr) {
-                    throw new Error("Nexus returned invalid JSON. Check Java console. Raw: " + rawResponse.substring(0, 50));
-                }
-                // --- END DEBUG BLOCK ---
-
+                const result = await res.json();
                 if(result.success) {
-                    stage.innerHTML = `<div class="p-8 bg-emerald-900/20 border border-emerald-500 text-emerald-200 rounded-xl text-center component-fade-in">
-                        <p class="font-bold">Transaction Finalized</p>
-                        <p class="text-xs opacity-70">Audit ID: ${Math.random().toString(36).substring(7)}</p>
+                    stage.innerHTML = `<div class="p-20 bg-white border border-blue-100 rounded-3xl text-center component-fade-in shadow-2xl">
+                        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <p class="font-black text-2xl text-slate-900 tracking-tight mb-2 text-blue-600">Mutation Authorized</p>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em]">State Synchronized via Nexus</p>
                     </div>`;
-                    setTimeout(() => resolveIntent(`/check ${props.target}`), 1200);
+                    setTimeout(() => resolveIntent(`@${props.target.replace(/^@/, '')}`), 2000);
                 } else {
-                    alert("Nexus Denied: " + result.reason);
+                    stage.innerHTML = `<div class="p-12 border-l-[12px] border-red-500 bg-white text-slate-900 rounded-2xl component-fade-in shadow-2xl">
+                        <h4 class="text-red-600 font-black text-[11px] uppercase tracking-[0.4em] mb-4">Governance Denial</h4>
+                        <p class="text-xl font-bold leading-tight text-slate-800">${result.reason}</p>
+                        <div class="mt-10 pt-6 border-t border-slate-100">
+                            <button onclick="location.reload()" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Clear Logic Fault</button>
+                        </div>
+                    </div>`;
                 }
-            } catch (err) {
-                console.error(err);
-                stage.innerHTML = `<div class="p-4 bg-red-900/30 border border-red-500 text-red-200 rounded">Governance Error: ${err.message}</div>`;
-            }
+            } catch (err) { stage.innerHTML = `<div class="p-8 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">Nexus Error: ${err.message}</div>`; }
         }
     </script>
 </body>
