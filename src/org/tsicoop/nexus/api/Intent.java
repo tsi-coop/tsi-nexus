@@ -22,14 +22,8 @@ public class Intent implements Action {
     public void post(HttpServletRequest req, HttpServletResponse res) {
         try {
             JSONObject input = InputProcessor.getInput(req);
-            String func = req.getHeader("X-DX-FUNCTION");
-
-            if ("resolve_intent".equalsIgnoreCase(func)) {
-                String rawIntent = (String) input.get("intent");
-                OutputProcessor.send(res, 200, resolveToAdaptiveUI(rawIntent));
-            } else {
-                OutputProcessor.errorResponse(res, 400, "Bad Request", "Invalid function header.", req.getRequestURI());
-            }
+String rawIntent = (String) input.get("intent");
+            OutputProcessor.send(res, 200, resolveToAdaptiveUI(rawIntent));
         } catch (Exception e) {
             OutputProcessor.errorResponse(res, 500, "Intent Resolution Failed", e.getMessage(), req.getRequestURI());
         }

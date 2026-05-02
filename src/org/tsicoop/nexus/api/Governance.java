@@ -24,14 +24,7 @@ public class Governance implements Action {
     public void post(HttpServletRequest req, HttpServletResponse res) {
         try {
             JSONObject input = InputProcessor.getInput(req);
-            String func = req.getHeader("X-DX-FUNCTION");
-
-            if ("validate_and_execute".equalsIgnoreCase(func)) {
-                JSONObject result = processGuardedAction(input);
-                OutputProcessor.send(res, 200, result);
-            } else {
-                OutputProcessor.errorResponse(res, 400, "Bad Request", "Invalid function.", req.getRequestURI());
-            }
+            OutputProcessor.send(res, 200, processGuardedAction(input));
         } catch (Exception e) {
             e.printStackTrace();
             JSONObject errorJson = new JSONObject();

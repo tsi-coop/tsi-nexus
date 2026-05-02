@@ -23,16 +23,9 @@ public class Context implements Action {
     public void post(HttpServletRequest req, HttpServletResponse res) {
         try {
             JSONObject input = InputProcessor.getInput(req);
-            String func = req.getHeader("X-DX-FUNCTION");
-
-            if ("get_twin_context".equalsIgnoreCase(func)) {
-                String externalId = (String) input.get("external_id");
-                // Clean the @ prefix if present
-                String cleanId = externalId.startsWith("@") ? externalId.substring(1) : externalId;
-                OutputProcessor.send(res, 200, assembleFullContext(cleanId));
-            } else {
-                OutputProcessor.errorResponse(res, 400, "Bad Request", "Missing or invalid function.", req.getRequestURI());
-            }
+            String externalId = (String) input.get("external_id");
+            String cleanId = externalId.startsWith("@") ? externalId.substring(1) : externalId;
+            OutputProcessor.send(res, 200, assembleFullContext(cleanId));
         } catch (Exception e) {
             OutputProcessor.errorResponse(res, 500, "Context Retrieval Failed", e.getMessage(), req.getRequestURI());
         }

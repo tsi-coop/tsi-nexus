@@ -129,7 +129,7 @@
             try {
                 const response = await fetch('/api/intent', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'resolve_intent' },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ intent: intent })
                 });
                 const data = await response.json();
@@ -161,7 +161,7 @@
                     try {
                         const resCtx = await fetch('/api/context', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'get_twin_context' },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ external_id: props.target })
                         });
                         const data = await resCtx.json();
@@ -250,7 +250,7 @@
             try {
                 const res = await fetch('/api/governance', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-DX-FUNCTION': 'validate_and_execute' },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody)
                 });
                 
