@@ -40,24 +40,26 @@ INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type) VAL
 -- 5. THE POLICY MANIFEST (Governance & Analytics)
 
 -- ACTION: DISBURSE (KYC Guard)
-INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message)
-VALUES ('POL-KYC', 'DISBURSE', 'Identity Verification', 
-        'SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND current_state->>''kyc'' != ''Verified''', 
-        'Action Blocked: KYC documentation is missing or pending.');
+INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode)
+VALUES ('POL-KYC', 'DISBURSE', 'Identity Verification',
+        'SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND current_state->>''kyc'' != ''Verified''',
+        'Action Blocked: KYC documentation is missing or pending.',
+        'GUARDRAIL');
 
 -- ACTION: DISBURSE (Group NPA Guard)
-INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message)
-VALUES ('POL-JLG', 'DISBURSE', 'Group Liability Check', 
-        'SELECT COUNT(*) FROM digital_twins t 
-         JOIN twin_relationships r1 ON t.id = r1.from_twin_id 
-         JOIN twin_relationships r2 ON r1.to_twin_id = r2.to_twin_id 
-         JOIN digital_twins m ON r2.from_twin_id = m.id 
-         WHERE t.external_id = ? AND m.current_state->>''status'' = ''NPA''', 
-        'Action Blocked: A member of your Joint Liability Group is in default.');
+INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode)
+VALUES ('POL-JLG', 'DISBURSE', 'Group Liability Check',
+        'SELECT COUNT(*) FROM digital_twins t
+         JOIN twin_relationships r1 ON t.id = r1.from_twin_id
+         JOIN twin_relationships r2 ON r1.to_twin_id = r2.to_twin_id
+         JOIN digital_twins m ON r2.from_twin_id = m.id
+         WHERE t.external_id = ? AND m.current_state->>''status'' = ''NPA''',
+        'Action Blocked: A member of your Joint Liability Group is in default.',
+        'GUARDRAIL');
 
 -- ACTION: ANALYZE (Single Entity Performance)
 -- Uses two-hop traversal so branches (branch→officer→member) are resolved correctly.
-INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message)
+INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode)
 VALUES ('ANALYZE-E', 'ANALYZE', 'Portfolio Quality Drill-down',
         'WITH target AS (
              SELECT id, external_id FROM digital_twins WHERE external_id = ?
@@ -81,11 +83,12 @@ VALUES ('ANALYZE-E', 'ANALYZE', 'Portfolio Quality Drill-down',
          FROM target t, all_reach ar
          JOIN digital_twins m ON m.id = ar.node_id AND m.type = ''member''
          GROUP BY t.external_id',
-        'Analysis Complete: Visualizing entity performance.');
+        'Analysis Complete: Visualizing entity performance.',
+        'ANALYTICS');
 
 -- ACTION: COMPARE (Benchmarking two Entities)
 -- Same two-hop traversal as ANALYZE, carrying root_id so members are aggregated per target.
-INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message)
+INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode)
 VALUES ('COMPARE-E', 'COMPARE', 'Side-by-side Institutional Benchmarking',
         'WITH target AS (
              SELECT id, external_id FROM digital_twins WHERE external_id IN (?, ?)
@@ -112,4 +115,5 @@ VALUES ('COMPARE-E', 'COMPARE', 'Side-by-side Institutional Benchmarking',
          JOIN all_reach ar ON t.id = ar.root_id
          JOIN digital_twins m ON m.id = ar.node_id AND m.type = ''member''
          GROUP BY t.external_id',
-        'Comparison Complete: Benchmarking institutional nodes.');
+        'Comparison Complete: Benchmarking institutional nodes.',
+        'ANALYTICS');

@@ -56,12 +56,15 @@ CREATE TABLE interaction_stream (
 -- 6. THE POLICY MANIFEST (Governance)
 -- This is the "Business Compiler" table.
 CREATE TABLE policy_manifest (
-    policy_id TEXT PRIMARY KEY,        
+    policy_id TEXT PRIMARY KEY,
     action_type TEXT NOT NULL,         -- Matches the /command verb (e.g., DISBURSE)
-    description TEXT,                  
-    query_logic TEXT NOT NULL,         -- The SQL-based Guardrail
-    error_message TEXT NOT NULL,       -- Liquid feedback string
-    is_active BOOLEAN DEFAULT TRUE,    
+    description TEXT,
+    query_logic TEXT NOT NULL,         -- The SQL executed at runtime
+    error_message TEXT NOT NULL,       -- Liquid feedback string (denial reason or analytics label)
+    execution_mode TEXT NOT NULL DEFAULT 'GUARDRAIL'
+        CHECK (execution_mode IN ('GUARDRAIL', 'ANALYTICS')),
+                                       -- GUARDRAIL: blocks if COUNT > 0; ANALYTICS: returns rows as data
+    is_active BOOLEAN DEFAULT TRUE,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

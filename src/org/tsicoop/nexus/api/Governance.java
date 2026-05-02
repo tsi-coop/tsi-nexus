@@ -54,8 +54,8 @@ public class Governance implements Action {
             conn = pool.getConnection();
             conn.setAutoCommit(false);
 
-            // Read-only analytics: execute query and return result label as success
-            if ("ANALYZE".equalsIgnoreCase(actionType) || "COMPARE".equalsIgnoreCase(actionType)) {
+            // Branch on execution_mode from policy_manifest — no hardcoded action types
+            if ("ANALYTICS".equals(fetchExecutionMode(conn, actionType))) {
                 JSONObject result = executeAnalysis(conn, actionType, params);
                 conn.commit();
                 return result;
@@ -91,9 +91,17 @@ public class Governance implements Action {
         }
     }
 
-    /**
-     * The Policy Engine: Executes SQL guardrails defined in the policy_manifest table.
-     */
+    private String fetchExecutionMode(Connection conn, String actionType) throws SQLException {
+        String sql = "SELECT execution_mode FROM policy_manifest WHERE action_type = ? AND is_active = TRUE LIMIT 1";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, actionType.toUpperCase());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return rs.getString("execution_mode");
+            }
+        }
+        return "GUARDRAIL";
+    }
+
     private String checkPolicyManifest(Connection conn, String action, JSONObject params) throws SQLException {
         String sql = "SELECT query_logic, error_message FROM policy_manifest WHERE action_type = ? AND is_active = TRUE";
         
