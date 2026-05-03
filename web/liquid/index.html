@@ -298,6 +298,10 @@
             <span class="ex-chip" onclick="fire(this)">How is the East branch doing?</span>
             <span class="ex-chip" onclick="fire(this)">Analyze anita's portfolio</span>
             <span class="ex-chip" onclick="fire(this)">Benchmark east and west branch</span>
+            <span class="ex-chip" onclick="fire(this)" style="border-color:#f59e0b40;color:#92400e;background:#451a03;">Meena</span>
+            <span class="ex-chip" onclick="fire(this)" style="border-color:#f59e0b40;color:#92400e;background:#451a03;">Satish</span>
+            <span class="ex-chip" onclick="fire(this)" style="border-color:#4ade8040;color:#14532d;background:#052e16;">Ravi</span>
+            <span class="ex-chip" onclick="fire(this)" style="border-color:#4ade8040;color:#14532d;background:#052e16;">Leela</span>
 
             <hr class="sec-divider">
 
@@ -330,17 +334,22 @@
                 <span class="ent-chip ent-branch" onclick="fire(this)">@branch_east</span>
                 <span class="ent-chip ent-branch" onclick="fire(this)">@branch_west</span>
             </div>
-            <div class="ent-label">Members</div>
+            <div class="ent-label">Members (type a name to search)</div>
             <div class="ent-row">
                 <span class="ent-chip ent-member" onclick="fire(this)">@satish_01</span>
                 <span class="ent-chip ent-member" onclick="fire(this)">@anita_02</span>
                 <span class="ent-chip ent-member" onclick="fire(this)">@rohan_03</span>
                 <span class="ent-chip ent-member" onclick="fire(this)">@meena_04</span>
+                <span class="ent-chip ent-member" onclick="fire(this)">@ravi_06</span>
+                <span class="ent-chip ent-member" onclick="fire(this)">@leela_13</span>
+                <span class="ent-chip ent-member" style="color:#64748b;cursor:default;opacity:.5;">+10 more…</span>
             </div>
             <div class="ent-label">Groups</div>
             <div class="ent-row">
                 <span class="ent-chip ent-group" onclick="fire(this)">@unity_group</span>
                 <span class="ent-chip ent-group" onclick="fire(this)">@alpha_group</span>
+                <span class="ent-chip ent-group" onclick="fire(this)">@sunrise_group</span>
+                <span class="ent-chip ent-group" onclick="fire(this)">@delta_group</span>
             </div>
 
             <hr class="sec-divider">
@@ -513,6 +522,8 @@
                 await renderContextCard(props);
             } else if (comp.component_type === 'universal_action_confirm') {
                 renderActionCard(props);
+            } else if (comp.component_type === 'nexus_disambiguation_card') {
+                renderDisambiguationCard(props);
             }
         }
     }
@@ -522,6 +533,13 @@
         const tpl   = document.getElementById('tpl-ctx-card');
         const clone = tpl.content.cloneNode(true);
         const card  = clone.querySelector('.nexus-card');
+
+        if (props.auto_resolved) {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'display:flex;align-items:center;gap:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:14px;';
+            banner.innerHTML = `<svg width="12" height="12" fill="none" stroke="#16a34a" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><span style="color:#15803d;font-weight:700;">Auto-resolved from &ldquo;<em>${esc(props.query||'')}</em>&rdquo; &mdash; only one match found.</span>`;
+            card.insertBefore(banner, card.firstChild);
+        }
 
         card.querySelector('.target-handle').textContent = props.target;
 
@@ -560,6 +578,65 @@
             }
         } catch(e) { console.error('Context error', e); }
 
+        appendToStage(card);
+    }
+
+    /* ── Disambiguation card ─────────────────── */
+    function renderDisambiguationCard(props) {
+        const card = document.createElement('div');
+        card.className = 'nexus-card fade-in';
+        card.style.borderLeftColor = '#f59e0b';
+
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:14px;';
+        header.innerHTML = `
+            <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;box-shadow:0 0 6px #f59e0b99;"></div>
+            <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#f59e0b;">Disambiguation Required</div>`;
+        card.appendChild(header);
+
+        // Title
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:16px;font-weight:700;color:#0f172a;margin-bottom:16px;';
+        title.innerHTML = `Found <strong>${props.matches.length}</strong> matches for &ldquo;<span style="color:#3b82f6;">${esc(props.query)}</span>&rdquo; &mdash; which one?`;
+        card.appendChild(title);
+
+        // Match list
+        const list = document.createElement('div');
+        list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+        props.matches.forEach(m => {
+            const btn = document.createElement('button');
+            btn.style.cssText = 'display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;cursor:pointer;text-align:left;width:100%;transition:all .12s;font-family:inherit;';
+            btn.onmouseover = () => { btn.style.background='#eff6ff'; btn.style.borderColor='#bfdbfe'; };
+            btn.onmouseout  = () => { btn.style.background='#f8fafc'; btn.style.borderColor='#e2e8f0'; };
+            btn.onclick = () => resolveIntent(m.handle);
+
+            const icon = document.createElement('div');
+            icon.style.cssText = 'width:32px;height:32px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+            icon.innerHTML = '<div style="width:8px;height:8px;background:#3b82f6;border-radius:50%;"></div>';
+
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            const nameEl = document.createElement('div');
+            nameEl.style.cssText = 'font-size:13px;font-weight:900;color:#0f172a;';
+            nameEl.textContent = m.name;
+            const metaEl = document.createElement('div');
+            metaEl.style.cssText = 'font-size:10px;color:#94a3b8;margin-top:2px;font-family:monospace;';
+            metaEl.textContent = `${m.handle}  ·  ${m.type.toUpperCase()}`;
+            info.appendChild(nameEl);
+            info.appendChild(metaEl);
+
+            const arrow = document.createElement('div');
+            arrow.innerHTML = '<svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>';
+
+            btn.appendChild(icon);
+            btn.appendChild(info);
+            btn.appendChild(arrow);
+            list.appendChild(btn);
+        });
+
+        card.appendChild(list);
         appendToStage(card);
     }
 

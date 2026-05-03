@@ -6,8 +6,8 @@
 INSERT INTO digital_twins (type, external_id, current_state) VALUES
 ('branch', 'branch_east', '{"name": "East Coast", "region": "Coastal"}'),
 ('branch', 'branch_west', '{"name": "West Valley", "region": "Inland"}'),
-('officer', 'rahul_01', '{"name": "Rahul", "level": "Senior"}'),
-('officer', 'sara_02',  '{"name": "Sara", "level": "Junior"}');
+('officer', 'rahul_01', '{"name": "Rahul Gupta",  "level": "Senior"}'),
+('officer', 'sara_02',  '{"name": "Sara Iyer",    "level": "Junior"}');
 
 -- 2. HIERARCHY: GROUPS
 INSERT INTO digital_twins (type, external_id, current_state) VALUES
@@ -16,10 +16,10 @@ INSERT INTO digital_twins (type, external_id, current_state) VALUES
 
 -- 3. SOVEREIGN TWINS (MEMBERS)
 INSERT INTO digital_twins (type, external_id, current_state) VALUES
-('member', 'satish_01', '{"status": "Active", "kyc": "Verified", "disbursed": 5000, "repaid": 4800}'),
-('member', 'anita_02',  '{"status": "NPA", "kyc": "Verified", "disbursed": 3000, "repaid": 500}'),
-('member', 'rohan_03',  '{"status": "Active", "kyc": "Pending", "disbursed": 4500, "repaid": 4400}'),
-('member', 'meena_04',  '{"status": "Active", "kyc": "Verified", "disbursed": 6000, "repaid": 5950}');
+('member', 'satish_01', '{"name": "Satish Kumar",  "status": "Active", "kyc": "Verified", "disbursed": 5000, "repaid": 4800}'),
+('member', 'anita_02',  '{"name": "Anita Desai",   "status": "NPA",    "kyc": "Verified", "disbursed": 3000, "repaid": 500}'),
+('member', 'rohan_03',  '{"name": "Rohan Mehta",   "status": "Active", "kyc": "Pending",  "disbursed": 4500, "repaid": 4400}'),
+('member', 'meena_04',  '{"name": "Meena Sharma",  "status": "Active", "kyc": "Verified", "disbursed": 6000, "repaid": 5950}');
 
 -- 4. THE GRAPH PILLAR (Relationship Mapping)
 INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type) VALUES
@@ -160,3 +160,116 @@ VALUES ('COMPARE-E', 'COMPARE', 'Side-by-side Institutional Benchmarking',
          GROUP BY t.external_id',
         'Comparison Complete: Benchmarking institutional nodes.',
         'ANALYTICS');
+
+-- ============================================================================
+-- SCALE EXPANSION: Multi-Branch Enterprise Seed
+-- Designed to exercise fuzzy search disambiguation (3× Meena, 2× Satish,
+-- 2× Anita, unique Ravi / Leela for auto-resolve testing).
+-- ============================================================================
+
+-- NEW BRANCHES
+INSERT INTO digital_twins (type, external_id, current_state) VALUES
+('branch', 'branch_north', '{"name": "Northern Plains", "region": "North"}'),
+('branch', 'branch_south', '{"name": "Southern Delta",  "region": "South"}');
+
+-- NEW OFFICERS
+INSERT INTO digital_twins (type, external_id, current_state) VALUES
+('officer', 'priya_03', '{"name": "Priya Nair",   "level": "Senior"}'),
+('officer', 'arun_04',  '{"name": "Arun Sharma",  "level": "Junior"}');
+
+-- NEW GROUPS
+INSERT INTO digital_twins (type, external_id, current_state) VALUES
+('group', 'sunrise_group', '{"name": "Sunrise JLG"}'),
+('group', 'gamma_group',   '{"name": "Gamma JLG"}'),
+('group', 'beta_group',    '{"name": "Beta JLG"}'),
+('group', 'delta_group',   '{"name": "Delta JLG"}');
+
+-- NEW MEMBERS
+-- North portfolio (priya_03): sunrise_group + gamma_group
+INSERT INTO digital_twins (type, external_id, current_state) VALUES
+('member', 'meena_05',   '{"name": "Meena Verma",     "status": "Active",  "kyc": "Verified", "disbursed": 5500, "repaid": 3000}'),
+('member', 'ravi_06',    '{"name": "Ravi Kumar",      "status": "Active",  "kyc": "Verified", "disbursed": 4000, "repaid": 3800}'),
+('member', 'lakshmi_07', '{"name": "Lakshmi Devi",    "status": "Active",  "kyc": "Verified", "disbursed": 5000, "repaid": 4900}'),
+('member', 'satish_08',  '{"name": "Satish Naidu",    "status": "NPA",     "kyc": "Verified", "disbursed": 3500, "repaid": 900}'),
+('member', 'suresh_09',  '{"name": "Suresh Babu",     "status": "Active",  "kyc": "Pending",  "disbursed": 3000, "repaid": 2100}'),
+('member', 'kavya_10',   '{"name": "Kavya Shankar",   "status": "Active",  "kyc": "Verified", "disbursed": 6000, "repaid": 5800}');
+
+-- South portfolio (arun_04): beta_group + delta_group
+INSERT INTO digital_twins (type, external_id, current_state) VALUES
+('member', 'anita_11',   '{"name": "Anita Kumari",    "status": "Active",  "kyc": "Pending",  "disbursed": 2000, "repaid": 1800}'),
+('member', 'gopal_12',   '{"name": "Gopal Das",       "status": "Active",  "kyc": "Verified", "disbursed": 4500, "repaid": 4000}'),
+('member', 'leela_13',   '{"name": "Leela Bai",       "status": "Active",  "kyc": "Verified", "disbursed": 2500, "repaid": 2400}'),
+('member', 'meena_14',   '{"name": "Meena Krishnan",  "status": "Active",  "kyc": "Verified", "disbursed": 4500, "repaid": 4400}'),
+('member', 'deepa_15',   '{"name": "Deepa Nair",      "status": "NPA",     "kyc": "Verified", "disbursed": 4000, "repaid": 700}'),
+('member', 'priya_16',   '{"name": "Priya Menon",     "status": "Active",  "kyc": "Verified", "disbursed": 3500, "repaid": 3200}');
+
+-- NEW RELATIONSHIPS
+INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type) VALUES
+-- Officers to Branches
+((SELECT id FROM digital_twins WHERE external_id='priya_03'), (SELECT id FROM digital_twins WHERE external_id='branch_north'), 'WORKS_AT'),
+((SELECT id FROM digital_twins WHERE external_id='arun_04'),  (SELECT id FROM digital_twins WHERE external_id='branch_south'), 'WORKS_AT'),
+-- North: sunrise_group members
+((SELECT id FROM digital_twins WHERE external_id='meena_05'),   (SELECT id FROM digital_twins WHERE external_id='sunrise_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='ravi_06'),    (SELECT id FROM digital_twins WHERE external_id='sunrise_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='lakshmi_07'), (SELECT id FROM digital_twins WHERE external_id='sunrise_group'), 'MEMBER_OF'),
+-- North: gamma_group members
+((SELECT id FROM digital_twins WHERE external_id='satish_08'),  (SELECT id FROM digital_twins WHERE external_id='gamma_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='suresh_09'),  (SELECT id FROM digital_twins WHERE external_id='gamma_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='kavya_10'),   (SELECT id FROM digital_twins WHERE external_id='gamma_group'), 'MEMBER_OF'),
+-- South: beta_group members
+((SELECT id FROM digital_twins WHERE external_id='anita_11'),   (SELECT id FROM digital_twins WHERE external_id='beta_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='gopal_12'),   (SELECT id FROM digital_twins WHERE external_id='beta_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='leela_13'),   (SELECT id FROM digital_twins WHERE external_id='beta_group'), 'MEMBER_OF'),
+-- South: delta_group members
+((SELECT id FROM digital_twins WHERE external_id='meena_14'),   (SELECT id FROM digital_twins WHERE external_id='delta_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='deepa_15'),   (SELECT id FROM digital_twins WHERE external_id='delta_group'), 'MEMBER_OF'),
+((SELECT id FROM digital_twins WHERE external_id='priya_16'),   (SELECT id FROM digital_twins WHERE external_id='delta_group'), 'MEMBER_OF'),
+-- North members → priya_03
+((SELECT id FROM digital_twins WHERE external_id='meena_05'),   (SELECT id FROM digital_twins WHERE external_id='priya_03'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='ravi_06'),    (SELECT id FROM digital_twins WHERE external_id='priya_03'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='lakshmi_07'), (SELECT id FROM digital_twins WHERE external_id='priya_03'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='satish_08'),  (SELECT id FROM digital_twins WHERE external_id='priya_03'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='suresh_09'),  (SELECT id FROM digital_twins WHERE external_id='priya_03'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='kavya_10'),   (SELECT id FROM digital_twins WHERE external_id='priya_03'), 'MANAGED_BY'),
+-- South members → arun_04
+((SELECT id FROM digital_twins WHERE external_id='anita_11'),   (SELECT id FROM digital_twins WHERE external_id='arun_04'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='gopal_12'),   (SELECT id FROM digital_twins WHERE external_id='arun_04'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='leela_13'),   (SELECT id FROM digital_twins WHERE external_id='arun_04'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='meena_14'),   (SELECT id FROM digital_twins WHERE external_id='arun_04'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='deepa_15'),   (SELECT id FROM digital_twins WHERE external_id='arun_04'), 'MANAGED_BY'),
+((SELECT id FROM digital_twins WHERE external_id='priya_16'),   (SELECT id FROM digital_twins WHERE external_id='arun_04'), 'MANAGED_BY');
+
+-- INTERACTION STREAMS: New Members
+INSERT INTO interaction_stream (owner_id, content, created_at) VALUES
+-- meena_05 (Meena Verma — North, mid-cycle)
+((SELECT id FROM digital_twins WHERE external_id='meena_05'), 'Loan disbursed: ₹5,500 for seasonal produce stocking.', NOW() - INTERVAL '45 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_05'), 'Repayment received: ₹3,000. Consistent payer.', NOW() - INTERVAL '15 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_05'), 'Field visit by Priya. Business expanding to adjacent market.', NOW() - INTERVAL '5 days'),
+-- ravi_06 (unique name — tests auto-resolve)
+((SELECT id FROM digital_twins WHERE external_id='ravi_06'), 'KYC verified. Aadhaar and PAN submitted.', NOW() - INTERVAL '60 days'),
+((SELECT id FROM digital_twins WHERE external_id='ravi_06'), 'Loan disbursed: ₹4,000 for transport equipment.', NOW() - INTERVAL '55 days'),
+((SELECT id FROM digital_twins WHERE external_id='ravi_06'), 'Repayment received: ₹3,800. Near closure, eligible for top-up.', NOW() - INTERVAL '10 days'),
+-- satish_08 (Satish Naidu — NPA, 2nd Satish)
+((SELECT id FROM digital_twins WHERE external_id='satish_08'), 'Loan disbursed: ₹3,500 for inventory purchase.', NOW() - INTERVAL '90 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_08'), 'Partial repayment: ₹900. Cited crop failure.', NOW() - INTERVAL '60 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_08'), 'Missed repayment. Account flagged NPA.', NOW() - INTERVAL '30 days'),
+((SELECT id FROM digital_twins WHERE external_id='satish_08'), 'Field visit by Priya. Borrower requests restructuring.', NOW() - INTERVAL '7 days'),
+-- anita_11 (Anita Kumari — KYC pending, 2nd Anita)
+((SELECT id FROM digital_twins WHERE external_id='anita_11'), 'Loan conditionally disbursed pending PAN submission.', NOW() - INTERVAL '30 days'),
+((SELECT id FROM digital_twins WHERE external_id='anita_11'), 'Repayment received: ₹1,800. KYC still outstanding.', NOW() - INTERVAL '5 days'),
+-- leela_13 (unique name — tests auto-resolve)
+((SELECT id FROM digital_twins WHERE external_id='leela_13'), 'KYC fully verified. Loan disbursed: ₹2,500.', NOW() - INTERVAL '40 days'),
+((SELECT id FROM digital_twins WHERE external_id='leela_13'), 'Repayment received: ₹2,400. Ahead of schedule.', NOW() - INTERVAL '8 days'),
+-- meena_14 (Meena Krishnan — 3rd Meena, South)
+((SELECT id FROM digital_twins WHERE external_id='meena_14'), 'Loan application submitted. KYC verified.', NOW() - INTERVAL '50 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_14'), 'Loan disbursed: ₹4,500. Trade finance.', NOW() - INTERVAL '45 days'),
+((SELECT id FROM digital_twins WHERE external_id='meena_14'), 'Repayment received: ₹4,400. Excellent track record.', NOW() - INTERVAL '10 days'),
+-- deepa_15 (NPA — South)
+((SELECT id FROM digital_twins WHERE external_id='deepa_15'), 'Loan disbursed: ₹4,000.', NOW() - INTERVAL '100 days'),
+((SELECT id FROM digital_twins WHERE external_id='deepa_15'), 'Partial payment: ₹700. Business disruption cited.', NOW() - INTERVAL '70 days'),
+((SELECT id FROM digital_twins WHERE external_id='deepa_15'), 'NPA declared. Recovery team engaged.', NOW() - INTERVAL '35 days'),
+-- Officer streams
+((SELECT id FROM digital_twins WHERE external_id='priya_03'), 'North portfolio review: 1 NPA (satish_08). Recovery plan initiated.', NOW() - INTERVAL '20 days'),
+((SELECT id FROM digital_twins WHERE external_id='priya_03'), 'Field visits completed: meena_05, ravi_06. Both current.', NOW() - INTERVAL '5 days'),
+((SELECT id FROM digital_twins WHERE external_id='arun_04'),  'South portfolio: 1 NPA (deepa_15). Flagged for review.', NOW() - INTERVAL '15 days'),
+((SELECT id FROM digital_twins WHERE external_id='arun_04'),  'meena_14 flagged as top performer. Eligible for enhanced credit limit.', NOW() - INTERVAL '10 days');

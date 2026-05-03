@@ -200,16 +200,83 @@ public class Intent implements Action {
             }
         }
 
-        // 3. SEMANTIC SEARCH / KNOWLEDGE RETRIEVAL (unrecognized natural language)
+        // 3. NO HANDLE: fuzzy name search → disambiguation → semantic fallback
         else if (!cleanIntent.contains("@") && !cleanIntent.startsWith("/")) {
-            JSONObject props = new JSONObject();
-            props.put("query", cleanIntent);
-            components.add(createComponent("nexus_semantic_results", props.toJSONString()));
+            String searchTerm = extractSearchTerm(cleanIntent);
+            List<JSONObject> matches = fuzzySearchEntities(searchTerm);
+
+            if (matches.size() == 1) {
+                String handle = (String) matches.get(0).get("handle");
+                System.out.println("[Intent] Auto-resolved '" + searchTerm + "' → " + handle);
+                components.add(createComponent("universal_context_card",
+                    "{\"target\":\"" + handle + "\",\"auto_resolved\":true,\"query\":\"" + searchTerm + "\"}"));
+            } else if (matches.size() > 1) {
+                JSONObject props = new JSONObject();
+                props.put("query", searchTerm);
+                JSONArray matchArray = new JSONArray();
+                for (JSONObject m : matches) matchArray.add(m);
+                props.put("matches", matchArray);
+                components.add(createComponent("nexus_disambiguation_card", props.toJSONString()));
+            } else {
+                JSONObject props = new JSONObject();
+                props.put("query", cleanIntent);
+                components.add(createComponent("nexus_semantic_results", props.toJSONString()));
+            }
         }
 
         response.put("success", true);
         response.put("components", components);
         return response;
+    }
+
+    // Strips command verbs, stop words, and numbers to isolate the entity name.
+    private String extractSearchTerm(String rawIntent) {
+        return rawIntent
+            .replaceAll("(?i)\\b(analyze|compare|disburse|show|check|get|find|loan|status|group|branch|portfolio|performance|for|the|me|to|from|in|of|and|or|with|a|an|is|are|can|how|what|who|does|do|did|has|have|had|his|her|their|this|that|week|month|today|yesterday)\\b", " ")
+            .replaceAll("\\d+", " ")
+            .replaceAll("[^a-zA-Z\\s]", " ")
+            .replaceAll("\\s+", " ")
+            .trim();
+    }
+
+    // Uses pg_trgm word_similarity for name-based lookup — stays fast at lakh scale.
+    @SuppressWarnings("unchecked")
+    private List<JSONObject> fuzzySearchEntities(String searchTerm) {
+        List<JSONObject> results = new ArrayList<>();
+        if (searchTerm == null || searchTerm.trim().isEmpty()) return results;
+
+        PoolDB pool = null;
+        Connection conn = null;
+        try {
+            pool = new PoolDB();
+            conn = pool.getConnection();
+            String sql =
+                "SELECT type, external_id, current_state->>'name' AS name " +
+                "FROM digital_twins " +
+                "WHERE type != 'system' " +
+                "  AND current_state->>'name' IS NOT NULL " +
+                "  AND word_similarity(?, current_state->>'name') > 0.4 " +
+                "ORDER BY word_similarity(?, current_state->>'name') DESC " +
+                "LIMIT 5";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, searchTerm);
+                pstmt.setString(2, searchTerm);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        JSONObject match = new JSONObject();
+                        match.put("handle", "@" + rs.getString("external_id"));
+                        match.put("type", rs.getString("type"));
+                        match.put("name", rs.getString("name"));
+                        results.add(match);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Intent] fuzzySearch failed: " + e.getMessage());
+        } finally {
+            pool.cleanup(null, null, conn);
+        }
+        return results;
     }
 
     private JSONObject createComponent(String type, String propsJson) {

@@ -6,6 +6,7 @@
 -- 0. INFRASTRUCTURE
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- 1. UNIVERSAL TYPES
 -- We use standard TEXT for types to allow "Vertical Collapse" without ENUM migrations
@@ -96,7 +97,12 @@ CREATE TRIGGER trg_nexus_lineage
 BEFORE UPDATE ON digital_twins
 FOR EACH ROW EXECUTE FUNCTION fn_nexus_track_lineage();
 
--- 9. SYSTEM SEED (Essential only)
+-- 9. FUZZY SEARCH INDEX
+-- Enables word_similarity() for name-based entity lookup at lakh scale
+CREATE INDEX IF NOT EXISTS idx_twins_name_trgm
+    ON digital_twins USING gin((current_state->>'name') gin_trgm_ops);
+
+-- 10. SYSTEM SEED (Essential only)
 INSERT INTO digital_twins (id, type, external_id, current_state) VALUES
 ('00000000-0000-0000-0000-000000000000', 'system', 'system_actor', '{"role":"governance_core"}')
 ON CONFLICT DO NOTHING;
