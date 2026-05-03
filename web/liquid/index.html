@@ -7,14 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --liquid-blue: #3b82f6; 
-            --nexus-dark: #0f172a;  
-            --tsi-yellow: #ffca28;  
-            --tsi-red: #ef5350;     
+            --liquid-blue: #3b82f6;
+            --nexus-dark: #0f172a;
+            --tsi-yellow: #ffca28;
+            --tsi-red: #ef5350;
         }
-        body { 
-            background-color: #f8fafc; 
-            color: var(--nexus-dark); 
+        body {
+            background-color: #f8fafc;
+            color: var(--nexus-dark);
             background-image: radial-gradient(#e2e8f0 0.5px, transparent 0.5px);
             background-size: 24px 24px;
         }
@@ -37,8 +37,15 @@
         .component-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         .accent-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-        
-        /* Premium Scrollbar */
+        .example-chip {
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .example-chip:hover {
+            border-color: #3b82f6;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -55,11 +62,13 @@
     </header>
 
     <main class="container mx-auto max-w-2xl px-4">
-        <div class="relative mb-16">
+
+        <!-- Input Bar -->
+        <div class="relative mb-6">
             <div class="absolute -left-3 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-lg shadow-[0_0_15px_rgba(59,130,246,0.4)]"></div>
-            <input type="text" id="command-k" 
+            <input type="text" id="command-k"
                    class="w-full bg-white border border-slate-200 p-8 rounded-2xl text-2xl font-light outline-none focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-slate-300 shadow-xl shadow-slate-200/40"
-                   placeholder="Express Intent..."
+                   placeholder="Ask naturally, or type /analyze @rahul_01…"
                    autocomplete="off">
             <div class="absolute right-8 top-1/2 -translate-y-1/2 flex items-center space-x-3">
                 <span class="accent-dot bg-[--tsi-yellow]"></span>
@@ -68,11 +77,124 @@
             </div>
         </div>
 
-        <div id="liquid-stage" class="space-y-10 pb-32">
-            <div class="text-center py-24 opacity-20">
-                <div class="inline-block border-2 border-slate-300 rounded-full px-8 py-2">
-                    <p class="text-[10px] uppercase tracking-[0.5em] font-black text-slate-500">Awaiting Signal</p>
+        <!-- Input hint -->
+        <p class="text-center text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-12">
+            Press <kbd class="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-slate-500 not-italic font-black">Enter</kbd> to submit &nbsp;·&nbsp; Natural language and /commands both work
+        </p>
+
+        <div id="liquid-stage" class="space-y-6 pb-32">
+
+            <!-- Help Panel — shown by default, cleared on first submit -->
+            <div id="help-panel" class="component-fade-in space-y-4">
+
+                <!-- Natural Language Examples -->
+                <div class="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm">
+                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">Try asking naturally</p>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
+                              onclick="fireExample(this)">How is Rahul performing?</span>
+                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
+                              onclick="fireExample(this)">Compare Rahul and Sara</span>
+                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
+                              onclick="fireExample(this)">How is the East branch doing?</span>
+                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
+                              onclick="fireExample(this)">Analyze anita's portfolio</span>
+                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
+                              onclick="fireExample(this)">Benchmark east and west branch</span>
+                    </div>
                 </div>
+
+                <div class="grid grid-cols-2 gap-4">
+
+                    <!-- Command Reference -->
+                    <div class="bg-white border border-slate-100 rounded-2xl p-7 shadow-sm">
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">Command reference</p>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <code class="text-blue-600 font-black text-xs bg-blue-50 px-2 py-0.5 rounded-lg">/analyze</code>
+                                    <code class="text-slate-500 text-xs">@entity</code>
+                                </div>
+                                <p class="text-[11px] text-slate-400 leading-snug">Portfolio drill-down for one entity. Works on officers, branches, groups.</p>
+                            </div>
+                            <div class="border-t border-slate-50 pt-4">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <code class="text-blue-600 font-black text-xs bg-blue-50 px-2 py-0.5 rounded-lg">/compare</code>
+                                    <code class="text-slate-500 text-xs">@entity1 @entity2</code>
+                                </div>
+                                <p class="text-[11px] text-slate-400 leading-snug">Side-by-side benchmarking of two entities. LLM narrates the difference.</p>
+                            </div>
+                            <div class="border-t border-slate-50 pt-4">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <code class="text-blue-600 font-black text-xs bg-blue-50 px-2 py-0.5 rounded-lg">/disburse</code>
+                                    <code class="text-slate-500 text-xs">@member amount</code>
+                                </div>
+                                <p class="text-[11px] text-slate-400 leading-snug">Loan disbursement. Triggers KYC and group liability guardrails before execution.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Entity Index -->
+                    <div class="bg-white border border-slate-100 rounded-2xl p-7 shadow-sm">
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">Entity index</p>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Officers</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@rahul_01</span>
+                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@sara_02</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Branches</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@branch_east</span>
+                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@branch_west</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Members</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@satish_01</span>
+                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@anita_02</span>
+                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@rohan_03</span>
+                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@meena_04</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Groups</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@unity_group</span>
+                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@alpha_group</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- How it works -->
+                <div class="bg-slate-900 rounded-2xl p-7 text-white">
+                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">How Liquid works</p>
+                    <div class="grid grid-cols-3 gap-6">
+                        <div>
+                            <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center mb-3 text-white font-black text-xs">1</div>
+                            <p class="text-xs font-bold text-white mb-1">Express Intent</p>
+                            <p class="text-[11px] text-slate-400 leading-snug">Type naturally or use a /command. The AI parses your input and maps it to the correct entity and action.</p>
+                        </div>
+                        <div>
+                            <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center mb-3 text-white font-black text-xs">2</div>
+                            <p class="text-xs font-bold text-white mb-1">Context Surfaces</p>
+                            <p class="text-[11px] text-slate-400 leading-snug">The entity's state, relationships, and full interaction history are loaded from the Sovereign Vault.</p>
+                        </div>
+                        <div>
+                            <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center mb-3 text-white font-black text-xs">3</div>
+                            <p class="text-xs font-bold text-white mb-1">Govern or Analyse</p>
+                            <p class="text-[11px] text-slate-400 leading-snug">Analytics actions run SQL and return an AI narrative. Mutations pass through policy guardrails before executing.</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </main>
@@ -107,10 +229,10 @@
     <template id="tpl-universal_action_confirm">
         <div class="bg-slate-900 text-white rounded-3xl p-12 shadow-2xl component-fade-in relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-blue-600 to-indigo-600"></div>
-            <h3 class="text-blue-400 font-black text-[11px] uppercase tracking-[0.5em] mb-6">Governance Handshake</h3>
+            <h3 class="action-header text-blue-400 font-black text-[11px] uppercase tracking-[0.5em] mb-6">Governance Handshake</h3>
             <p class="action-desc text-3xl font-light leading-tight mb-12 text-slate-100">Proposed action...</p>
             <div class="flex items-center space-x-8">
-                <button class="exec-btn bg-blue-600 text-white px-12 py-5 rounded-2xl text-sm font-black hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/20">Authorize Mutation</button>
+                <button class="exec-btn bg-blue-600 text-white px-12 py-5 rounded-2xl text-sm font-black hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/20">Authorize Action</button>
                 <button onclick="this.closest('.component-fade-in').remove()" class="text-slate-500 text-xs font-black uppercase tracking-widest hover:text-white transition-colors">Dismiss</button>
             </div>
         </div>
@@ -122,25 +244,55 @@
 
         input.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && input.value.trim()) {
-                const val = input.value;
+                const val = input.value.trim();
                 input.value = '';
                 await resolveIntent(val);
             }
         });
 
+        function fireExample(el) {
+            const text = el.innerText;
+            input.value = text;
+            resolveIntent(text);
+        }
+
         async function resolveIntent(intent) {
-            stage.innerHTML = '<div class="text-center py-16 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.4em]">RESOLVING INTENT...</div>';
+            const isNL = !intent.trim().startsWith('/') && !intent.trim().startsWith('@');
+            stage.innerHTML = isNL
+                ? '<div class="text-center py-16 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.4em]">AI PARSING INTENT…</div>'
+                : '<div class="text-center py-16 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.4em]">RESOLVING…</div>';
+
             try {
                 const response = await fetch('/api/intent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ intent: intent })
+                    body: JSON.stringify({ intent })
                 });
                 const data = await response.json();
-                renderAdaptiveUI(data.components);
+                stage.innerHTML = '';
+
+                // Show LLM interpretation banner when natural language was parsed
+                if (data.llm_command) {
+                    const banner = document.createElement('div');
+                    banner.className = 'component-fade-in flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-5 py-3';
+                    banner.innerHTML = `
+                        <div class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                            <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <span class="text-[11px] text-blue-500 font-bold">AI understood:</span>
+                        <code class="text-[11px] font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded">${escHtml(data.llm_command)}</code>
+                        <span class="text-[10px] text-blue-300 font-bold ml-auto">from "${escHtml(data.intent_captured)}"</span>`;
+                    stage.appendChild(banner);
+                }
+
+                await renderAdaptiveUI(data.components);
             } catch (err) {
-                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-700 border-l-8 border-red-500 rounded-xl shadow-lg font-bold">Nexus Connection Failed</div>`;
+                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-700 border-l-8 border-red-500 rounded-xl shadow-lg font-bold">Nexus Connection Failed: ${escHtml(err.message)}</div>`;
             }
+        }
+
+        function escHtml(str) {
+            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
         const safeSet = (el, val, mode = 'text') => {
@@ -150,18 +302,16 @@
         };
 
         async function renderAdaptiveUI(components) {
-            stage.innerHTML = ''; 
             for (const comp of components) {
                 const template = document.getElementById(`tpl-${comp.component_type}`);
                 if (!template) continue;
 
                 const clone = template.content.cloneNode(true);
-                const container = clone.querySelector('div'); 
+                const container = clone.querySelector('div');
                 const props = JSON.parse(comp.props);
 
                 if (comp.component_type === 'universal_context_card') {
                     safeSet(container.querySelector('.target-handle'), props.target);
-
                     try {
                         const resCtx = await fetch('/api/context', {
                             method: 'POST',
@@ -172,46 +322,57 @@
                         const ctx = data.context;
 
                         safeSet(container.querySelector('.twin-type'), ctx.type);
-                        
+
                         const state = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
                         const gridHtml = Object.entries(state).map(([k, v]) => `
                             <div class="group">
-                                <p class="text-[10px] uppercase font-black text-slate-300 tracking-widest mb-2 group-hover:text-blue-500 transition-colors">${k}</p>
-                                <p class="text-lg font-bold text-slate-800">${v}</p>
-                            </div>
-                        `).join('');
+                                <p class="text-[10px] uppercase font-black text-slate-300 tracking-widest mb-2 group-hover:text-blue-500 transition-colors">${escHtml(k)}</p>
+                                <p class="text-lg font-bold text-slate-800">${escHtml(String(v))}</p>
+                            </div>`).join('');
                         safeSet(container.querySelector('.state-grid'), gridHtml, 'html');
 
                         const links = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
-                        if(links && links.length > 0) {
+                        if (links && links.length > 0) {
                             const linksHtml = links.map(l => `
                                 <span class="bg-white border border-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl shadow-sm hover:border-blue-300 transition-colors">
-                                    ${l.type} <span class="text-blue-500 mx-1">→</span> ${l.to}
-                                </span>
-                            `).join('');
+                                    ${escHtml(l.type)} <span class="text-blue-500 mx-1">→</span> ${escHtml(l.to)}
+                                </span>`).join('');
                             safeSet(container.querySelector('.graph-links'), linksHtml, 'html');
                         }
+
                         const interactions = ctx.recent_interactions;
                         if (interactions && interactions.length > 0) {
                             const streamHtml = interactions.map(i => `
                                 <div class="flex items-start gap-4">
                                     <span class="text-[10px] font-black text-slate-300 whitespace-nowrap pt-0.5 w-20 shrink-0">${new Date(i.timestamp).toLocaleDateString('en-GB', {day:'2-digit', month:'short'})}</span>
-                                    <span class="text-sm text-slate-600 leading-snug">${i.content}</span>
+                                    <span class="text-sm text-slate-600 leading-snug">${escHtml(i.content)}</span>
                                 </div>`).join('');
                             safeSet(container.querySelector('.interaction-stream'), streamHtml, 'html');
                             container.querySelector('.interaction-stream-wrap').classList.remove('hidden');
                         }
                     } catch (e) { console.error("Context Error", e); }
-                    
+
                 } else if (comp.component_type === 'universal_action_confirm') {
-                    // Logic to display relevant labels based on action type
-                    if (props.action_type === 'COMPARE') {
-                        safeSet(container.querySelector('.action-desc'), `Benchmark ${props.target_1} against ${props.target_2}?`);
+                    const isAnalytics = ['ANALYZE', 'COMPARE'].includes(props.action_type);
+                    const headerEl = container.querySelector('.action-header');
+                    const execBtn  = container.querySelector('.exec-btn');
+
+                    if (isAnalytics) {
+                        safeSet(headerEl, 'Intelligence Query');
+                        safeSet(execBtn, props.action_type === 'COMPARE' ? 'Run Comparison' : 'Run Analysis');
                     } else {
-                        safeSet(container.querySelector('.action-desc'), `Execute ${props.action_type} for ${props.target_external_id} with value "${props.value}"?`);
+                        safeSet(headerEl, 'Governance Handshake');
+                        safeSet(execBtn, 'Authorize Action');
                     }
-                    
-                    const execBtn = container.querySelector('.exec-btn');
+
+                    if (props.action_type === 'COMPARE') {
+                        safeSet(container.querySelector('.action-desc'), `Benchmark ${props.target_1} against ${props.target_2}`);
+                    } else if (props.action_type === 'ANALYZE') {
+                        safeSet(container.querySelector('.action-desc'), `Analyze portfolio for ${props.target_external_id}`);
+                    } else {
+                        safeSet(container.querySelector('.action-desc'), `Execute ${props.action_type} for ${props.target_external_id}${props.value ? ' — value: ' + props.value : ''}`);
+                    }
+
                     if (execBtn) execBtn.onclick = () => finalizeAction(props);
                 }
 
@@ -225,8 +386,8 @@
                 const row = data[0];
                 return Object.entries(row).filter(([k]) => k !== 'external_id').map(([k, v]) => `
                     <div class="flex justify-between items-center py-4 border-b border-slate-100 last:border-0">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">${k.replace(/_/g, ' ')}</span>
-                        <span class="text-2xl font-black text-slate-800">${v ?? '—'}${k.includes('rate') ? '%' : ''}</span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">${escHtml(k.replace(/_/g,' '))}</span>
+                        <span class="text-2xl font-black text-slate-800">${escHtml(String(v ?? '—'))}${k.includes('rate') ? '%' : ''}</span>
                     </div>`).join('');
             }
             if (actionType === 'COMPARE') {
@@ -234,12 +395,12 @@
                 return `<table class="w-full text-sm">
                     <thead><tr>
                         <th class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400 pb-3">Entity</th>
-                        ${cols.map(c => `<th class="text-right text-[10px] font-black uppercase tracking-widest text-slate-400 pb-3">${c.replace(/_/g, ' ')}</th>`).join('')}
+                        ${cols.map(c => `<th class="text-right text-[10px] font-black uppercase tracking-widest text-slate-400 pb-3">${escHtml(c.replace(/_/g,' '))}</th>`).join('')}
                     </tr></thead>
                     <tbody>${data.map(row => `
                         <tr class="border-t border-slate-100">
-                            <td class="py-3 font-bold text-slate-700">${row.external_id}</td>
-                            ${cols.map(c => `<td class="py-3 text-right font-black text-slate-800">${row[c] ?? '—'}${c.includes('rate') ? '%' : ''}</td>`).join('')}
+                            <td class="py-3 font-bold text-slate-700">${escHtml(String(row.external_id))}</td>
+                            ${cols.map(c => `<td class="py-3 text-right font-black text-slate-800">${escHtml(String(row[c] ?? '—'))}${c.includes('rate') ? '%' : ''}</td>`).join('')}
                         </tr>`).join('')}
                     </tbody></table>`;
             }
@@ -248,13 +409,12 @@
 
         async function finalizeAction(props) {
             stage.innerHTML = '<div class="text-center py-24 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.6em]">GOVERNANCE CHECK</div>';
-            
-            // Critical Fix: Aligning parameters to match Governance.java expectations
+
             const requestBody = {
                 action_type: props.action_type,
                 intent_raw: props.intent_raw,
                 params: {
-                    target_external_id: props.target_external_id, 
+                    target_external_id: props.target_external_id,
                     target_1: props.target_1,
                     target_2: props.target_2,
                     new_data: props.value ? { [props.action_type.toLowerCase() + "_amount"]: props.value } : null
@@ -267,42 +427,46 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody)
                 });
-                
                 const result = await res.json();
-                
-                if(result.success) {
+
+                if (result.success) {
                     stage.innerHTML = `<div class="p-20 bg-white border border-blue-100 rounded-3xl text-center component-fade-in shadow-2xl">
                         <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
                             <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                         </div>
                         <p class="font-black text-2xl text-slate-900 tracking-tight mb-2 text-blue-600">
-                            ${(props.action_type === 'ANALYZE' || props.action_type === 'COMPARE') ? 'Analysis Generated' : 'Mutation Authorized'}
+                            ${(['ANALYZE','COMPARE'].includes(props.action_type)) ? 'Analysis Complete' : 'Action Authorized'}
                         </p>
                         <div class="text-slate-700 font-medium mt-6 bg-slate-50 p-6 rounded-xl border border-slate-100 shadow-inner">
-                           ${result.data ? renderAnalysisData(result.data, props.action_type) : (result.reason || result.message)}
+                            ${result.data ? renderAnalysisData(result.data, props.action_type) : escHtml(result.reason || result.message || '')}
                         </div>
                         ${result.narrative ? `
                         <div class="mt-4 p-6 bg-blue-50/50 rounded-xl border border-blue-100 text-left">
                             <p class="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em] mb-3">Intelligence</p>
-                            <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">${result.narrative}</p>
+                            <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">${escHtml(result.narrative)}</p>
                         </div>` : ''}
+                        <button onclick="showHelp()" class="mt-8 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">← New Query</button>
                     </div>`;
-                    
+
                     if (props.action_type === 'DISBURSE') {
-                        setTimeout(() => resolveIntent(`@${props.target_external_id.replace(/^@/, '')}`), 3500);
+                        setTimeout(() => resolveIntent(`@${(props.target_external_id || '').replace(/^@/, '')}`), 3500);
                     }
                 } else {
                     stage.innerHTML = `<div class="p-12 border-l-[12px] border-red-500 bg-white text-slate-900 rounded-2xl component-fade-in shadow-2xl">
                         <h4 class="text-red-600 font-black text-[11px] uppercase tracking-[0.4em] mb-4">Governance Denial</h4>
-                        <p class="text-xl font-bold leading-tight text-slate-800">${result.reason}</p>
+                        <p class="text-xl font-bold leading-tight text-slate-800">${escHtml(result.reason || '')}</p>
                         <div class="mt-10 pt-6 border-t border-slate-100">
-                            <button onclick="location.reload()" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Clear Logic Fault</button>
+                            <button onclick="showHelp()" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">← New Query</button>
                         </div>
                     </div>`;
                 }
-            } catch (err) { 
-                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">Nexus Error: ${err.message}</div>`; 
+            } catch (err) {
+                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">Nexus Error: ${escHtml(err.message)}</div>`;
             }
+        }
+
+        function showHelp() {
+            location.reload();
         }
     </script>
 </body>

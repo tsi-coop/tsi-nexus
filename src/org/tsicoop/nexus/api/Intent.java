@@ -6,6 +6,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -18,28 +21,148 @@ import java.util.regex.Pattern;
  */
 public class Intent implements Action {
 
+    private static final String VLLM_URL;
+    private static final String VLLM_MODEL;
+
+    static {
+        String url = System.getenv("VLLM_URL");
+        String model = System.getenv("VLLM_MODEL");
+        VLLM_URL = (url != null && !url.isEmpty()) ? url.replaceAll("/$", "") : null;
+        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : "google/gemma-3-12b-it";
+    }
+
+    private static final String INTENT_SYSTEM_PROMPT =
+        "You are the command parser for TSI Nexus, an institutional intelligence platform.\n" +
+        "Translate the user's natural language into a single structured command.\n\n" +
+        "Available commands:\n" +
+        "  /analyze @<id>               — analyze a single entity's performance\n" +
+        "  /compare @<id1> @<id2>       — benchmark two entities side by side\n" +
+        "  /disburse @<member_id> <amt> — disburse a loan amount to a member\n\n" +
+        "Rules:\n" +
+        "1. Output ONLY the command string. No explanation, no markdown, no punctuation.\n" +
+        "2. Map names or descriptions to the correct @handle from the entity list provided.\n" +
+        "3. The @handle must match exactly what is listed — do not invent handles.\n" +
+        "4. If intent is unclear or no matching entity exists, output: /unknown";
+
     @Override
     public void post(HttpServletRequest req, HttpServletResponse res) {
         try {
             JSONObject input = InputProcessor.getInput(req);
-String rawIntent = (String) input.get("intent");
-            OutputProcessor.send(res, 200, resolveToAdaptiveUI(rawIntent));
+            String rawIntent = (String) input.get("intent");
+
+            String llmCommand = llmParseIntent(rawIntent);
+            String intentToProcess = (llmCommand != null) ? llmCommand : rawIntent;
+
+            JSONObject result = resolveToAdaptiveUI(intentToProcess);
+            result.put("intent_captured", rawIntent);
+            if (llmCommand != null) result.put("llm_command", llmCommand);
+
+            OutputProcessor.send(res, 200, result);
         } catch (Exception e) {
             OutputProcessor.errorResponse(res, 500, "Intent Resolution Failed", e.getMessage(), req.getRequestURI());
         }
     }
 
     /**
-     * Maps intent to UI components.
-     * Uses a polymorphic approach: The UI behaves differently based on the 'type' of the twin.
+     * Calls the LLM to convert natural language into a /command string.
+     * Returns null if LLM is unavailable, the input is already a command, or parsing fails.
      */
+    @SuppressWarnings("unchecked")
+    private String llmParseIntent(String rawInput) {
+        if (VLLM_URL == null || rawInput == null) return null;
+        if (rawInput.trim().startsWith("/")) return null; // already a command
+
+        try {
+            String entityList = fetchEntityList();
+
+            String userContent = "Known entities:\n" + entityList + "\nUser said: \"" + rawInput + "\"";
+
+            JSONArray messages = new JSONArray();
+            JSONObject sysMsg = new JSONObject();
+            sysMsg.put("role", "system");
+            sysMsg.put("content", INTENT_SYSTEM_PROMPT);
+            messages.add(sysMsg);
+            JSONObject userMsg = new JSONObject();
+            userMsg.put("role", "user");
+            userMsg.put("content", userContent);
+            messages.add(userMsg);
+
+            JSONObject body = new JSONObject();
+            body.put("model", VLLM_MODEL);
+            body.put("messages", messages);
+            body.put("max_tokens", 64);
+            body.put("temperature", 0.1);
+
+            System.out.println("[Intent] LLM parsing: \"" + rawInput + "\"");
+            HttpClient http = new HttpClient();
+            JSONObject response = http.sendPost(
+                VLLM_URL + "/v1/chat/completions",
+                body,
+                "Authorization", "Bearer dummy"
+            );
+
+            JSONArray choices = (JSONArray) response.get("choices");
+            if (choices != null && !choices.isEmpty()) {
+                JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
+                if (message != null) {
+                    String content = (String) message.get("content");
+                    if (content != null) {
+                        // Take only the first line; LLM may add extra commentary
+                        String parsed = content.trim().split("\\n")[0].trim();
+                        System.out.println("[Intent] LLM resolved to: " + parsed);
+                        if (parsed.startsWith("/") && !parsed.startsWith("/unknown")) {
+                            return parsed;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Intent] LLM parse failed: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Fetches all known entity handles and names from the DB to ground the LLM prompt.
+     */
+    private String fetchEntityList() {
+        PoolDB pool = null;
+        Connection conn = null;
+        try {
+            pool = new PoolDB();
+            conn = pool.getConnection();
+            StringBuilder sb = new StringBuilder();
+            String sql = "SELECT type, external_id, current_state->>'name' AS name " +
+                         "FROM digital_twins WHERE type != 'system' ORDER BY type, external_id";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    sb.append("@").append(rs.getString("external_id"))
+                      .append(" (").append(rs.getString("type")).append(")");
+                    String name = rs.getString("name");
+                    if (name != null && !name.isEmpty()) sb.append(" — ").append(name);
+                    sb.append("\n");
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            System.err.println("[Intent] fetchEntityList failed: " + e.getMessage());
+            return "";
+        } finally {
+            pool.cleanup(null, null, conn);
+        }
+    }
+
+    /**
+     * Maps a (possibly LLM-resolved) command or raw intent to UI components.
+     */
+    @SuppressWarnings("unchecked")
     private JSONObject resolveToAdaptiveUI(String intent) {
         JSONObject response = new JSONObject();
         JSONArray components = new JSONArray();
         String cleanIntent = intent.trim();
 
         // 1. DISAMBIGUATION / CONTEXT LOOKUP (@target)
-        // If the user mentions an entity, always trigger a Context Card.
         if (cleanIntent.contains("@")) {
             List<String> targets = extractAllTargets(cleanIntent);
             for (String target : targets) {
@@ -51,13 +174,12 @@ String rawIntent = (String) input.get("intent");
         if (cleanIntent.startsWith("/")) {
             String[] parts = cleanIntent.split("\\s+");
             if (parts.length >= 2) {
-                String actionVerb = parts[0].substring(1).toUpperCase(); // e.g., DISBURSE, ANALYZE, COMPARE
-                
+                String actionVerb = parts[0].substring(1).toUpperCase();
+
                 JSONObject props = new JSONObject();
                 props.put("action_type", actionVerb);
                 props.put("intent_raw", cleanIntent);
 
-                // MULTI-TARGET EXTRACTION FOR COMPARISON
                 if ("COMPARE".equalsIgnoreCase(actionVerb)) {
                     List<String> targets = extractAllTargets(cleanIntent);
                     if (targets.size() >= 2) {
@@ -65,22 +187,20 @@ String rawIntent = (String) input.get("intent");
                         props.put("target_2", targets.get(1));
                     }
                 } else {
-                    // STANDARD SINGLE TARGET EXTRACTION (DISBURSE, ANALYZE)
                     String target = extractTarget(cleanIntent);
                     String value = "";
-                    // Simple logic to find the numeric value if present
                     for (String part : parts) {
                         if (part.matches("\\d+")) value = part;
                     }
                     props.put("target_external_id", target);
                     props.put("value", value);
                 }
-                
+
                 components.add(createComponent("universal_action_confirm", props.toJSONString()));
             }
-        } 
-        
-        // 3. SEMANTIC SEARCH / KNOWLEDGE RETRIEVAL
+        }
+
+        // 3. SEMANTIC SEARCH / KNOWLEDGE RETRIEVAL (unrecognized natural language)
         else if (!cleanIntent.contains("@") && !cleanIntent.startsWith("/")) {
             JSONObject props = new JSONObject();
             props.put("query", cleanIntent);
@@ -88,32 +208,22 @@ String rawIntent = (String) input.get("intent");
         }
 
         response.put("success", true);
-        response.put("intent_captured", cleanIntent);
-        response.put("components", components); 
+        response.put("components", components);
         return response;
     }
 
-    /**
-     * Generates the UI Schema for the Liquid Interface.
-     */
     private JSONObject createComponent(String type, String propsJson) {
         JSONObject comp = new JSONObject();
         comp.put("component_type", type);
-        comp.put("props", propsJson); 
+        comp.put("props", propsJson);
         return comp;
     }
 
-    /**
-     * Uses Regex to extract the first handle.
-     */
     private String extractTarget(String intent) {
         List<String> targets = extractAllTargets(intent);
         return targets.isEmpty() ? "unknown" : targets.get(0);
     }
 
-    /**
-     * Extracts all handles (e.g., @branch_east @branch_west) for comparisons.
-     */
     private List<String> extractAllTargets(String intent) {
         List<String> targets = new ArrayList<>();
         Pattern pattern = Pattern.compile("@([\\w\\.]+)");
