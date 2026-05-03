@@ -11,7 +11,7 @@ import java.net.http.HttpResponse;
 public class HttpClient {
 
     private final java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
-            .version(java.net.http.HttpClient.Version.HTTP_2)
+            .version(java.net.http.HttpClient.Version.HTTP_1_1)
             .build();
 
     public void sendGet(String url) throws Exception {

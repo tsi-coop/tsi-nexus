@@ -52,12 +52,14 @@ public class Intelligence {
             body.put("max_tokens", 1024);
             body.put("temperature", 0.7);
 
+            System.out.println("[Intelligence] POST " + VLLM_URL + "/v1/chat/completions model=" + VLLM_MODEL);
             HttpClient http = new HttpClient();
             JSONObject response = http.sendPost(
                 VLLM_URL + "/v1/chat/completions",
                 body,
                 "Authorization", "Bearer dummy"
             );
+            System.out.println("[Intelligence] response keys=" + response.keySet());
 
             // OpenAI-compatible response: choices[0].message.content
             JSONArray choices = (JSONArray) response.get("choices");
@@ -70,6 +72,7 @@ public class Intelligence {
             }
             return "";
         } catch (Exception e) {
+            System.err.println("[Intelligence] ERROR calling vLLM: " + e.getMessage());
             e.printStackTrace();
             return "";
         }
