@@ -3,471 +3,684 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liquid | Adaptive Enterprise Interface</title>
+    <title>Liquid | TSI Nexus</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --liquid-blue: #3b82f6;
-            --nexus-dark: #0f172a;
-            --tsi-yellow: #ffca28;
-            --tsi-red: #ef5350;
+        :root { --blue: #3b82f6; }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: ui-sans-serif, system-ui, sans-serif;
         }
-        body {
-            background-color: #f8fafc;
-            color: var(--nexus-dark);
+
+        /* ── Layout ─────────────────────────────────── */
+        #shell {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Left pane ───────────────────────────────── */
+        #left {
+            width: 340px;
+            flex-shrink: 0;
+            background: #0f172a;
+            border-right: 1px solid #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #left-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 24px;
+        }
+        #left-scroll::-webkit-scrollbar { width: 3px; }
+        #left-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+        /* ── Right pane ──────────────────────────────── */
+        #right {
+            flex: 1;
+            overflow-y: auto;
+            background: #f8fafc;
             background-image: radial-gradient(#e2e8f0 0.5px, transparent 0.5px);
-            background-size: 24px 24px;
+            background-size: 22px 22px;
+            display: flex;
+            flex-direction: column;
         }
-        .liquid-logo {
-            width: 48px; height: 48px;
-            background: linear-gradient(135deg, var(--liquid-blue), #60a5fa);
+        #right::-webkit-scrollbar { width: 5px; }
+        #right::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* ── Logo blob ───────────────────────────────── */
+        .logo-blob {
+            width: 32px; height: 32px; flex-shrink: 0;
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
             border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
             animation: morph 6s ease-in-out infinite;
-            border: 2px solid white;
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
+            box-shadow: 0 0 16px rgba(59,130,246,0.35);
         }
         @keyframes morph {
-            0%, 100% { border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; }
-            50% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+            0%,100% { border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; }
+            50%      { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
         }
-        .nexus-border {
-            border-left: 8px solid var(--liquid-blue);
-            border-right: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+
+        /* ── Input ───────────────────────────────────── */
+        #cmd {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 13px;
+            font-weight: 400;
+            padding: 10px 14px;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
         }
-        .component-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .accent-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-        .example-chip {
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-        .example-chip:hover {
+        #cmd::placeholder { color: #475569; }
+        #cmd:focus {
             border-color: #3b82f6;
-            color: #1d4ed8;
-            background: #eff6ff;
+            box-shadow: 0 0 0 3px rgba(59,130,246,.12);
         }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* ── Section label ───────────────────────────── */
+        .sec-label {
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .3em;
+            color: #334155;
+            margin-bottom: 8px;
+        }
+        .sec-divider { border-color: #1e293b; margin: 16px 0; }
+
+        /* ── Example chips ───────────────────────────── */
+        .ex-chip {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 7px;
+            padding: 7px 10px;
+            cursor: pointer;
+            transition: all .12s;
+            margin-bottom: 5px;
+        }
+        .ex-chip:hover { color: #93c5fd; border-color: #3b82f680; background: #172554; }
+
+        /* ── Command rows ────────────────────────────── */
+        .cmd-row { margin-bottom: 10px; }
+        .cmd-badge {
+            display: inline-block;
+            font-family: monospace;
+            font-size: 10px;
+            font-weight: 900;
+            color: #60a5fa;
+            background: #172554;
+            border: 1px solid #1d4ed860;
+            border-radius: 5px;
+            padding: 1px 6px;
+            margin-right: 4px;
+        }
+        .cmd-args { font-family: monospace; font-size: 10px; color: #475569; }
+        .cmd-hint { font-size: 10px; color: #334155; margin-top: 3px; line-height: 1.4; }
+
+        /* ── Entity chips ────────────────────────────── */
+        .ent-label {
+            font-size: 8px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .25em;
+            color: #1e3a5f;
+            margin-bottom: 5px;
+            margin-top: 10px;
+        }
+        .ent-row { display: flex; flex-wrap: wrap; gap: 5px; }
+        .ent-chip {
+            font-size: 10px;
+            font-weight: 900;
+            padding: 3px 8px;
+            border-radius: 5px;
+            border: 1px solid;
+            cursor: pointer;
+            transition: all .12s;
+        }
+        .ent-officer  { color: #60a5fa; background: #172554; border-color: #1d4ed860; }
+        .ent-branch   { color: #a78bfa; background: #1e1b4b; border-color: #4c1d9560; }
+        .ent-member   { color: #94a3b8; background: #1e293b; border-color: #33415560; }
+        .ent-group    { color: #6ee7b7; background: #022c22; border-color: #06402560; }
+        .ent-chip:hover { opacity: .75; }
+
+        /* ── How-it-works steps ──────────────────────── */
+        .step { display: flex; gap: 9px; margin-bottom: 9px; }
+        .step-n {
+            width: 18px; height: 18px; flex-shrink: 0;
+            background: #1d4ed8;
+            border-radius: 4px;
+            font-size: 9px; font-weight: 900; color: #fff;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .step-title { font-size: 10px; font-weight: 700; color: #475569; }
+        .step-body  { font-size: 9px;  color: #334155; line-height: 1.45; margin-top: 1px; }
+
+        /* ── Right pane: stage states ────────────────── */
+        #stage.is-idle {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #stage.is-loading {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #stage.is-results {
+            padding: 28px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 860px;
+            width: 100%;
+            align-self: flex-start; /* top-align so short results don't float */
+        }
+
+        /* ── Cards (right pane) ──────────────────────── */
+        .nexus-card {
+            background: #fff;
+            border-left: 6px solid var(--blue);
+            border-top: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 24px 28px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.06);
+        }
+        .dark-card {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 24px 28px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18);
+            position: relative;
+            overflow: hidden;
+        }
+        .dark-card-bar {
+            position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #60a5fa, #3b82f6, #6366f1);
+        }
+
+        .fade-in { animation: fadeUp .35s cubic-bezier(.16,1,.3,1) forwards; }
+        @keyframes fadeUp {
+            from { opacity:0; transform:translateY(10px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* ── LLM banner ──────────────────────────────── */
+        #llm-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 11px;
+        }
+        #llm-banner.show { display: flex; }
+
+        /* ── State grid ──────────────────────────────── */
+        .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; margin: 16px 0; }
+        .state-val  { font-size: 18px; font-weight: 900; color: #0f172a; }
+        .state-key  { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .2em; color: #94a3b8; margin-bottom: 3px; }
+
+        /* ── Interaction stream ───────────────────────── */
+        .stream-row { display: flex; gap: 12px; margin-bottom: 10px; }
+        .stream-date { font-size: 9px; font-weight: 900; color: #94a3b8; white-space: nowrap; width: 48px; flex-shrink: 0; padding-top: 1px; }
+        .stream-text { font-size: 12px; color: #475569; line-height: 1.45; }
+
+        /* ── Graph topology ──────────────────────────── */
+        .topo-chip {
+            background: #fff; border: 1px solid #e2e8f0;
+            font-size: 10px; font-weight: 900; color: #475569;
+            padding: 5px 10px; border-radius: 8px;
+            display: inline-block; margin: 3px;
+        }
     </style>
 </head>
-<body class="font-sans antialiased min-h-screen">
+<body>
+<div id="shell">
 
-    <header class="max-w-4xl mx-auto px-4 pt-16 pb-12 flex flex-col items-center text-center">
-        <div class="liquid-logo mb-6"></div>
-        <h1 class="text-5xl font-black tracking-tighter text-slate-900 italic leading-none mb-4">Liquid</h1>
-        <p class="text-slate-500 text-xs font-black tracking-[0.2em] uppercase max-w-md border-y border-slate-200 py-4">
-            Adaptive Interface for Intelligent Enterprise
-        </p>
-    </header>
+    <!-- ═══════════════════════════════════════════
+         LEFT PANE
+    ═══════════════════════════════════════════ -->
+    <aside id="left">
 
-    <main class="container mx-auto max-w-2xl px-4">
+        <!-- Header -->
+        <div style="padding:20px 20px 0; flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+                <div class="logo-blob"></div>
+                <div style="flex:1">
+                    <div style="font-size:18px;font-weight:900;color:#f1f5f9;font-style:italic;letter-spacing:-.03em;line-height:1;">Liquid</div>
+                    <div style="font-size:8px;font-weight:900;color:#334155;text-transform:uppercase;letter-spacing:.3em;margin-top:2px;">TSI Nexus</div>
+                </div>
+                <div style="display:flex;gap:5px;align-items:center;">
+                    <div style="width:6px;height:6px;border-radius:50%;background:#facc15;"></div>
+                    <div style="width:6px;height:6px;border-radius:50%;background:#f87171;"></div>
+                    <div style="width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade8099;"></div>
+                </div>
+            </div>
 
-        <!-- Input Bar -->
-        <div class="relative mb-6">
-            <div class="absolute -left-3 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-lg shadow-[0_0_15px_rgba(59,130,246,0.4)]"></div>
-            <input type="text" id="command-k"
-                   class="w-full bg-white border border-slate-200 p-8 rounded-2xl text-2xl font-light outline-none focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-slate-300 shadow-xl shadow-slate-200/40"
-                   placeholder="Ask naturally, or type /analyze @rahul_01…"
-                   autocomplete="off">
-            <div class="absolute right-8 top-1/2 -translate-y-1/2 flex items-center space-x-3">
-                <span class="accent-dot bg-[--tsi-yellow]"></span>
-                <span class="accent-dot bg-[--tsi-red]"></span>
-                <span class="text-[10px] font-black text-slate-400 tracking-widest uppercase ml-3">Nexus Active</span>
+            <!-- Input -->
+            <input id="cmd" type="text" placeholder="Ask anything… or /analyze @rahul_01" autocomplete="off">
+            <div style="text-align:center;font-size:8px;color:#334155;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-top:6px;margin-bottom:16px;">
+                Enter to submit &nbsp;·&nbsp; natural language &amp; /commands
             </div>
         </div>
 
-        <!-- Input hint -->
-        <p class="text-center text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-12">
-            Press <kbd class="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-slate-500 not-italic font-black">Enter</kbd> to submit &nbsp;·&nbsp; Natural language and /commands both work
-        </p>
+        <!-- Scrollable help content -->
+        <div id="left-scroll">
 
-        <div id="liquid-stage" class="space-y-6 pb-32">
+            <hr class="sec-divider">
 
-            <!-- Help Panel — shown by default, cleared on first submit -->
-            <div id="help-panel" class="component-fade-in space-y-4">
+            <!-- Try asking -->
+            <div class="sec-label">Try asking</div>
+            <span class="ex-chip" onclick="fire(this)">How is Rahul performing?</span>
+            <span class="ex-chip" onclick="fire(this)">Compare Rahul and Sara</span>
+            <span class="ex-chip" onclick="fire(this)">How is the East branch doing?</span>
+            <span class="ex-chip" onclick="fire(this)">Analyze anita's portfolio</span>
+            <span class="ex-chip" onclick="fire(this)">Benchmark east and west branch</span>
 
-                <!-- Natural Language Examples -->
-                <div class="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm">
-                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">Try asking naturally</p>
-                    <div class="flex flex-wrap gap-3">
-                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
-                              onclick="fireExample(this)">How is Rahul performing?</span>
-                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
-                              onclick="fireExample(this)">Compare Rahul and Sara</span>
-                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
-                              onclick="fireExample(this)">How is the East branch doing?</span>
-                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
-                              onclick="fireExample(this)">Analyze anita's portfolio</span>
-                        <span class="example-chip bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
-                              onclick="fireExample(this)">Benchmark east and west branch</span>
-                    </div>
-                </div>
+            <hr class="sec-divider">
 
-                <div class="grid grid-cols-2 gap-4">
+            <!-- Commands -->
+            <div class="sec-label">Commands</div>
+            <div class="cmd-row">
+                <span class="cmd-badge">/analyze</span><span class="cmd-args">@entity</span>
+                <div class="cmd-hint">Portfolio drill-down — officers, branches, groups.</div>
+            </div>
+            <div class="cmd-row">
+                <span class="cmd-badge">/compare</span><span class="cmd-args">@e1 @e2</span>
+                <div class="cmd-hint">Side-by-side benchmark. LLM narrates the difference.</div>
+            </div>
+            <div class="cmd-row">
+                <span class="cmd-badge">/disburse</span><span class="cmd-args">@member amt</span>
+                <div class="cmd-hint">Loan disbursement. KYC + group guardrails enforced.</div>
+            </div>
 
-                    <!-- Command Reference -->
-                    <div class="bg-white border border-slate-100 rounded-2xl p-7 shadow-sm">
-                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">Command reference</p>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <code class="text-blue-600 font-black text-xs bg-blue-50 px-2 py-0.5 rounded-lg">/analyze</code>
-                                    <code class="text-slate-500 text-xs">@entity</code>
-                                </div>
-                                <p class="text-[11px] text-slate-400 leading-snug">Portfolio drill-down for one entity. Works on officers, branches, groups.</p>
-                            </div>
-                            <div class="border-t border-slate-50 pt-4">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <code class="text-blue-600 font-black text-xs bg-blue-50 px-2 py-0.5 rounded-lg">/compare</code>
-                                    <code class="text-slate-500 text-xs">@entity1 @entity2</code>
-                                </div>
-                                <p class="text-[11px] text-slate-400 leading-snug">Side-by-side benchmarking of two entities. LLM narrates the difference.</p>
-                            </div>
-                            <div class="border-t border-slate-50 pt-4">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <code class="text-blue-600 font-black text-xs bg-blue-50 px-2 py-0.5 rounded-lg">/disburse</code>
-                                    <code class="text-slate-500 text-xs">@member amount</code>
-                                </div>
-                                <p class="text-[11px] text-slate-400 leading-snug">Loan disbursement. Triggers KYC and group liability guardrails before execution.</p>
-                            </div>
-                        </div>
-                    </div>
+            <hr class="sec-divider">
 
-                    <!-- Entity Index -->
-                    <div class="bg-white border border-slate-100 rounded-2xl p-7 shadow-sm">
-                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">Entity index</p>
-                        <div class="space-y-3">
-                            <div>
-                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Officers</p>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@rahul_01</span>
-                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@sara_02</span>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Branches</p>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@branch_east</span>
-                                    <span class="example-chip text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@branch_west</span>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Members</p>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@satish_01</span>
-                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@anita_02</span>
-                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@rohan_03</span>
-                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@meena_04</span>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-[9px] font-black uppercase tracking-widest text-slate-300 mb-1.5">Groups</p>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@unity_group</span>
-                                    <span class="example-chip text-[10px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" onclick="fireExample(this)">@alpha_group</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Entity index -->
+            <div class="sec-label">Entity index</div>
+            <div class="ent-label">Officers</div>
+            <div class="ent-row">
+                <span class="ent-chip ent-officer" onclick="fire(this)">@rahul_01</span>
+                <span class="ent-chip ent-officer" onclick="fire(this)">@sara_02</span>
+            </div>
+            <div class="ent-label">Branches</div>
+            <div class="ent-row">
+                <span class="ent-chip ent-branch" onclick="fire(this)">@branch_east</span>
+                <span class="ent-chip ent-branch" onclick="fire(this)">@branch_west</span>
+            </div>
+            <div class="ent-label">Members</div>
+            <div class="ent-row">
+                <span class="ent-chip ent-member" onclick="fire(this)">@satish_01</span>
+                <span class="ent-chip ent-member" onclick="fire(this)">@anita_02</span>
+                <span class="ent-chip ent-member" onclick="fire(this)">@rohan_03</span>
+                <span class="ent-chip ent-member" onclick="fire(this)">@meena_04</span>
+            </div>
+            <div class="ent-label">Groups</div>
+            <div class="ent-row">
+                <span class="ent-chip ent-group" onclick="fire(this)">@unity_group</span>
+                <span class="ent-chip ent-group" onclick="fire(this)">@alpha_group</span>
+            </div>
 
-                </div>
+            <hr class="sec-divider">
 
-                <!-- How it works -->
-                <div class="bg-slate-900 rounded-2xl p-7 text-white">
-                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-5">How Liquid works</p>
-                    <div class="grid grid-cols-3 gap-6">
-                        <div>
-                            <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center mb-3 text-white font-black text-xs">1</div>
-                            <p class="text-xs font-bold text-white mb-1">Express Intent</p>
-                            <p class="text-[11px] text-slate-400 leading-snug">Type naturally or use a /command. The AI parses your input and maps it to the correct entity and action.</p>
-                        </div>
-                        <div>
-                            <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center mb-3 text-white font-black text-xs">2</div>
-                            <p class="text-xs font-bold text-white mb-1">Context Surfaces</p>
-                            <p class="text-[11px] text-slate-400 leading-snug">The entity's state, relationships, and full interaction history are loaded from the Sovereign Vault.</p>
-                        </div>
-                        <div>
-                            <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center mb-3 text-white font-black text-xs">3</div>
-                            <p class="text-xs font-bold text-white mb-1">Govern or Analyse</p>
-                            <p class="text-[11px] text-slate-400 leading-snug">Analytics actions run SQL and return an AI narrative. Mutations pass through policy guardrails before executing.</p>
-                        </div>
-                    </div>
-                </div>
+            <!-- How it works -->
+            <div class="sec-label">How it works</div>
+            <div class="step">
+                <div class="step-n">1</div>
+                <div><div class="step-title">Express Intent</div><div class="step-body">Type naturally. AI maps your words to the right entity and action.</div></div>
+            </div>
+            <div class="step">
+                <div class="step-n">2</div>
+                <div><div class="step-title">Context Surfaces</div><div class="step-body">State, graph topology, and interaction history load from the Vault.</div></div>
+            </div>
+            <div class="step">
+                <div class="step-n">3</div>
+                <div><div class="step-title">Govern or Analyse</div><div class="step-body">Analytics run SQL + AI narrative. Mutations pass policy guardrails.</div></div>
+            </div>
 
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════
+         RIGHT PANE
+    ═══════════════════════════════════════════ -->
+    <main id="right">
+        <div id="stage" class="is-idle">
+            <div style="text-align:center;opacity:.25;">
+                <div class="logo-blob" style="width:56px;height:56px;margin:0 auto 16px;opacity:.5;"></div>
+                <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#94a3b8;">Awaiting Signal</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:6px;font-weight:500;">Ask a question or click an example on the left</div>
             </div>
         </div>
     </main>
 
-    <template id="tpl-universal_context_card">
-        <div class="bg-white nexus-border rounded-2xl p-10 shadow-lg component-fade-in">
-            <div class="flex justify-between items-start mb-10">
+</div><!-- #shell -->
+
+<!-- ─────────────────────────────────────────────
+     TEMPLATES
+───────────────────────────────────────────── -->
+
+<template id="tpl-ctx-card">
+    <div class="nexus-card fade-in">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+            <div>
+                <div class="target-handle" style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-.02em;"></div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+                    <span class="twin-type" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#3b82f6;"></span>
+                    <span style="width:3px;height:3px;border-radius:50%;background:#cbd5e1;display:inline-block;"></span>
+                    <span style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.15em;">Sovereign Node</span>
+                </div>
+            </div>
+            <div style="width:36px;height:36px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                <div style="width:8px;height:8px;background:#3b82f6;border-radius:50%;animation:pulse 2s infinite;"></div>
+            </div>
+        </div>
+        <div class="state-grid"></div>
+        <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:4px;">
+            <div class="sec-label" style="color:#94a3b8;margin-bottom:8px;">Graph Topology</div>
+            <div class="graph-links"></div>
+        </div>
+        <div class="stream-wrap" style="display:none;background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:8px;">
+            <div class="sec-label" style="color:#94a3b8;margin-bottom:10px;">Interaction Stream</div>
+            <div class="stream-body"></div>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-action-card">
+    <div class="dark-card fade-in">
+        <div class="dark-card-bar"></div>
+        <div class="action-header" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#60a5fa;margin-bottom:12px;margin-top:6px;"></div>
+        <div class="action-desc" style="font-size:22px;font-weight:300;color:#f1f5f9;line-height:1.3;margin-bottom:20px;"></div>
+        <div style="display:flex;align-items:center;gap:20px;">
+            <button class="exec-btn" style="background:#2563eb;color:#fff;padding:10px 28px;border-radius:10px;font-size:12px;font-weight:900;border:none;cursor:pointer;transition:background .15s;box-shadow:0 4px 14px rgba(37,99,235,.35);"
+                onmouseover="this.style.background='#3b82f6'" onmouseout="this.style.background='#2563eb'"></button>
+            <button onclick="resetStage()" style="background:none;border:none;color:#475569;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;">Dismiss</button>
+        </div>
+    </div>
+</template>
+
+<script>
+    const cmd   = document.getElementById('cmd');
+    const stage = document.getElementById('stage');
+
+    /* ── Keyboard ─────────────────────────────── */
+    cmd.addEventListener('keypress', e => {
+        if (e.key === 'Enter' && cmd.value.trim()) {
+            const v = cmd.value.trim();
+            cmd.value = '';
+            resolveIntent(v);
+        }
+    });
+
+    function fire(el) {
+        const t = el.innerText;
+        cmd.value = t;
+        resolveIntent(t);
+    }
+
+    /* ── Stage helpers ────────────────────────── */
+    function stageLoading(isNL) {
+        stage.className = 'is-loading';
+        stage.innerHTML = `
+            <div style="text-align:center;">
+                <div style="font-size:10px;font-weight:900;letter-spacing:.45em;text-transform:uppercase;color:#3b82f6;animation:pulse 1.5s infinite;">
+                    ${isNL ? 'AI Parsing Intent…' : 'Resolving…'}
+                </div>
+            </div>`;
+    }
+
+    function stageResults() {
+        stage.className = 'is-results';
+        stage.innerHTML = '';
+    }
+
+    function resetStage() {
+        stage.className = 'is-idle';
+        stage.innerHTML = `
+            <div style="text-align:center;opacity:.25;">
+                <div class="logo-blob" style="width:56px;height:56px;margin:0 auto 16px;opacity:.5;"></div>
+                <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#94a3b8;">Awaiting Signal</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:6px;font-weight:500;">Ask a question or click an example on the left</div>
+            </div>`;
+    }
+
+    function appendToStage(el) {
+        stage.appendChild(el);
+    }
+
+    /* ── Escape HTML ──────────────────────────── */
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    /* ── Resolve intent ───────────────────────── */
+    async function resolveIntent(intent) {
+        const isNL = !intent.startsWith('/') && !intent.startsWith('@');
+        stageLoading(isNL);
+        try {
+            const res  = await fetch('/api/intent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({intent}) });
+            const data = await res.json();
+            stageResults();
+
+            if (data.llm_command) {
+                const b = document.createElement('div');
+                b.className = 'fade-in';
+                b.style.cssText = 'display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:9px 14px;font-size:11px;';
+                b.innerHTML = `
+                    <svg width="14" height="14" fill="none" stroke="#3b82f6" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span style="color:#3b82f6;font-weight:700;">AI understood:</span>
+                    <code style="color:#1d4ed8;background:#dbeafe;font-weight:900;padding:2px 7px;border-radius:5px;font-size:11px;">${esc(data.llm_command)}</code>
+                    <span style="color:#93c5fd;font-size:10px;margin-left:auto;">from "${esc(data.intent_captured)}"</span>`;
+                appendToStage(b);
+            }
+
+            await renderComponents(data.components);
+        } catch(e) {
+            stageResults();
+            const err = document.createElement('div');
+            err.innerHTML = `<div style="padding:20px 24px;background:#fff;border-left:6px solid #ef4444;border-radius:12px;color:#b91c1c;font-weight:700;font-size:13px;">Connection failed: ${esc(e.message)}</div>`;
+            appendToStage(err.firstElementChild);
+        }
+    }
+
+    /* ── Render components ────────────────────── */
+    async function renderComponents(components) {
+        for (const comp of components) {
+            const props = JSON.parse(comp.props);
+
+            if (comp.component_type === 'universal_context_card') {
+                await renderContextCard(props);
+            } else if (comp.component_type === 'universal_action_confirm') {
+                renderActionCard(props);
+            }
+        }
+    }
+
+    /* ── Context card ─────────────────────────── */
+    async function renderContextCard(props) {
+        const tpl   = document.getElementById('tpl-ctx-card');
+        const clone = tpl.content.cloneNode(true);
+        const card  = clone.querySelector('.nexus-card');
+
+        card.querySelector('.target-handle').textContent = props.target;
+
+        try {
+            const res  = await fetch('/api/context', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({external_id: props.target}) });
+            const data = await res.json();
+            const ctx  = data.context;
+
+            card.querySelector('.twin-type').textContent = ctx.type;
+
+            const state  = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
+            const grid   = card.querySelector('.state-grid');
+            grid.innerHTML = Object.entries(state).map(([k,v]) => `
                 <div>
-                    <h2 class="target-handle text-3xl font-black text-slate-900 tracking-tight mb-1">@target</h2>
-                    <div class="flex items-center space-x-2">
-                        <span class="twin-type text-[11px] font-black uppercase tracking-[0.2em] text-blue-600">TYPE</span>
-                        <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Sovereign Node</span>
-                    </div>
-                </div>
-                <div class="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100">
-                    <div class="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
-                </div>
-            </div>
-            <div class="state-grid grid grid-cols-2 gap-y-10 gap-x-8 mb-12"></div>
-            <div class="bg-slate-50/80 rounded-2xl p-6 border border-slate-100 mb-4">
-                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">Graph Topology</h4>
-                <div class="graph-links flex flex-wrap gap-3"></div>
-            </div>
-            <div class="interaction-stream-wrap hidden bg-slate-50/80 rounded-2xl p-6 border border-slate-100">
-                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">Interaction Stream</h4>
-                <div class="interaction-stream space-y-4"></div>
-            </div>
-        </div>
-    </template>
+                    <div class="state-key">${esc(k)}</div>
+                    <div class="state-val">${esc(String(v))}</div>
+                </div>`).join('');
 
-    <template id="tpl-universal_action_confirm">
-        <div class="bg-slate-900 text-white rounded-3xl p-12 shadow-2xl component-fade-in relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-blue-600 to-indigo-600"></div>
-            <h3 class="action-header text-blue-400 font-black text-[11px] uppercase tracking-[0.5em] mb-6">Governance Handshake</h3>
-            <p class="action-desc text-3xl font-light leading-tight mb-12 text-slate-100">Proposed action...</p>
-            <div class="flex items-center space-x-8">
-                <button class="exec-btn bg-blue-600 text-white px-12 py-5 rounded-2xl text-sm font-black hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/20">Authorize Action</button>
-                <button onclick="this.closest('.component-fade-in').remove()" class="text-slate-500 text-xs font-black uppercase tracking-widest hover:text-white transition-colors">Dismiss</button>
-            </div>
-        </div>
-    </template>
-
-    <script>
-        const input = document.getElementById('command-k');
-        const stage = document.getElementById('liquid-stage');
-
-        input.addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter' && input.value.trim()) {
-                const val = input.value.trim();
-                input.value = '';
-                await resolveIntent(val);
+            const links  = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
+            const topo   = card.querySelector('.graph-links');
+            if (links && links.length) {
+                topo.innerHTML = links.map(l => `<span class="topo-chip">${esc(l.type)} <span style="color:#3b82f6;">→</span> ${esc(l.to)}</span>`).join('');
+            } else {
+                topo.innerHTML = '<span style="font-size:10px;color:#94a3b8;">No outbound links</span>';
             }
-        });
 
-        function fireExample(el) {
-            const text = el.innerText;
-            input.value = text;
-            resolveIntent(text);
-        }
-
-        async function resolveIntent(intent) {
-            const isNL = !intent.trim().startsWith('/') && !intent.trim().startsWith('@');
-            stage.innerHTML = isNL
-                ? '<div class="text-center py-16 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.4em]">AI PARSING INTENT…</div>'
-                : '<div class="text-center py-16 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.4em]">RESOLVING…</div>';
-
-            try {
-                const response = await fetch('/api/intent', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ intent })
-                });
-                const data = await response.json();
-                stage.innerHTML = '';
-
-                // Show LLM interpretation banner when natural language was parsed
-                if (data.llm_command) {
-                    const banner = document.createElement('div');
-                    banner.className = 'component-fade-in flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-5 py-3';
-                    banner.innerHTML = `
-                        <div class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                            <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        </div>
-                        <span class="text-[11px] text-blue-500 font-bold">AI understood:</span>
-                        <code class="text-[11px] font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded">${escHtml(data.llm_command)}</code>
-                        <span class="text-[10px] text-blue-300 font-bold ml-auto">from "${escHtml(data.intent_captured)}"</span>`;
-                    stage.appendChild(banner);
-                }
-
-                await renderAdaptiveUI(data.components);
-            } catch (err) {
-                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-700 border-l-8 border-red-500 rounded-xl shadow-lg font-bold">Nexus Connection Failed: ${escHtml(err.message)}</div>`;
-            }
-        }
-
-        function escHtml(str) {
-            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        const safeSet = (el, val, mode = 'text') => {
-            if (!el) return;
-            if (mode === 'html') el.innerHTML = val;
-            else el.innerText = val;
-        };
-
-        async function renderAdaptiveUI(components) {
-            for (const comp of components) {
-                const template = document.getElementById(`tpl-${comp.component_type}`);
-                if (!template) continue;
-
-                const clone = template.content.cloneNode(true);
-                const container = clone.querySelector('div');
-                const props = JSON.parse(comp.props);
-
-                if (comp.component_type === 'universal_context_card') {
-                    safeSet(container.querySelector('.target-handle'), props.target);
-                    try {
-                        const resCtx = await fetch('/api/context', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ external_id: props.target })
-                        });
-                        const data = await resCtx.json();
-                        const ctx = data.context;
-
-                        safeSet(container.querySelector('.twin-type'), ctx.type);
-
-                        const state = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
-                        const gridHtml = Object.entries(state).map(([k, v]) => `
-                            <div class="group">
-                                <p class="text-[10px] uppercase font-black text-slate-300 tracking-widest mb-2 group-hover:text-blue-500 transition-colors">${escHtml(k)}</p>
-                                <p class="text-lg font-bold text-slate-800">${escHtml(String(v))}</p>
-                            </div>`).join('');
-                        safeSet(container.querySelector('.state-grid'), gridHtml, 'html');
-
-                        const links = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
-                        if (links && links.length > 0) {
-                            const linksHtml = links.map(l => `
-                                <span class="bg-white border border-slate-200 text-slate-600 text-[10px] font-black px-4 py-2 rounded-xl shadow-sm hover:border-blue-300 transition-colors">
-                                    ${escHtml(l.type)} <span class="text-blue-500 mx-1">→</span> ${escHtml(l.to)}
-                                </span>`).join('');
-                            safeSet(container.querySelector('.graph-links'), linksHtml, 'html');
-                        }
-
-                        const interactions = ctx.recent_interactions;
-                        if (interactions && interactions.length > 0) {
-                            const streamHtml = interactions.map(i => `
-                                <div class="flex items-start gap-4">
-                                    <span class="text-[10px] font-black text-slate-300 whitespace-nowrap pt-0.5 w-20 shrink-0">${new Date(i.timestamp).toLocaleDateString('en-GB', {day:'2-digit', month:'short'})}</span>
-                                    <span class="text-sm text-slate-600 leading-snug">${escHtml(i.content)}</span>
-                                </div>`).join('');
-                            safeSet(container.querySelector('.interaction-stream'), streamHtml, 'html');
-                            container.querySelector('.interaction-stream-wrap').classList.remove('hidden');
-                        }
-                    } catch (e) { console.error("Context Error", e); }
-
-                } else if (comp.component_type === 'universal_action_confirm') {
-                    const isAnalytics = ['ANALYZE', 'COMPARE'].includes(props.action_type);
-                    const headerEl = container.querySelector('.action-header');
-                    const execBtn  = container.querySelector('.exec-btn');
-
-                    if (isAnalytics) {
-                        safeSet(headerEl, 'Intelligence Query');
-                        safeSet(execBtn, props.action_type === 'COMPARE' ? 'Run Comparison' : 'Run Analysis');
-                    } else {
-                        safeSet(headerEl, 'Governance Handshake');
-                        safeSet(execBtn, 'Authorize Action');
-                    }
-
-                    if (props.action_type === 'COMPARE') {
-                        safeSet(container.querySelector('.action-desc'), `Benchmark ${props.target_1} against ${props.target_2}`);
-                    } else if (props.action_type === 'ANALYZE') {
-                        safeSet(container.querySelector('.action-desc'), `Analyze portfolio for ${props.target_external_id}`);
-                    } else {
-                        safeSet(container.querySelector('.action-desc'), `Execute ${props.action_type} for ${props.target_external_id}${props.value ? ' — value: ' + props.value : ''}`);
-                    }
-
-                    if (execBtn) execBtn.onclick = () => finalizeAction(props);
-                }
-
-                stage.appendChild(clone);
-            }
-        }
-
-        function renderAnalysisData(data, actionType) {
-            if (!data || data.length === 0) return '<p class="text-slate-400 italic text-sm">No data returned for this entity.</p>';
-            if (actionType === 'ANALYZE') {
-                const row = data[0];
-                return Object.entries(row).filter(([k]) => k !== 'external_id').map(([k, v]) => `
-                    <div class="flex justify-between items-center py-4 border-b border-slate-100 last:border-0">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">${escHtml(k.replace(/_/g,' '))}</span>
-                        <span class="text-2xl font-black text-slate-800">${escHtml(String(v ?? '—'))}${k.includes('rate') ? '%' : ''}</span>
+            const istream = ctx.recent_interactions;
+            if (istream && istream.length) {
+                const wrap = card.querySelector('.stream-wrap');
+                wrap.style.display = 'block';
+                wrap.querySelector('.stream-body').innerHTML = istream.map(i => `
+                    <div class="stream-row">
+                        <div class="stream-date">${new Date(i.timestamp).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div>
+                        <div class="stream-text">${esc(i.content)}</div>
                     </div>`).join('');
             }
-            if (actionType === 'COMPARE') {
-                const cols = Object.keys(data[0]).filter(k => k !== 'external_id');
-                return `<table class="w-full text-sm">
-                    <thead><tr>
-                        <th class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400 pb-3">Entity</th>
-                        ${cols.map(c => `<th class="text-right text-[10px] font-black uppercase tracking-widest text-slate-400 pb-3">${escHtml(c.replace(/_/g,' '))}</th>`).join('')}
-                    </tr></thead>
-                    <tbody>${data.map(row => `
-                        <tr class="border-t border-slate-100">
-                            <td class="py-3 font-bold text-slate-700">${escHtml(String(row.external_id))}</td>
-                            ${cols.map(c => `<td class="py-3 text-right font-black text-slate-800">${escHtml(String(row[c] ?? '—'))}${c.includes('rate') ? '%' : ''}</td>`).join('')}
-                        </tr>`).join('')}
-                    </tbody></table>`;
+        } catch(e) { console.error('Context error', e); }
+
+        appendToStage(card);
+    }
+
+    /* ── Action card ──────────────────────────── */
+    function renderActionCard(props) {
+        const tpl   = document.getElementById('tpl-action-card');
+        const clone = tpl.content.cloneNode(true);
+        const card  = clone.querySelector('.dark-card');
+
+        const isAnalytics = ['ANALYZE','COMPARE'].includes(props.action_type);
+        card.querySelector('.action-header').textContent = isAnalytics ? 'Intelligence Query' : 'Governance Handshake';
+
+        const btn = card.querySelector('.exec-btn');
+        if (props.action_type === 'COMPARE') {
+            card.querySelector('.action-desc').textContent = `Benchmark ${props.target_1} against ${props.target_2}`;
+            btn.textContent = 'Run Comparison';
+        } else if (props.action_type === 'ANALYZE') {
+            card.querySelector('.action-desc').textContent = `Analyse portfolio for ${props.target_external_id}`;
+            btn.textContent = 'Run Analysis';
+        } else {
+            card.querySelector('.action-desc').textContent = `Execute ${props.action_type} for ${props.target_external_id}${props.value ? ' — ₹' + props.value : ''}`;
+            btn.textContent = 'Authorize Action';
+        }
+
+        btn.onclick = () => finalizeAction(props);
+        appendToStage(card);
+    }
+
+    /* ── Finalize action ──────────────────────── */
+    async function finalizeAction(props) {
+        stageLoading(false);
+        const body = {
+            action_type: props.action_type,
+            intent_raw:  props.intent_raw,
+            params: {
+                target_external_id: props.target_external_id,
+                target_1:           props.target_1,
+                target_2:           props.target_2,
+                new_data: props.value ? {[props.action_type.toLowerCase()+'_amount']: props.value} : null
             }
-            return '';
-        }
+        };
+        try {
+            const res    = await fetch('/api/governance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+            const result = await res.json();
+            stageResults();
 
-        async function finalizeAction(props) {
-            stage.innerHTML = '<div class="text-center py-24 animate-pulse text-blue-600 text-[11px] font-black tracking-[0.6em]">GOVERNANCE CHECK</div>';
+            if (result.success) {
+                const wrap = document.createElement('div');
+                wrap.className = 'fade-in';
+                wrap.style.cssText = 'background:#fff;border:1px solid #e0f2fe;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.06);';
+                wrap.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <div style="width:36px;height:36px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                            <svg width="18" height="18" fill="none" stroke="#3b82f6" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div style="font-size:16px;font-weight:900;color:#1d4ed8;letter-spacing:-.01em;">
+                            ${['ANALYZE','COMPARE'].includes(props.action_type) ? 'Analysis Complete' : 'Action Authorized'}
+                        </div>
+                        <button onclick="resetStage()" style="margin-left:auto;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← New Query</button>
+                    </div>
+                    <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:16px;">
+                        ${result.data ? renderTable(result.data, props.action_type) : `<span style="font-size:13px;color:#475569;">${esc(result.reason||result.message||'')}</span>`}
+                    </div>
+                    ${result.narrative ? `
+                    <div style="margin-top:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;">
+                        <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3em;color:#60a5fa;margin-bottom:8px;">Intelligence</div>
+                        <div style="font-size:12px;color:#334155;line-height:1.65;white-space:pre-line;">${esc(result.narrative)}</div>
+                    </div>` : ''}`;
+                appendToStage(wrap);
 
-            const requestBody = {
-                action_type: props.action_type,
-                intent_raw: props.intent_raw,
-                params: {
-                    target_external_id: props.target_external_id,
-                    target_1: props.target_1,
-                    target_2: props.target_2,
-                    new_data: props.value ? { [props.action_type.toLowerCase() + "_amount"]: props.value } : null
+                if (props.action_type === 'DISBURSE') {
+                    setTimeout(() => resolveIntent(`@${(props.target_external_id||'').replace(/^@/,'')}`), 3000);
                 }
-            };
-
-            try {
-                const res = await fetch('/api/governance', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-                const result = await res.json();
-
-                if (result.success) {
-                    stage.innerHTML = `<div class="p-20 bg-white border border-blue-100 rounded-3xl text-center component-fade-in shadow-2xl">
-                        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                        </div>
-                        <p class="font-black text-2xl text-slate-900 tracking-tight mb-2 text-blue-600">
-                            ${(['ANALYZE','COMPARE'].includes(props.action_type)) ? 'Analysis Complete' : 'Action Authorized'}
-                        </p>
-                        <div class="text-slate-700 font-medium mt-6 bg-slate-50 p-6 rounded-xl border border-slate-100 shadow-inner">
-                            ${result.data ? renderAnalysisData(result.data, props.action_type) : escHtml(result.reason || result.message || '')}
-                        </div>
-                        ${result.narrative ? `
-                        <div class="mt-4 p-6 bg-blue-50/50 rounded-xl border border-blue-100 text-left">
-                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em] mb-3">Intelligence</p>
-                            <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">${escHtml(result.narrative)}</p>
-                        </div>` : ''}
-                        <button onclick="showHelp()" class="mt-8 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">← New Query</button>
-                    </div>`;
-
-                    if (props.action_type === 'DISBURSE') {
-                        setTimeout(() => resolveIntent(`@${(props.target_external_id || '').replace(/^@/, '')}`), 3500);
-                    }
-                } else {
-                    stage.innerHTML = `<div class="p-12 border-l-[12px] border-red-500 bg-white text-slate-900 rounded-2xl component-fade-in shadow-2xl">
-                        <h4 class="text-red-600 font-black text-[11px] uppercase tracking-[0.4em] mb-4">Governance Denial</h4>
-                        <p class="text-xl font-bold leading-tight text-slate-800">${escHtml(result.reason || '')}</p>
-                        <div class="mt-10 pt-6 border-t border-slate-100">
-                            <button onclick="showHelp()" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">← New Query</button>
-                        </div>
-                    </div>`;
-                }
-            } catch (err) {
-                stage.innerHTML = `<div class="p-8 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">Nexus Error: ${escHtml(err.message)}</div>`;
+            } else {
+                const deny = document.createElement('div');
+                deny.className = 'fade-in';
+                deny.style.cssText = 'background:#fff;border-left:6px solid #ef4444;border-radius:14px;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.06);';
+                deny.innerHTML = `
+                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#ef4444;margin-bottom:10px;">Governance Denial</div>
+                    <div style="font-size:16px;font-weight:700;color:#0f172a;">${esc(result.reason||'')}</div>
+                    <button onclick="resetStage()" style="margin-top:16px;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← New Query</button>`;
+                appendToStage(deny);
             }
+        } catch(e) {
+            stageResults();
+            const err = document.createElement('div');
+            err.style.cssText = 'padding:20px 24px;background:#fff;border-left:6px solid #ef4444;border-radius:12px;color:#b91c1c;font-weight:700;font-size:13px;';
+            err.textContent = 'Nexus Error: ' + e.message;
+            appendToStage(err);
+        }
+    }
+
+    /* ── Render table (analysis results) ─────── */
+    function renderTable(data, actionType) {
+        if (!data || !data.length) return '<span style="color:#94a3b8;font-style:italic;font-size:12px;">No data returned.</span>';
+
+        if (actionType === 'ANALYZE') {
+            const row = data[0];
+            return Object.entries(row).filter(([k]) => k !== 'external_id').map(([k,v]) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                    <span style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;">${esc(k.replace(/_/g,' '))}</span>
+                    <span style="font-size:20px;font-weight:900;color:#0f172a;">${esc(String(v??'—'))}${k.includes('rate')?'%':''}</span>
+                </div>`).join('');
         }
 
-        function showHelp() {
-            location.reload();
+        if (actionType === 'COMPARE') {
+            const cols = Object.keys(data[0]).filter(k => k !== 'external_id');
+            return `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead><tr>
+                    <th style="text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">Entity</th>
+                    ${cols.map(c=>`<th style="text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">${esc(c.replace(/_/g,' '))}</th>`).join('')}
+                </tr></thead>
+                <tbody>${data.map(row=>`
+                    <tr style="border-top:1px solid #f1f5f9;">
+                        <td style="padding:10px 0;font-weight:700;color:#334155;">${esc(String(row.external_id))}</td>
+                        ${cols.map(c=>`<td style="padding:10px 0;text-align:right;font-weight:900;color:#0f172a;font-size:16px;">${esc(String(row[c]??'—'))}${c.includes('rate')?'%':''}</td>`).join('')}
+                    </tr>`).join('')}
+                </tbody></table>`;
         }
-    </script>
+        return '';
+    }
+</script>
 </body>
 </html>
