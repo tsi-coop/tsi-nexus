@@ -203,7 +203,13 @@ public class Intent implements Action {
         // 3. NO HANDLE: fuzzy name search → disambiguation → semantic fallback
         else if (!cleanIntent.contains("@") && !cleanIntent.startsWith("/")) {
             String searchTerm = extractSearchTerm(cleanIntent);
-            List<JSONObject> matches = fuzzySearchEntities(searchTerm);
+            // Fuzzy search is only meaningful for name-like inputs (short, no question mark).
+            // Questions and multi-word sentences fall straight to semantic search.
+            boolean nameLike = !cleanIntent.contains("?")
+                            && cleanIntent.trim().split("\\s+").length <= 4
+                            && searchTerm.split("\\s+").length <= 2
+                            && !searchTerm.isEmpty();
+            List<JSONObject> matches = nameLike ? fuzzySearchEntities(searchTerm) : new ArrayList<>();
 
             if (matches.size() == 1) {
                 String handle = (String) matches.get(0).get("handle");
