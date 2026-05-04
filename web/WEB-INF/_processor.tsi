@@ -3,4 +3,5 @@
 /api/context=org.tsicoop.nexus.api.Context
 /api/governance=org.tsicoop.nexus.api.Governance
 /api/capture=org.tsicoop.nexus.api.Capture
+/api/entities=org.tsicoop.nexus.api.Entities
 

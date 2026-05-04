@@ -275,6 +275,17 @@ INSERT INTO interaction_stream (owner_id, content, created_at) VALUES
 ((SELECT id FROM digital_twins WHERE external_id='arun_04'),  'meena_14 flagged as top performer. Eligible for enhanced credit limit.', NOW() - INTERVAL '10 days');
 
 -- ============================================================================
+-- COMMAND MANIFEST: Available slash commands in this deployment.
+-- Drives the LLM system prompt, UI routing, and sidebar display dynamically.
+-- ============================================================================
+
+INSERT INTO command_manifest (command_verb, label, args_hint, hint, component_type, action_type, multi_target, has_value) VALUES
+  ('analyze',  'Analyze',  '@entity',         'Pull up the full profile and performance details for any entity.',     'universal_action_confirm', 'ANALYZE',  FALSE, FALSE),
+  ('compare',  'Compare',  '@entity @entity', 'Put two entities side by side. AI explains the differences.',          'universal_action_confirm', 'COMPARE',  TRUE,  FALSE),
+  ('disburse', 'Disburse', '@entity amount',  'Initiate a governed transaction. Compliance rules run automatically.', 'universal_action_confirm', 'DISBURSE', FALSE, TRUE),
+  ('capture',  'Capture',  '@entity',         'Record an interaction — a form, survey, or field visit.',              'interaction_capture_form',  'CAPTURE',  FALSE, FALSE);
+
+-- ============================================================================
 -- INTERACTION SCHEMAS: Generic Capture Registry
 -- Each row defines a self-contained interaction form.
 -- Adding a new interaction type (survey, doc-upload, field visit …) is a

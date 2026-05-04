@@ -88,7 +88,24 @@ CREATE TABLE policy_manifest (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. ACTION & AUDIT LOG
+-- 7. COMMAND MANIFEST
+-- Defines every slash command available in this deployment.
+-- component_type drives UI routing; multi_target/has_value drive argument parsing.
+-- Adding a new command = one INSERT here + any governance rows in policy_manifest.
+CREATE TABLE command_manifest (
+    command_verb   TEXT PRIMARY KEY,
+    label          TEXT NOT NULL,
+    args_hint      TEXT NOT NULL DEFAULT '@entity',
+    hint           TEXT NOT NULL,
+    component_type TEXT NOT NULL DEFAULT 'universal_action_confirm',
+    action_type    TEXT NOT NULL,
+    multi_target   BOOLEAN NOT NULL DEFAULT FALSE,
+    has_value      BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active      BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. ACTION & AUDIT LOG
 CREATE TABLE action_audit_log (
     audit_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     actor_id UUID REFERENCES digital_twins(id),

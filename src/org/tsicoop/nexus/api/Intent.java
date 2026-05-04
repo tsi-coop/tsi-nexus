@@ -13,11 +13,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * TSI Nexus: Universal Intent Resolver
- * The bridge between Natural Language/Commands and the Liquid Interface.
- * Designed to be vertical-agnostic: handles any entity type or action via metadata.
+ *
+ * The bridge between Natural Language / Commands and the Liquid Interface.
+ * Vertical-agnostic: available commands, their routing, and the LLM prompt
+ * are all driven by rows in command_manifest — zero hardcoding here.
  */
 public class Intent implements Action {
 
@@ -25,63 +28,80 @@ public class Intent implements Action {
     private static final String VLLM_MODEL;
 
     static {
-        String url = System.getenv("VLLM_URL");
+        String url   = System.getenv("VLLM_URL");
         String model = System.getenv("VLLM_MODEL");
-        VLLM_URL = (url != null && !url.isEmpty()) ? url.replaceAll("/$", "") : null;
+        VLLM_URL   = (url   != null && !url.isEmpty())   ? url.replaceAll("/$", "") : null;
         VLLM_MODEL = (model != null && !model.isEmpty()) ? model : "google/gemma-3-12b-it";
     }
 
-    private static final String INTENT_SYSTEM_PROMPT =
-        "You are the command parser for TSI Nexus, an institutional intelligence platform.\n" +
-        "Translate the user's natural language into a single structured command.\n\n" +
-        "Available commands:\n" +
-        "  /analyze @<id>               — analyze a single entity's performance\n" +
-        "  /compare @<id1> @<id2>       — benchmark two entities side by side\n" +
-        "  /disburse @<member_id> <amt> — disburse a loan amount to a member\n" +
-        "  /capture @<member_id>        — open an interaction capture form for a member\n\n" +
-        "Rules:\n" +
-        "1. Output ONLY the command string. No explanation, no markdown, no punctuation.\n" +
-        "2. Map names or descriptions to the correct @handle from the entity list provided.\n" +
-        "3. The @handle must match exactly what is listed — do not invent handles.\n" +
-        "4. If intent is unclear or no matching entity exists, output: /unknown";
-
     @Override
     public void post(HttpServletRequest req, HttpServletResponse res) {
+        PoolDB pool = null;
+        Connection conn = null;
         try {
-            JSONObject input = InputProcessor.getInput(req);
-            String rawIntent = (String) input.get("intent");
+            pool = new PoolDB();
+            conn = pool.getConnection();
 
-            String llmCommand = llmParseIntent(rawIntent);
+            JSONObject input  = InputProcessor.getInput(req);
+            String rawIntent  = (String) input.get("intent");
+
+            List<JSONObject> commands = loadCommands(conn);
+            String llmCommand = llmParseIntent(rawIntent, commands);
             String intentToProcess = (llmCommand != null) ? llmCommand : rawIntent;
 
-            JSONObject result = resolveToAdaptiveUI(intentToProcess);
+            JSONObject result = resolveToAdaptiveUI(intentToProcess, commands);
             result.put("intent_captured", rawIntent);
             if (llmCommand != null) result.put("llm_command", llmCommand);
 
             OutputProcessor.send(res, 200, result);
         } catch (Exception e) {
             OutputProcessor.errorResponse(res, 500, "Intent Resolution Failed", e.getMessage(), req.getRequestURI());
+        } finally {
+            if (pool != null) pool.cleanup(null, null, conn);
         }
     }
 
-    /**
-     * Calls the LLM to convert natural language into a /command string.
-     * Returns null if LLM is unavailable, the input is already a command, or parsing fails.
-     */
+    /* ── Load commands from DB ────────────────────────────────────────────── */
+
     @SuppressWarnings("unchecked")
-    private String llmParseIntent(String rawInput) {
+    private List<JSONObject> loadCommands(Connection conn) throws Exception {
+        List<JSONObject> commands = new ArrayList<>();
+        String sql = "SELECT command_verb, label, args_hint, hint, component_type, action_type, multi_target, has_value " +
+                     "FROM command_manifest WHERE is_active = TRUE ORDER BY command_verb";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                JSONObject cmd = new JSONObject();
+                cmd.put("command_verb",   rs.getString("command_verb"));
+                cmd.put("label",          rs.getString("label"));
+                cmd.put("args_hint",      rs.getString("args_hint"));
+                cmd.put("hint",           rs.getString("hint"));
+                cmd.put("component_type", rs.getString("component_type"));
+                cmd.put("action_type",    rs.getString("action_type"));
+                cmd.put("multi_target",   rs.getBoolean("multi_target"));
+                cmd.put("has_value",      rs.getBoolean("has_value"));
+                commands.add(cmd);
+            }
+        }
+        return commands;
+    }
+
+    /* ── LLM: natural language → /command ────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private String llmParseIntent(String rawInput, List<JSONObject> commands) {
         if (VLLM_URL == null || rawInput == null) return null;
-        if (rawInput.trim().startsWith("/")) return null; // already a command
+        if (rawInput.trim().startsWith("/")) return null;
 
         try {
-            String entityList = fetchEntityList();
-
-            String userContent = "Known entities:\n" + entityList + "\nUser said: \"" + rawInput + "\"";
+            String systemPrompt = buildSystemPrompt(commands);
+            String entityList   = fetchEntityList();
+            String userContent  = "Known entities:\n" + entityList + "\nUser said: \"" + rawInput + "\"";
 
             JSONArray messages = new JSONArray();
             JSONObject sysMsg = new JSONObject();
             sysMsg.put("role", "system");
-            sysMsg.put("content", INTENT_SYSTEM_PROMPT);
+            sysMsg.put("content", systemPrompt);
             messages.add(sysMsg);
             JSONObject userMsg = new JSONObject();
             userMsg.put("role", "user");
@@ -108,7 +128,6 @@ public class Intent implements Action {
                 if (message != null) {
                     String content = (String) message.get("content");
                     if (content != null) {
-                        // Take only the first line; LLM may add extra commentary
                         String parsed = content.trim().split("\\n")[0].trim();
                         System.out.println("[Intent] LLM resolved to: " + parsed);
                         if (parsed.startsWith("/") && !parsed.startsWith("/unknown")) {
@@ -123,101 +142,84 @@ public class Intent implements Action {
         return null;
     }
 
-    /**
-     * Fetches all known entity handles and names from the DB to ground the LLM prompt.
-     */
-    private String fetchEntityList() {
-        PoolDB pool = null;
-        Connection conn = null;
-        try {
-            pool = new PoolDB();
-            conn = pool.getConnection();
-            StringBuilder sb = new StringBuilder();
-            String sql = "SELECT type, external_id, current_state->>'name' AS name " +
-                         "FROM digital_twins WHERE type != 'system' ORDER BY type, external_id";
-            try (PreparedStatement pstmt = conn.prepareStatement(sql);
-                 ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    sb.append("@").append(rs.getString("external_id"))
-                      .append(" (").append(rs.getString("type")).append(")");
-                    String name = rs.getString("name");
-                    if (name != null && !name.isEmpty()) sb.append(" — ").append(name);
-                    sb.append("\n");
-                }
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            System.err.println("[Intent] fetchEntityList failed: " + e.getMessage());
-            return "";
-        } finally {
-            pool.cleanup(null, null, conn);
+    private String buildSystemPrompt(List<JSONObject> commands) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("You are the command parser for TSI Nexus, an institutional intelligence platform.\n");
+        sb.append("Translate the user's natural language into a single structured command.\n\n");
+        sb.append("Available commands:\n");
+        for (JSONObject cmd : commands) {
+            sb.append("  /").append(cmd.get("command_verb"))
+              .append(" ").append(cmd.get("args_hint"))
+              .append("  — ").append(cmd.get("hint")).append("\n");
         }
+        sb.append("\nRules:\n");
+        sb.append("1. Output ONLY the command string. No explanation, no markdown, no punctuation.\n");
+        sb.append("2. Map names or descriptions to the correct @handle from the entity list provided.\n");
+        sb.append("3. The @handle must match exactly what is listed — do not invent handles.\n");
+        sb.append("4. If intent is unclear or no matching entity exists, output: /unknown");
+        return sb.toString();
     }
 
-    /**
-     * Maps a (possibly LLM-resolved) command or raw intent to UI components.
-     */
-    @SuppressWarnings("unchecked")
-    private JSONObject resolveToAdaptiveUI(String intent) {
-        JSONObject response = new JSONObject();
-        JSONArray components = new JSONArray();
-        String cleanIntent = intent.trim();
+    /* ── Map command → UI components ─────────────────────────────────────── */
 
-        // 1. DISAMBIGUATION / CONTEXT LOOKUP (@target)
+    @SuppressWarnings("unchecked")
+    private JSONObject resolveToAdaptiveUI(String intent, List<JSONObject> commands) {
+        JSONObject response  = new JSONObject();
+        JSONArray components = new JSONArray();
+        String cleanIntent   = intent.trim();
+
+        // 1. Context card for each @target mentioned
         if (cleanIntent.contains("@")) {
-            List<String> targets = extractAllTargets(cleanIntent);
-            for (String target : targets) {
-                components.add(createComponent("universal_context_card", "{\"target\":\"" + target + "\"}"));
+            for (String target : extractAllTargets(cleanIntent)) {
+                components.add(createComponent("universal_context_card",
+                    "{\"target\":\"" + target + "\"}"));
             }
         }
 
-        // 2. UNIVERSAL COMMAND PATTERN (/command @target value)
+        // 2. Command routing — driven entirely by command_manifest
         if (cleanIntent.startsWith("/")) {
             String[] parts = cleanIntent.split("\\s+");
             if (parts.length >= 2) {
-                String actionVerb = parts[0].substring(1).toUpperCase();
+                String verb = parts[0].substring(1).toLowerCase();
+                JSONObject cmd = findCommand(commands, verb);
 
-                if ("CAPTURE".equalsIgnoreCase(actionVerb)) {
-                    // Capture opens a schema-driven form — not a governance confirmation card
-                    JSONObject props = new JSONObject();
+                String componentType = cmd != null ? (String) cmd.get("component_type") : "universal_action_confirm";
+                boolean multiTarget  = cmd != null && Boolean.TRUE.equals(cmd.get("multi_target"));
+
+                JSONObject props = new JSONObject();
+                props.put("action_type", verb.toUpperCase());
+                props.put("intent_raw",  cleanIntent);
+
+                if ("interaction_capture_form".equals(componentType)) {
                     props.put("target", extractTarget(cleanIntent));
-                    props.put("intent_raw", cleanIntent);
                     components.add(createComponent("interaction_capture_form", props.toJSONString()));
                 } else {
-                    JSONObject props = new JSONObject();
-                    props.put("action_type", actionVerb);
-                    props.put("intent_raw", cleanIntent);
-
-                    if ("COMPARE".equalsIgnoreCase(actionVerb)) {
+                    if (multiTarget) {
                         List<String> targets = extractAllTargets(cleanIntent);
                         if (targets.size() >= 2) {
                             props.put("target_1", targets.get(0));
                             props.put("target_2", targets.get(1));
                         }
                     } else {
-                        String target = extractTarget(cleanIntent);
+                        props.put("target_external_id", extractTarget(cleanIntent));
                         String value = "";
                         for (String part : parts) {
-                            if (part.matches("\\d+")) value = part;
+                            if (part.matches("\\d+")) { value = part; break; }
                         }
-                        props.put("target_external_id", target);
                         props.put("value", value);
                     }
-
                     components.add(createComponent("universal_action_confirm", props.toJSONString()));
                 }
             }
         }
 
-        // 3. NO HANDLE: fuzzy name search → disambiguation → semantic fallback
-        else if (!cleanIntent.contains("@") && !cleanIntent.startsWith("/")) {
-            String searchTerm = extractSearchTerm(cleanIntent);
-            // Fuzzy search is only meaningful for name-like inputs (short, no question mark).
-            // Questions and multi-word sentences fall straight to semantic search.
-            boolean nameLike = !cleanIntent.contains("?")
-                            && cleanIntent.trim().split("\\s+").length <= 4
-                            && searchTerm.split("\\s+").length <= 2
-                            && !searchTerm.isEmpty();
+        // 3. No command, no handle — fuzzy name search or semantic fallback
+        else if (!cleanIntent.contains("@")) {
+            String searchTerm = extractSearchTerm(cleanIntent, commands);
+            boolean nameLike  = !cleanIntent.contains("?")
+                             && cleanIntent.trim().split("\\s+").length <= 4
+                             && searchTerm.split("\\s+").length <= 2
+                             && !searchTerm.isEmpty();
             List<JSONObject> matches = nameLike ? fuzzySearchEntities(searchTerm) : new ArrayList<>();
 
             if (matches.size() == 1) {
@@ -244,22 +246,60 @@ public class Intent implements Action {
         return response;
     }
 
-    // Strips command verbs, stop words, and numbers to isolate the entity name.
-    private String extractSearchTerm(String rawIntent) {
+    private JSONObject findCommand(List<JSONObject> commands, String verb) {
+        for (JSONObject cmd : commands) {
+            if (verb.equalsIgnoreCase((String) cmd.get("command_verb"))) return cmd;
+        }
+        return null;
+    }
+
+    /* ── DB helpers ───────────────────────────────────────────────────────── */
+
+    private String fetchEntityList() {
+        PoolDB pool = null;
+        Connection conn = null;
+        try {
+            pool = new PoolDB();
+            conn = pool.getConnection();
+            StringBuilder sb = new StringBuilder();
+            String sql = "SELECT type, external_id, current_state->>'name' AS name " +
+                         "FROM digital_twins WHERE type != 'system' ORDER BY type, external_id";
+            try (PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    sb.append("@").append(rs.getString("external_id"))
+                      .append(" (").append(rs.getString("type")).append(")");
+                    String name = rs.getString("name");
+                    if (name != null && !name.isEmpty()) sb.append(" — ").append(name);
+                    sb.append("\n");
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            System.err.println("[Intent] fetchEntityList failed: " + e.getMessage());
+            return "";
+        } finally {
+            pool.cleanup(null, null, conn);
+        }
+    }
+
+    // Strips command verbs (from DB) and generic English stop words to isolate entity names.
+    private String extractSearchTerm(String rawIntent, List<JSONObject> commands) {
+        String verbPattern = commands.stream()
+            .map(c -> (String) c.get("command_verb"))
+            .collect(Collectors.joining("|"));
         return rawIntent
-            .replaceAll("(?i)\\b(analyze|compare|disburse|capture|verify|kyc|show|check|get|find|loan|status|group|branch|portfolio|performance|for|the|me|to|from|in|of|and|or|with|a|an|is|are|can|how|what|who|does|do|did|has|have|had|his|her|their|this|that|week|month|today|yesterday)\\b", " ")
+            .replaceAll("(?i)\\b(" + verbPattern + "|show|check|get|find|status|performance|for|the|me|to|from|in|of|and|or|with|a|an|is|are|can|how|what|who|does|do|did|has|have|had|his|her|their|this|that|week|month|today|yesterday)\\b", " ")
             .replaceAll("\\d+", " ")
             .replaceAll("[^a-zA-Z\\s]", " ")
             .replaceAll("\\s+", " ")
             .trim();
     }
 
-    // Uses pg_trgm word_similarity for name-based lookup — stays fast at lakh scale.
     @SuppressWarnings("unchecked")
     private List<JSONObject> fuzzySearchEntities(String searchTerm) {
         List<JSONObject> results = new ArrayList<>();
         if (searchTerm == null || searchTerm.trim().isEmpty()) return results;
-
         PoolDB pool = null;
         Connection conn = null;
         try {
@@ -273,15 +313,15 @@ public class Intent implements Action {
                 "  AND word_similarity(?, current_state->>'name') > 0.4 " +
                 "ORDER BY word_similarity(?, current_state->>'name') DESC " +
                 "LIMIT 5";
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setString(1, searchTerm);
-                pstmt.setString(2, searchTerm);
-                try (ResultSet rs = pstmt.executeQuery()) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, searchTerm);
+                ps.setString(2, searchTerm);
+                try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         JSONObject match = new JSONObject();
                         match.put("handle", "@" + rs.getString("external_id"));
-                        match.put("type", rs.getString("type"));
-                        match.put("name", rs.getString("name"));
+                        match.put("type",   rs.getString("type"));
+                        match.put("name",   rs.getString("name"));
                         results.add(match);
                     }
                 }
@@ -308,11 +348,8 @@ public class Intent implements Action {
 
     private List<String> extractAllTargets(String intent) {
         List<String> targets = new ArrayList<>();
-        Pattern pattern = Pattern.compile("@([\\w\\.]+)");
-        Matcher matcher = pattern.matcher(intent);
-        while (matcher.find()) {
-            targets.add("@" + matcher.group(1));
-        }
+        Matcher matcher = Pattern.compile("@([\\w\\.]+)").matcher(intent);
+        while (matcher.find()) targets.add("@" + matcher.group(1));
         return targets;
     }
 

@@ -339,7 +339,7 @@
             </div>
 
             <!-- Input -->
-            <input id="cmd" type="text" placeholder="Ask about a member, officer, or branch…" autocomplete="off">
+            <input id="cmd" type="text" placeholder="Ask a question or type a name…" autocomplete="off">
             <div style="text-align:center;font-size:8px;color:#94a3b8;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-top:6px;margin-bottom:16px;">
                 Press Enter &nbsp;·&nbsp; or tap any name below
             </div>
@@ -350,74 +350,26 @@
 
             <hr class="sec-divider">
 
-            <!-- Try asking -->
+            <!-- Try asking — populated dynamically from /api/entities -->
             <div class="sec-label">Try asking</div>
-            <span class="ex-chip" onclick="fire(this)">How is Rahul doing?</span>
-            <span class="ex-chip" onclick="fire(this)">Compare Rahul and Sara</span>
-            <span class="ex-chip" onclick="fire(this)">How is the East branch performing?</span>
-            <span class="ex-chip" onclick="fire(this)">Show Anita's loan performance</span>
-            <span class="ex-chip" onclick="fire(this)">Compare East and West branch</span>
-            <span class="ex-chip" onclick="fire(this)" style="border-color:#a7f3d0;color:#065f46;background:#ecfdf5;">Complete KYC for Rohan</span>
-            <span class="ex-chip" onclick="fire(this)" style="border-color:#fed7aa;color:#9a3412;background:#fff7ed;">Meena</span>
-            <span class="ex-chip" onclick="fire(this)" style="border-color:#fed7aa;color:#9a3412;background:#fff7ed;">Satish</span>
-            <span class="ex-chip" onclick="fire(this)" style="border-color:#a7f3d0;color:#065f46;background:#ecfdf5;">Ravi Kumar</span>
-            <span class="ex-chip" onclick="fire(this)" style="border-color:#a7f3d0;color:#065f46;background:#ecfdf5;">Leela Bai</span>
+            <div id="ex-chips-container" style="display:contents;">
+                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
+            </div>
 
             <hr class="sec-divider">
 
-            <!-- Commands -->
+            <!-- Commands — populated dynamically from /api/entities -->
             <div class="sec-label">What you can do</div>
-            <div class="cmd-row">
-                <span class="cmd-badge">/analyze</span><span class="cmd-args">@name</span>
-                <div class="cmd-hint">Drill into any officer's, branch's, or group's loan performance.</div>
-            </div>
-            <div class="cmd-row">
-                <span class="cmd-badge">/compare</span><span class="cmd-args">@name @name</span>
-                <div class="cmd-hint">Put two officers or branches side by side. AI explains the difference.</div>
-            </div>
-            <div class="cmd-row">
-                <span class="cmd-badge">/disburse</span><span class="cmd-args">@member amount</span>
-                <div class="cmd-hint">Disburse a loan. KYC and group compliance are checked automatically.</div>
-            </div>
-            <div class="cmd-row">
-                <span class="cmd-badge" style="background:#059669;">/capture</span><span class="cmd-args">@member</span>
-                <div class="cmd-hint">Record KYC details, a survey response, or any field interaction.</div>
+            <div id="commands-container">
+                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
             </div>
 
             <hr class="sec-divider">
 
-            <!-- Entity index -->
+            <!-- Entity index — populated dynamically from /api/entities -->
             <div class="sec-label">Quick Access</div>
-            <div class="ent-label">Loan Officers</div>
-            <div class="ent-row">
-                <span class="ent-chip ent-officer" onclick="fire(this)">Rahul Gupta</span>
-                <span class="ent-chip ent-officer" onclick="fire(this)">Sara Iyer</span>
-                <span class="ent-chip ent-officer" onclick="fire(this)">Priya Nair</span>
-                <span class="ent-chip ent-officer" onclick="fire(this)">Arun Sharma</span>
-            </div>
-            <div class="ent-label">Branches</div>
-            <div class="ent-row">
-                <span class="ent-chip ent-branch" onclick="fire(this)">East Coast</span>
-                <span class="ent-chip ent-branch" onclick="fire(this)">West Valley</span>
-                <span class="ent-chip ent-branch" onclick="fire(this)">Northern Plains</span>
-                <span class="ent-chip ent-branch" onclick="fire(this)">Southern Delta</span>
-            </div>
-            <div class="ent-label">Borrowers &nbsp;<span style="font-weight:400;text-transform:none;letter-spacing:0;color:#cbd5e1;">— or just type a name above</span></div>
-            <div class="ent-row">
-                <span class="ent-chip ent-member" onclick="fire(this)">Satish Kumar</span>
-                <span class="ent-chip ent-member" onclick="fire(this)">Anita Desai</span>
-                <span class="ent-chip ent-member" onclick="fire(this)">Rohan Mehta</span>
-                <span class="ent-chip ent-member" onclick="fire(this)">Meena Sharma</span>
-                <span class="ent-chip ent-member" onclick="fire(this)">Ravi Kumar</span>
-                <span class="ent-chip ent-member" onclick="fire(this)">Leela Bai</span>
-                <span class="ent-chip ent-member" style="color:#94a3b8;cursor:default;opacity:.6;">+10 more…</span>
-            </div>
-            <div class="ent-label">Groups</div>
-            <div class="ent-row">
-                <span class="ent-chip ent-group" onclick="fire(this)">Unity Group</span>
-                <span class="ent-chip ent-group" onclick="fire(this)">Alpha Group</span>
-                <span class="ent-chip ent-group" onclick="fire(this)">Sunrise Group</span>
-                <span class="ent-chip ent-group" onclick="fire(this)">Delta Group</span>
+            <div id="entity-index-container">
+                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
             </div>
 
             <hr class="sec-divider">
@@ -430,7 +382,7 @@
             </div>
             <div class="step">
                 <div class="step-n">2</div>
-                <div><div class="step-title">See the full picture</div><div class="step-body">Current details, linked accounts, and recent activity are pulled up instantly.</div></div>
+                <div><div class="step-title">See the full picture</div><div class="step-body">Current details, connections, and recent activity are pulled up instantly.</div></div>
             </div>
             <div class="step">
                 <div class="step-n">3</div>
@@ -561,30 +513,27 @@
     }
 
     /* ── Display helpers ──────────────────────── */
-    const prettyKey = k => ({
-        name: null, kyc: 'KYC Status', status: 'Account Status',
-        disbursed: 'Loan Amount', repaid: 'Amount Repaid',
-        level: 'Officer Level', region: 'Region', role: 'Role',
-        kyc_id_last4: 'ID (Last 4)', kyc_date: 'Verified On',
-        disburse_amount: 'Amount Disbursed'
-    }[k] ?? k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase()));
+    // 'name' returns null → hidden (shown as the card heading already).
+    // Everything else: generic titlecase from snake_case.
+    const prettyKey = k => k === 'name' ? null : k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
 
     const prettyVal = (k, v) => {
         const s = String(v ?? '');
-        const badge = { Active:'#dcfce7:#166534', Verified:'#dcfce7:#166534', NPA:'#fee2e2:#991b1b', Pending:'#fef3c7:#92400e' }[s];
+        // Universal status badges — domain-agnostic labels
+        const badge = {
+            Active:'#dcfce7:#166534', Verified:'#dcfce7:#166534', Completed:'#dcfce7:#166534',
+            Inactive:'#f1f5f9:#475569', Pending:'#fef3c7:#92400e', Blocked:'#fee2e2:#991b1b'
+        }[s];
         if (badge) {
             const [bg, color] = badge.split(':');
             return `<span style="background:${bg};color:${color};padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block;">${s}</span>`;
         }
-        if ((k==='disbursed'||k==='repaid'||k==='disburse_amount') && !isNaN(Number(v))) {
-            return `<span class="state-val">₹${Number(v).toLocaleString('en-IN')}</span>`;
-        }
         return `<span class="state-val">${esc(s)}</span>`;
     };
 
-    const prettyRel  = t => ({ MEMBER_OF:'Member of', MANAGED_BY:'Managed by', WORKS_AT:'Works at', SPOUSE_OF:'Spouse of', OPERATES:'Operates' }[t] ?? t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()));
+    const prettyRel  = t => t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
     const prettyId   = id => id.replace(/^@/,'').replace(/_(\d+)$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    const prettyType = t => ({ member:'Borrower', officer:'Loan Officer', branch:'Branch', group:'Group', system:'System' }[t] ?? t);
+    const prettyType = t => t.charAt(0).toUpperCase() + t.slice(1);
 
     function appendToStage(el) {
         stage.appendChild(el);
@@ -592,6 +541,89 @@
 
     /* ── Escape HTML ──────────────────────────── */
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    /* ── Sidebar — loaded dynamically from /api/entities ─────────────────── */
+    async function loadSidebar() {
+        try {
+            const res  = await fetch('/api/entities');
+            const data = await res.json();
+            if (!data.success || !data.entity_types) return;
+
+            const types = data.entity_types;
+
+            // Build "Try asking" examples from actual entity data
+            const exContainer = document.getElementById('ex-chips-container');
+            exContainer.innerHTML = '';
+            const allSamples = types.flatMap(t => t.sample.map(e => ({ ...e, type: t.type })));
+
+            const addEx = (text, style) => {
+                const chip = document.createElement('span');
+                chip.className = 'ex-chip';
+                if (style) chip.setAttribute('style', style);
+                chip.textContent = text;
+                chip.onclick = () => fire(chip);
+                exContainer.appendChild(chip);
+            };
+
+            if (allSamples.length >= 1) addEx(`How is ${allSamples[0].name} doing?`);
+            if (allSamples.length >= 2) addEx(`Compare ${allSamples[0].name} and ${allSamples[1].name}`);
+            if (allSamples.length >= 3) addEx(allSamples[2].name, 'border-color:#fed7aa;color:#9a3412;background:#fff7ed;');
+            if (allSamples.length >= 4) addEx(allSamples[3].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
+            if (allSamples.length >= 5) addEx(allSamples[4].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
+
+            // Build command list from manifest
+            const cmdContainer = document.getElementById('commands-container');
+            cmdContainer.innerHTML = '';
+            (data.commands || []).forEach(cmd => {
+                const isCapture = cmd.component_type === 'interaction_capture_form';
+                const row = document.createElement('div');
+                row.className = 'cmd-row';
+                row.innerHTML = `
+                    <span class="cmd-badge" style="${isCapture ? 'background:#059669;' : ''}">${esc('/' + cmd.command_verb)}</span>
+                    <span class="cmd-args">${esc(cmd.args_hint)}</span>
+                    <div class="cmd-hint">${esc(cmd.hint)}</div>`;
+                cmdContainer.appendChild(row);
+            });
+
+            // Build entity index grouped by type
+            const indexContainer = document.getElementById('entity-index-container');
+            indexContainer.innerHTML = '';
+            const typeColors = ['ent-officer','ent-branch','ent-member','ent-group','ent-member'];
+
+            types.forEach((group, gi) => {
+                const label = document.createElement('div');
+                label.className = 'ent-label';
+                label.textContent = prettyType(group.type) + 's';
+                indexContainer.appendChild(label);
+
+                const row = document.createElement('div');
+                row.className = 'ent-row';
+                const colorClass = typeColors[gi % typeColors.length];
+
+                group.sample.forEach(e => {
+                    const chip = document.createElement('span');
+                    chip.className = `ent-chip ${colorClass}`;
+                    chip.textContent = e.name;
+                    chip.onclick = () => fire(chip);
+                    row.appendChild(chip);
+                });
+
+                if (group.count > group.sample.length) {
+                    const more = document.createElement('span');
+                    more.className = 'ent-chip';
+                    more.style.cssText = 'color:#94a3b8;cursor:default;opacity:.6;';
+                    more.textContent = `+${group.count - group.sample.length} more…`;
+                    row.appendChild(more);
+                }
+
+                indexContainer.appendChild(row);
+            });
+
+        } catch (e) {
+            console.warn('[Sidebar] loadSidebar failed:', e.message);
+        }
+    }
+    loadSidebar();
 
     /* ── Navigation history ───────────────────── */
     let navStack  = [];   // [{intent, label}]
@@ -806,7 +838,7 @@
             card.querySelector('.action-desc').textContent = `Show full performance report for ${prettyId(props.target_external_id)}`;
             btn.textContent = 'Run Report';
         } else if (props.action_type === 'DISBURSE') {
-            card.querySelector('.action-desc').textContent = `Disburse${props.value ? ' ₹' + Number(props.value).toLocaleString('en-IN') : ''} to ${prettyId(props.target_external_id)}`;
+            card.querySelector('.action-desc').textContent = `Disburse${props.value ? ' ' + props.value : ''} to ${prettyId(props.target_external_id)}`;
             btn.textContent = 'Confirm & Proceed';
         } else {
             card.querySelector('.action-desc').textContent = `${props.action_type} · ${prettyId(props.target_external_id)}`;
