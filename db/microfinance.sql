@@ -309,3 +309,21 @@ VALUES (
   'Action Blocked: KYC is already verified for this member.',
   'GUARDRAIL'
 );
+
+INSERT INTO interaction_schema (schema_id, label, applies_to, action_type, fields, state_patch, stream_tmpl)
+VALUES (
+  'HOUSEHOLD_SURVEY_CAPTURE',
+  'Household Survey',
+  'member',
+  'CAPTURE_HOUSEHOLD',
+  '[
+    {"key":"family_size","label":"Number of Family Members","type":"number","required":true,"pattern":"^[1-9][0-9]?$","hint":"Total people living in the household"},
+    {"key":"income_source","label":"Primary Income Source","type":"select","options":["Agriculture","Trade / Business","Wage Labour","Salaried Employment","Other"],"required":true},
+    {"key":"income_range","label":"Monthly Household Income","type":"select","options":["Below ₹5,000","₹5,000 – ₹10,000","₹10,000 – ₹20,000","Above ₹20,000"],"required":true},
+    {"key":"housing_type","label":"Housing Type","type":"select","options":["Owned","Rented","Shared / Joint family"],"required":true},
+    {"key":"has_bank_account","label":"Bank Account","type":"select","options":["Yes","No"],"required":true},
+    {"key":"notes","label":"Field Officer Notes","type":"textarea","required":false,"state_transform":"omit"}
+  ]',
+  '{"household_survey":"Completed"}',
+  'Household survey completed. Family of {family_size}. Primary income: {income_source}. Monthly income: {income_range}. Housing: {housing_type}.'
+);

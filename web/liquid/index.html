@@ -903,8 +903,10 @@
                 return;
             }
 
-            for (const schema of data.schemas) {
-                renderSchemaForm(schema, props.target);
+            if (data.schemas.length === 1) {
+                renderSchemaForm(data.schemas[0], props.target);
+            } else {
+                renderSchemaPicker(data.schemas, props.target);
             }
         } catch(e) {
             placeholder.remove();
@@ -913,6 +915,44 @@
             err.textContent = 'Capture load failed: ' + e.message;
             appendToStage(err);
         }
+    }
+
+    function renderSchemaPicker(schemas, target) {
+        const card = document.createElement('div');
+        card.className = 'nexus-card fade-in';
+        card.style.borderLeftColor = '#059669';
+        card.innerHTML = `
+            <div style="font-size:10px;font-weight:900;letter-spacing:.4em;text-transform:uppercase;color:#059669;margin-bottom:4px;">Record Interaction</div>
+            <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px;">${esc(prettyId(target))}</div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:18px;">Choose the type of interaction to record</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                ${schemas.map(s => `
+                    <button class="schema-pick-btn" data-schema-id="${esc(s.schema_id)}"
+                        style="display:flex;align-items:center;gap:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 18px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#6d28d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 5H7a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div style="font-size:14px;font-weight:700;color:#1e293b;">${esc(s.label)}</div>
+                            <div style="font-size:12px;color:#64748b;margin-top:2px;">${esc(s.fields.length)} field${s.fields.length !== 1 ? 's' : ''} to fill in</div>
+                        </div>
+                        <svg style="margin-left:auto;flex-shrink:0;" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                `).join('')}
+            </div>`;
+
+        card.querySelectorAll('.schema-pick-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#6d28d9'; btn.style.background = '#f5f3ff'; });
+            btn.addEventListener('mouseleave', () => { btn.style.borderColor = '#e2e8f0'; btn.style.background = '#f8fafc'; });
+            btn.addEventListener('click', () => {
+                const schema = schemas.find(s => s.schema_id === btn.dataset.schemaId);
+                if (schema) { card.remove(); renderSchemaForm(schema, target); }
+            });
+        });
+
+        appendToStage(card);
     }
 
     function renderSchemaForm(schema, target) {
