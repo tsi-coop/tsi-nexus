@@ -273,3 +273,39 @@ INSERT INTO interaction_stream (owner_id, content, created_at) VALUES
 ((SELECT id FROM digital_twins WHERE external_id='priya_03'), 'Field visits completed: meena_05, ravi_06. Both current.', NOW() - INTERVAL '5 days'),
 ((SELECT id FROM digital_twins WHERE external_id='arun_04'),  'South portfolio: 1 NPA (deepa_15). Flagged for review.', NOW() - INTERVAL '15 days'),
 ((SELECT id FROM digital_twins WHERE external_id='arun_04'),  'meena_14 flagged as top performer. Eligible for enhanced credit limit.', NOW() - INTERVAL '10 days');
+
+-- ============================================================================
+-- INTERACTION SCHEMAS: Generic Capture Registry
+-- Each row defines a self-contained interaction form.
+-- Adding a new interaction type (survey, doc-upload, field visit …) is a
+-- plain INSERT here — no Java changes required.
+-- ============================================================================
+
+INSERT INTO interaction_schema (schema_id, label, applies_to, action_type, fields, state_patch, stream_tmpl)
+VALUES (
+  'KYC_MEMBER_CAPTURE',
+  'KYC Document Verification',
+  'member',
+  'CAPTURE_KYC',
+  '[
+    {"key":"photo_id_type","label":"Photo ID Type","type":"select","options":["Aadhaar","PAN","Voter ID","Passport","Driving License"],"required":true,"hint":"Primary government-issued ID submitted by the member"},
+    {"key":"id_number_last4","label":"ID Last 4 Digits","type":"text","required":true,"pattern":"^[0-9]{4}$","hint":"Last 4 digits of the ID number only","state_key":"kyc_id_last4"},
+    {"key":"verified_by","label":"Verified By (Officer)","type":"text","required":true,"hint":"Full name of the field officer who verified the document"},
+    {"key":"verification_date","label":"Verification Date","type":"date","required":true,"state_key":"kyc_date"},
+    {"key":"notes","label":"Observations","type":"textarea","required":false,"hint":"Optional — document condition, discrepancies, or field remarks","state_transform":"omit"}
+  ]',
+  '{"kyc":"Verified"}',
+  'KYC verified. {photo_id_type} (last 4: {id_number_last4}) confirmed by {verified_by} on {verification_date}.'
+);
+
+-- Governance: prevent re-capture when KYC is already Verified
+-- Set is_active = FALSE to allow re-verification in deployments that need it.
+INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode)
+VALUES (
+  'POL-KYC-DUP',
+  'CAPTURE_KYC',
+  'Idempotency guard — block if member is already KYC verified',
+  'SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND current_state->>''kyc'' = ''Verified''',
+  'Action Blocked: KYC is already verified for this member.',
+  'GUARDRAIL'
+);

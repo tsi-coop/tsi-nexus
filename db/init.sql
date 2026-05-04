@@ -54,7 +54,26 @@ CREATE TABLE interaction_stream (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. THE POLICY MANIFEST (Governance)
+-- 6. INTERACTION SCHEMA (Generic Form Registry)
+-- Each row defines a capture form: what fields to collect, how to validate,
+-- what to write back to current_state, and how to log to interaction_stream.
+-- Zero sector-specific Java — adding KYC / survey / doc-upload is a DB INSERT.
+CREATE TABLE interaction_schema (
+    schema_id    TEXT PRIMARY KEY,
+    label        TEXT NOT NULL,
+    applies_to   TEXT NOT NULL DEFAULT '*',   -- 'member', 'officer', '*'
+    action_type  TEXT NOT NULL,               -- links to policy_manifest for guardrails
+    fields       JSONB NOT NULL,
+    -- Each field: {key, label, type, required, pattern, hint, state_key, state_transform}
+    --   state_key       : override the key written to current_state (default = key)
+    --   state_transform : 'last4' | 'uppercase' | 'omit' (default = store as-is)
+    state_patch  JSONB NOT NULL DEFAULT '{}', -- fixed KV merged into current_state on success
+    stream_tmpl  TEXT NOT NULL,               -- {field_key} placeholders filled at runtime
+    is_active    BOOLEAN DEFAULT TRUE,
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. THE POLICY MANIFEST (Governance)
 -- This is the "Business Compiler" table.
 CREATE TABLE policy_manifest (
     policy_id TEXT PRIMARY KEY,

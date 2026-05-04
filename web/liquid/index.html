@@ -256,6 +256,45 @@
             padding: 5px 10px; border-radius: 8px;
             display: inline-block; margin: 3px;
         }
+
+        /* ── Interaction capture form ─────────────────── */
+        .cap-field { margin-bottom: 16px; }
+        .cap-label {
+            font-size: 9px; font-weight: 900; text-transform: uppercase;
+            letter-spacing: .2em; color: #475569;
+            display: flex; align-items: center; gap: 5px; margin-bottom: 6px;
+        }
+        .cap-required { color: #e11d48; }
+        .cap-input, .cap-select, .cap-textarea {
+            width: 100%;
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            color: #0f172a;
+            font-size: 13px;
+            padding: 9px 12px;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .cap-textarea { resize: vertical; min-height: 72px; }
+        .cap-input:focus, .cap-select:focus, .cap-textarea:focus {
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(5,150,105,.10);
+        }
+        .cap-hint  { font-size: 10px; color: #94a3b8; margin-top: 4px; line-height: 1.4; }
+        .cap-error { font-size: 10px; color: #e11d48; margin-top: 4px; font-weight: 700; display: none; }
+        .cap-submit {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #fff; border: none; border-radius: 10px;
+            padding: 11px 28px; font-size: 12px; font-weight: 900;
+            cursor: pointer; transition: opacity .15s;
+            box-shadow: 0 4px 14px rgba(5,150,105,.30);
+            letter-spacing: .02em; font-family: inherit;
+        }
+        .cap-submit:hover   { opacity: .88; }
+        .cap-submit:disabled { opacity: .5; cursor: default; }
     </style>
 </head>
 <body>
@@ -297,6 +336,7 @@
             <div class="sec-label">Try asking</div>
             <span class="ex-chip" onclick="fire(this)">How is Rahul performing?</span>
             <span class="ex-chip" onclick="fire(this)">Compare Rahul and Sara</span>
+            <span class="ex-chip" onclick="fire(this)" style="border-color:#a7f3d0;color:#065f46;background:#ecfdf5;">/capture @rohan_03</span>
             <span class="ex-chip" onclick="fire(this)">How is the East branch doing?</span>
             <span class="ex-chip" onclick="fire(this)">Analyze anita's portfolio</span>
             <span class="ex-chip" onclick="fire(this)">Benchmark east and west branch</span>
@@ -320,6 +360,10 @@
             <div class="cmd-row">
                 <span class="cmd-badge">/disburse</span><span class="cmd-args">@member amt</span>
                 <div class="cmd-hint">Loan disbursement. KYC + group guardrails enforced.</div>
+            </div>
+            <div class="cmd-row">
+                <span class="cmd-badge" style="background:#059669;">/capture</span><span class="cmd-args">@member</span>
+                <div class="cmd-hint">Open an interaction form. Schema driven — KYC, surveys, uploads.</div>
             </div>
 
             <hr class="sec-divider">
@@ -433,6 +477,22 @@
     </div>
 </template>
 
+<template id="tpl-capture-card">
+    <div class="nexus-card fade-in" style="border-left-color:#059669;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#059669;box-shadow:0 0 8px rgba(5,150,105,.5);"></div>
+            <div class="cap-schema-label" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#059669;"></div>
+        </div>
+        <div class="cap-entity-name" style="font-size:20px;font-weight:900;color:#0f172a;letter-spacing:-.02em;margin-bottom:4px;"></div>
+        <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.2em;margin-bottom:20px;">Interaction Capture</div>
+        <div class="cap-fields-body"></div>
+        <div style="display:flex;align-items:center;gap:16px;margin-top:4px;padding-top:16px;border-top:1px solid #f1f5f9;">
+            <button class="cap-submit">Record Interaction</button>
+            <button class="cap-dismiss" onclick="resetStage()" style="background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;cursor:pointer;">Dismiss</button>
+        </div>
+    </div>
+</template>
+
 <script>
     const cmd   = document.getElementById('cmd');
     const stage = document.getElementById('stage');
@@ -526,6 +586,8 @@
                 renderActionCard(props);
             } else if (comp.component_type === 'nexus_disambiguation_card') {
                 renderDisambiguationCard(props);
+            } else if (comp.component_type === 'interaction_capture_form') {
+                await renderCaptureCard(props);
             }
         }
     }
@@ -725,6 +787,175 @@
             err.style.cssText = 'padding:20px 24px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;';
             err.textContent = 'Nexus Error: ' + e.message;
             appendToStage(err);
+        }
+    }
+
+    /* ── Capture form ────────────────────────── */
+    async function renderCaptureCard(props) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'nexus-card fade-in';
+        placeholder.style.borderLeftColor = '#059669';
+        placeholder.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:.4em;text-transform:uppercase;color:#059669;animation:pulse 1.5s infinite;">Loading capture form…</div>`;
+        appendToStage(placeholder);
+
+        try {
+            const res  = await fetch('/api/capture?external_id=' + encodeURIComponent(props.target || ''));
+            const data = await res.json();
+            placeholder.remove();
+
+            if (!data.success || !data.schemas || !data.schemas.length) {
+                const msg = document.createElement('div');
+                msg.className = 'nexus-card fade-in';
+                msg.style.borderLeftColor = '#e11d48';
+                msg.innerHTML = `<div style="color:#9f1239;font-weight:700;font-size:13px;">No capture schemas are defined for this entity type (${esc(data.entity_type||'unknown')}).</div>`;
+                appendToStage(msg);
+                return;
+            }
+
+            for (const schema of data.schemas) {
+                renderSchemaForm(schema, props.target);
+            }
+        } catch(e) {
+            placeholder.remove();
+            const err = document.createElement('div');
+            err.style.cssText = 'padding:20px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;';
+            err.textContent = 'Capture load failed: ' + e.message;
+            appendToStage(err);
+        }
+    }
+
+    function renderSchemaForm(schema, target) {
+        const tpl   = document.getElementById('tpl-capture-card');
+        const clone = tpl.content.cloneNode(true);
+        const card  = clone.querySelector('.nexus-card');
+
+        card.querySelector('.cap-schema-label').textContent = schema.label;
+        card.querySelector('.cap-entity-name').textContent  = target;
+
+        const body     = card.querySelector('.cap-fields-body');
+        const fieldMap = {};
+
+        for (const field of schema.fields) {
+            const wrap = document.createElement('div');
+            wrap.className = 'cap-field';
+
+            const labelEl = document.createElement('label');
+            labelEl.className = 'cap-label';
+            labelEl.innerHTML = esc(field.label) + (field.required ? ' <span class="cap-required">*</span>' : '');
+
+            let inputEl;
+            if (field.type === 'select') {
+                inputEl = document.createElement('select');
+                inputEl.className = 'cap-select';
+                inputEl.innerHTML = `<option value="">Select…</option>` +
+                    (field.options || []).map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+            } else if (field.type === 'textarea') {
+                inputEl = document.createElement('textarea');
+                inputEl.className = 'cap-textarea';
+                inputEl.placeholder = field.hint || '';
+            } else {
+                inputEl = document.createElement('input');
+                inputEl.type = field.type || 'text';
+                inputEl.className = 'cap-input';
+                inputEl.placeholder = field.hint || '';
+            }
+            inputEl.dataset.key = field.key;
+
+            const hintEl = document.createElement('div');
+            hintEl.className = 'cap-hint';
+            hintEl.textContent = field.hint || '';
+
+            const errEl = document.createElement('div');
+            errEl.className = 'cap-error';
+
+            wrap.appendChild(labelEl);
+            wrap.appendChild(inputEl);
+            wrap.appendChild(hintEl);
+            wrap.appendChild(errEl);
+            body.appendChild(wrap);
+            fieldMap[field.key] = { inputEl, errEl, field };
+        }
+
+        card.querySelector('.cap-submit').addEventListener('click', () => {
+            submitCapture(schema, target, fieldMap, card);
+        });
+
+        appendToStage(card);
+    }
+
+    async function submitCapture(schema, target, fieldMap, card) {
+        let valid = true;
+        const formData = {};
+
+        for (const [key, { inputEl, errEl, field }] of Object.entries(fieldMap)) {
+            const val = inputEl.value.trim();
+            errEl.style.display = 'none';
+
+            if (field.required && !val) {
+                errEl.textContent = field.label + ' is required.';
+                errEl.style.display = 'block';
+                valid = false;
+            } else if (field.pattern && val && !new RegExp(field.pattern).test(val)) {
+                errEl.textContent = field.hint || 'Invalid format.';
+                errEl.style.display = 'block';
+                valid = false;
+            } else {
+                formData[key] = val;
+            }
+        }
+        if (!valid) return;
+
+        const btn = card.querySelector('.cap-submit');
+        btn.disabled    = true;
+        btn.textContent = 'Saving…';
+
+        try {
+            const res = await fetch('/api/capture', {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({ schema_id: schema.schema_id, external_id: target, form_data: formData })
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                card.style.opacity        = '.4';
+                card.style.pointerEvents  = 'none';
+
+                const wrap = document.createElement('div');
+                wrap.className = 'fade-in';
+                wrap.style.cssText = 'background:#fff;border:1px solid #a7f3d0;border-left:6px solid #059669;border-radius:14px;padding:24px 28px;box-shadow:0 4px 20px rgba(5,150,105,.08);';
+                wrap.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                        <div style="width:34px;height:34px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg width="16" height="16" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div style="font-size:15px;font-weight:900;color:#065f46;letter-spacing:-.01em;">Interaction Captured</div>
+                        <button onclick="resetStage()" style="margin-left:auto;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← New Query</button>
+                    </div>
+                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:12px 16px;font-size:12px;color:#166534;line-height:1.6;">
+                        ${esc(result.stream_entry || '')}
+                    </div>
+                    <div style="font-size:10px;color:#94a3b8;margin-top:10px;">Interaction stream updated · State patch applied · Refreshing context…</div>`;
+                appendToStage(wrap);
+                setTimeout(() => resolveIntent(target), 2200);
+            } else {
+                btn.disabled    = false;
+                btn.textContent = 'Record Interaction';
+                const deny = document.createElement('div');
+                deny.className = 'fade-in';
+                deny.style.cssText = 'background:#fff;border-left:6px solid #e11d48;border-radius:12px;padding:18px 22px;margin-top:0;';
+                deny.innerHTML = `
+                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.35em;color:#e11d48;margin-bottom:6px;">Governance Denial</div>
+                    <div style="font-size:14px;font-weight:700;color:#0f172a;">${esc(result.reason || 'Unknown error')}</div>`;
+                appendToStage(deny);
+            }
+        } catch(e) {
+            btn.disabled    = false;
+            btn.textContent = 'Record Interaction';
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = 'padding:12px 14px;background:#fff1f2;border-radius:8px;color:#9f1239;font-weight:700;font-size:12px;margin-top:12px;';
+            errDiv.textContent = 'Request failed: ' + e.message;
+            card.appendChild(errDiv);
         }
     }
 

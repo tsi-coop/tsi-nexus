@@ -37,7 +37,8 @@ public class Intent implements Action {
         "Available commands:\n" +
         "  /analyze @<id>               — analyze a single entity's performance\n" +
         "  /compare @<id1> @<id2>       — benchmark two entities side by side\n" +
-        "  /disburse @<member_id> <amt> — disburse a loan amount to a member\n\n" +
+        "  /disburse @<member_id> <amt> — disburse a loan amount to a member\n" +
+        "  /capture @<member_id>        — open an interaction capture form for a member\n\n" +
         "Rules:\n" +
         "1. Output ONLY the command string. No explanation, no markdown, no punctuation.\n" +
         "2. Map names or descriptions to the correct @handle from the entity list provided.\n" +
@@ -176,27 +177,35 @@ public class Intent implements Action {
             if (parts.length >= 2) {
                 String actionVerb = parts[0].substring(1).toUpperCase();
 
-                JSONObject props = new JSONObject();
-                props.put("action_type", actionVerb);
-                props.put("intent_raw", cleanIntent);
-
-                if ("COMPARE".equalsIgnoreCase(actionVerb)) {
-                    List<String> targets = extractAllTargets(cleanIntent);
-                    if (targets.size() >= 2) {
-                        props.put("target_1", targets.get(0));
-                        props.put("target_2", targets.get(1));
-                    }
+                if ("CAPTURE".equalsIgnoreCase(actionVerb)) {
+                    // Capture opens a schema-driven form — not a governance confirmation card
+                    JSONObject props = new JSONObject();
+                    props.put("target", extractTarget(cleanIntent));
+                    props.put("intent_raw", cleanIntent);
+                    components.add(createComponent("interaction_capture_form", props.toJSONString()));
                 } else {
-                    String target = extractTarget(cleanIntent);
-                    String value = "";
-                    for (String part : parts) {
-                        if (part.matches("\\d+")) value = part;
-                    }
-                    props.put("target_external_id", target);
-                    props.put("value", value);
-                }
+                    JSONObject props = new JSONObject();
+                    props.put("action_type", actionVerb);
+                    props.put("intent_raw", cleanIntent);
 
-                components.add(createComponent("universal_action_confirm", props.toJSONString()));
+                    if ("COMPARE".equalsIgnoreCase(actionVerb)) {
+                        List<String> targets = extractAllTargets(cleanIntent);
+                        if (targets.size() >= 2) {
+                            props.put("target_1", targets.get(0));
+                            props.put("target_2", targets.get(1));
+                        }
+                    } else {
+                        String target = extractTarget(cleanIntent);
+                        String value = "";
+                        for (String part : parts) {
+                            if (part.matches("\\d+")) value = part;
+                        }
+                        props.put("target_external_id", target);
+                        props.put("value", value);
+                    }
+
+                    components.add(createComponent("universal_action_confirm", props.toJSONString()));
+                }
             }
         }
 
@@ -238,7 +247,7 @@ public class Intent implements Action {
     // Strips command verbs, stop words, and numbers to isolate the entity name.
     private String extractSearchTerm(String rawIntent) {
         return rawIntent
-            .replaceAll("(?i)\\b(analyze|compare|disburse|show|check|get|find|loan|status|group|branch|portfolio|performance|for|the|me|to|from|in|of|and|or|with|a|an|is|are|can|how|what|who|does|do|did|has|have|had|his|her|their|this|that|week|month|today|yesterday)\\b", " ")
+            .replaceAll("(?i)\\b(analyze|compare|disburse|capture|verify|kyc|show|check|get|find|loan|status|group|branch|portfolio|performance|for|the|me|to|from|in|of|and|or|with|a|an|is|are|can|how|what|who|does|do|did|has|have|had|his|her|their|this|that|week|month|today|yesterday)\\b", " ")
             .replaceAll("\\d+", " ")
             .replaceAll("[^a-zA-Z\\s]", " ")
             .replaceAll("\\s+", " ")
