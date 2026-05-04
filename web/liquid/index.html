@@ -256,6 +256,24 @@
             padding: 5px 10px; border-radius: 8px;
             display: inline-block; margin: 3px;
         }
+        button.topo-chip {
+            cursor: pointer; font-family: inherit;
+            transition: background .12s, border-color .12s, color .12s;
+        }
+        button.topo-chip:hover {
+            background: #eef2ff; border-color: #a5b4fc; color: #3730a3;
+        }
+
+        /* ── Back navigation ─────────────────────── */
+        .nav-back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 6px 14px; font-size: 11px; font-weight: 700; color: #64748b;
+            cursor: pointer; font-family: inherit;
+            transition: background .12s, border-color .12s, color .12s;
+            margin-bottom: 4px;
+        }
+        .nav-back-btn:hover { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; }
 
         /* ── Interaction capture form ─────────────────── */
         .cap-field { margin-bottom: 16px; }
@@ -504,14 +522,14 @@
         if (e.key === 'Enter' && cmd.value.trim()) {
             const v = cmd.value.trim();
             cmd.value = '';
-            resolveIntent(v);
+            userSearch(v);
         }
     });
 
     function fire(el) {
         const t = el.innerText;
         cmd.value = t;
-        resolveIntent(t);
+        userSearch(t);
     }
 
     /* ── Stage helpers ────────────────────────── */
@@ -531,6 +549,8 @@
     }
 
     function resetStage() {
+        navStack  = [];
+        lastIntent = null;
         stage.className = 'is-idle';
         stage.innerHTML = `
             <div style="text-align:center;opacity:.3;">
@@ -573,14 +593,40 @@
     /* ── Escape HTML ──────────────────────────── */
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
+    /* ── Navigation history ───────────────────── */
+    let navStack  = [];   // [{intent, label}]
+    let lastIntent = null;
+
+    // Fresh user search — clears history
+    function userSearch(intent) {
+        navStack = [];
+        resolveIntent(intent);
+    }
+
+    function showBackButton() {
+        const entry = navStack[navStack.length - 1];
+        const btn = document.createElement('button');
+        btn.className = 'nav-back-btn fade-in';
+        btn.innerHTML = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back to ${esc(entry.label)}`;
+        btn.onclick = navBack;
+        stage.insertBefore(btn, stage.firstChild);
+    }
+
+    function navBack() {
+        const entry = navStack.pop();
+        if (entry) resolveIntent(entry.intent);
+    }
+
     /* ── Resolve intent ───────────────────────── */
     async function resolveIntent(intent) {
+        lastIntent = intent;
         const isNL = !intent.startsWith('/') && !intent.startsWith('@');
         stageLoading(isNL);
         try {
             const res  = await fetch('/api/intent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({intent}) });
             const data = await res.json();
             stageResults();
+            if (navStack.length) showBackButton();
 
             if (data.llm_command) {
                 const b = document.createElement('div');
@@ -657,7 +703,17 @@
             const links  = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
             const topo   = card.querySelector('.graph-links');
             if (links && links.length) {
-                topo.innerHTML = links.map(l => `<span class="topo-chip">${esc(prettyRel(l.type))} <span style="color:#4f46e5;margin:0 2px;">·</span> ${esc(prettyId(l.to))}</span>`).join('');
+                topo.innerHTML = '';
+                links.forEach(l => {
+                    const chip = document.createElement('button');
+                    chip.className = 'topo-chip';
+                    chip.innerHTML = `${esc(prettyRel(l.type))} <span style="color:#4f46e5;margin:0 2px;">·</span> ${esc(prettyId(l.to))}`;
+                    chip.onclick = () => {
+                        navStack.push({ intent: lastIntent, label: card.querySelector('.target-handle').textContent });
+                        resolveIntent('@' + l.to.replace(/^@/, ''));
+                    };
+                    topo.appendChild(chip);
+                });
             } else {
                 topo.innerHTML = '<span style="font-size:10px;color:#94a3b8;">No connections on record</span>';
             }
