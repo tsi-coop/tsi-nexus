@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSI Nexus - Institutional Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        :root { --nexus-primary: #020617; --nexus-accent: #6366f1; --background: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--background); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        .nexus-card { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1); border-top: 4px solid var(--nexus-accent); background-color: white; z-index: 10; position: relative; }
+    </style>
+</head>
+<body>
+
+<div class="w-full max-w-md p-12 rounded-3xl nexus-card border border-slate-100">
+    <div class="text-center mb-12">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-950 rounded-2xl mb-6 shadow-xl">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+        </div>
+        <h2 class="text-3xl font-black text-slate-950 tracking-tight">TSI Nexus</h2>
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Powering Institutional Intelligence</p>
+    </div>
+
+    <div id="nexus-feedback" class="hidden p-4 mb-8 rounded-xl text-center text-[10px] font-black uppercase tracking-wider"></div>
+
+    <form class="space-y-6" id="nexusLoginForm">
+        <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Email Address</label>
+            <input type="email" id="email" required class="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none transition-all text-sm focus:border-indigo-500" placeholder="admin@tsicoop.org">
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Password</label>
+            <input type="password" id="password" required class="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none transition-all text-sm focus:border-indigo-500" placeholder="••••••••••••">
+        </div>
+
+        <button type="submit" id="nexusBtn" class="w-full py-5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.3em] shadow-lg mt-4 hover:bg-slate-900 transition-all">
+            Sign In
+        </button>
+    </form>
+</div>
+
+<script>
+    // Using DOMContentLoaded to ensure the HTML is loaded before running script
+    document.addEventListener('DOMContentLoaded', () => {
+        const loginForm = document.getElementById('nexusLoginForm');
+        const loginBtn = document.getElementById('nexusBtn');
+        const feedback = document.getElementById('nexus-feedback');
+
+        if (!loginForm) {
+            console.error("Critical: Login form not found in DOM even after load.");
+            return;
+        }
+
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            loginBtn.disabled = true;
+            loginBtn.innerText = "AUTHENTICATING...";
+            feedback.classList.add('hidden');
+
+            // --- DEV BYPASS ---
+            if (email === "admin@tsicoop.org" && password === "admin123") {
+                loginBtn.innerText = "AUTHORIZED";
+                loginBtn.style.backgroundColor = "#059669";
+                localStorage.setItem('nexus_token', 'dev_token');
+                setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/nexus/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const text = await response.text();
+                const data = text ? JSON.parse(text) : {};
+
+                if (response.ok && data.success) {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    throw new Error(data.message || "Access Denied");
+                }
+            } catch (err) {
+                feedback.textContent = err.message;
+                feedback.className = "p-4 mb-8 rounded-xl text-center text-[10px] font-black uppercase bg-red-50 text-red-600 border border-red-100 block";
+                loginBtn.disabled = false;
+                loginBtn.innerText = "Sign In";
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
