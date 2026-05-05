@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSI Nexus - Liquid Templates</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
+        .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
+        .code-editor { font-family: 'Fira Code', monospace; background-color: #0f172a; }
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
+        <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
+            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
+            <div class="px-6 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
+            <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                Dashboard
+            </a>
+            <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                Context Graph
+            </a>
+            <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                Policy Manifest
+            </a>
+
+            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
+            <a href="liquid_templates.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
+                Liquid Templates
+            </a>
+            <a href="#" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                Form Builder
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 text-slate-800">
+            <h2 class="text-lg font-bold uppercase tracking-tight">Liquid Template Registry</h2>
+            <div class="flex space-x-3">
+                <button onclick="toggleModal('componentLibraryModal')" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Component Library</button>
+                <button onclick="toggleModal('createTemplateModal')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">+ New Template</button>
+            </div>
+        </header>
+
+        <section class="flex-1 overflow-y-auto p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div class="p-6 flex-1">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-black rounded uppercase tracking-widest">Type: Account Summary</span>
+                            <div class="flex space-x-1">
+                                <button class="p-1 text-slate-400 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                                <button class="p-1 text-slate-400 hover:text-rose-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                            </div>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800 mb-1">Standard Portfolio Card</h4>
+                        <p class="text-[11px] text-slate-500">Materializes the active balance and arrears status for any Member entity.</p>
+                    </div>
+                    <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Status: Live</span>
+                        <button onclick="toggleModal('previewModal')" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800">Preview UI</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div class="p-6 flex-1">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[9px] font-black rounded uppercase tracking-widest">Type: Critical Alert</span>
+                            <div class="flex space-x-1">
+                                <button class="p-1 text-slate-400 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                            </div>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800 mb-1">Delinquency Notification</h4>
+                        <p class="text-[11px] text-slate-500">Only materializes if <code>days_past_due > 15</code>. Displays collection protocol.</p>
+                    </div>
+                    <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Status: Conditional</span>
+                        <button class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800">Preview UI</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="createTemplateModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="modal-container bg-white w-full max-w-4xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">New Liquid Template</h3>
+                <button onclick="toggleModal('createTemplateModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <div class="flex-1 flex overflow-hidden">
+                <div class="w-1/2 p-8 border-r border-slate-100 flex flex-col">
+                    <div class="mb-6 space-y-4">
+                        <input type="text" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Template Name (e.g. Collection Card)">
+                        <select class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 outline-none">
+                            <option>Base Entity: Member</option>
+                            <option>Base Entity: Group</option>
+                            <option>Base Entity: Officer</option>
+                        </select>
+                    </div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">HTML Content (Tailwind Supported)</label>
+                    <textarea class="flex-1 code-editor text-indigo-300 p-6 rounded-2xl text-[11px] outline-none resize-none leading-relaxed" spellcheck="false">&lt;div class="p-6 bg-white rounded-xl shadow-sm border border-slate-200"&gt;
+  &lt;h3 class="text-lg font-bold"&gt;{{ entity.name }}&lt;/h3&gt;
+  &lt;p class="text-slate-500"&gt;Balance: {{ entity.current_state.balance }}&lt;/p&gt;
+&lt;/div&gt;</textarea>
+                </div>
+                <div class="w-1/2 p-8 bg-slate-50/50 flex flex-col">
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Materialization Logic</h4>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-6">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-3">Conditional Trigger (SQL)</label>
+                        <textarea class="w-full bg-slate-900 text-indigo-400 font-mono text-[10px] p-4 rounded-xl h-24 outline-none border-none" placeholder="SELECT 1 FROM current_state WHERE..."></textarea>
+                        <p class="text-[9px] text-slate-400 mt-2 italic">Template will only materialize if this query returns results.</p>
+                    </div>
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Available Context Graph Variables</h4>
+                    <div class="flex-1 bg-white rounded-2xl border border-slate-100 p-4 overflow-y-auto space-y-2">
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-700">
+                            <span>entity.current_state.kyc_status</span>
+                            <button class="text-indigo-600 hover:underline">Copy Tag</button>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-700">
+                            <span>entity.current_state.total_arrears</span>
+                            <button class="text-indigo-600 hover:underline">Copy Tag</button>
+                        </div>
+                    </div>
+                    <button class="mt-6 py-4 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg">Commit Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="componentLibraryModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="modal-container bg-white w-full max-w-2xl h-[60vh] rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
+            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Adaptive Component Registry</h3>
+                <button onclick="toggleModal('componentLibraryModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </header>
+            <div class="flex-1 p-8 grid grid-cols-2 gap-6 overflow-y-auto">
+                <div class="border border-slate-200 rounded-2xl p-4 flex items-center space-x-4 cursor-pointer hover:border-indigo-500 transition-colors group">
+                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-800 uppercase tracking-tight">Chart Card</p>
+                        <p class="text-[9px] text-slate-400 font-bold">Materializes time-series charts.</p>
+                    </div>
+                </div>
+                </div>
+        </div>
+    </div>
+
+    <div id="previewModal" class="modal-overlay fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[90] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="modal-container bg-slate-100 w-full max-w-md h-[400px] rounded-[32px] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col border-[8px] border-slate-900">
+            <div class="bg-white flex-1 p-8 flex items-center justify-center">
+                <div class="w-full p-6 bg-white rounded-2xl shadow-lg border border-slate-100 text-center">
+                    <h3 class="text-lg font-black text-slate-900">Unity Self-Help Group</h3>
+                    <p class="text-sm text-slate-500 font-bold mt-2">Current Balance: 45,000</p>
+                    <div class="mt-6 pt-6 border-t border-slate-50">
+                        <span class="px-4 py-2 bg-green-50 text-green-600 text-[10px] font-black uppercase rounded-full tracking-widest">Active Snapshot</span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="toggleModal('previewModal')" class="bg-slate-900 text-white py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-colors">Close Simulator</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const container = modal.querySelector('.modal-container');
+            if (modal.classList.contains('opacity-0')) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => container.classList.remove('scale-95', 'opacity-0'), 10);
+            } else {
+                container.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
+            }
+        }
+    </script>
+</body>
+</html>

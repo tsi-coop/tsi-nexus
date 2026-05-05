@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSI Nexus - Interaction Stream</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
+        .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
+        .stream-line { position: absolute; left: 31px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; z-index: 0; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
+        <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
+            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
+            <div class="px-6 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
+            <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                Dashboard
+            </a>
+            <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                Context Graph
+            </a>
+            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
+            <a href="seeding.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                Seeding & Simulation
+            </a>
+            <a href="stream.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                Interaction Stream
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 text-slate-800">
+            <h2 class="text-lg font-bold uppercase tracking-tight">Interaction Stream Ledger</h2>
+            <div class="flex space-x-3">
+                <button onclick="toggleModal('timeTravelModal')" class="px-4 py-2 bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-100 transition-colors">Time-Travel Audit</button>
+                <div class="flex items-center px-3 py-1 bg-slate-100 rounded-lg">
+                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Live Feed</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="flex-1 overflow-y-auto p-12 relative">
+            <div class="stream-line"></div>
+            
+            <div class="space-y-12">
+                <div class="relative z-10">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 bg-f8fafc inline-block pr-4">May 05, 2026</h3>
+                    
+                    <div class="space-y-8">
+                        <div class="flex items-start group">
+                            <div class="w-16 pt-1 text-right pr-6">
+                                <span class="text-[10px] font-bold text-slate-400">14:22</span>
+                            </div>
+                            <div class="w-8 h-8 rounded-full bg-white border-4 border-indigo-500 z-10"></div>
+                            <div class="flex-1 ml-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-300 transition-all cursor-pointer" onclick="toggleModal('eventDetailModal')">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="text-xs font-black text-slate-900 uppercase tracking-tight">/disburse Intent Resolved</h4>
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-black rounded uppercase">Authorized</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-4">Actor: <strong>Officer_Rahul</strong> | Target: <strong>Member_882</strong></p>
+                                <div class="flex items-center space-x-4 text-[9px] font-bold text-slate-400 uppercase">
+                                    <span>Pillar: Governance</span>
+                                    <span>•</span>
+                                    <span>Rule: POL-KYC</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start group">
+                            <div class="w-16 pt-1 text-right pr-6">
+                                <span class="text-[10px] font-bold text-slate-400">13:05</span>
+                            </div>
+                            <div class="w-8 h-8 rounded-full bg-white border-4 border-rose-500 z-10"></div>
+                            <div class="flex-1 ml-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-rose-300 transition-all">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="text-xs font-black text-slate-900 uppercase tracking-tight">/onboard Intent Blocked</h4>
+                                    <span class="px-2 py-0.5 bg-rose-100 text-rose-700 text-[9px] font-black rounded uppercase">Denial</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-4">Reason: Joint Liability Group default detected via <strong>POL-JLG</strong>.</p>
+                                <div class="bg-slate-50 p-3 rounded-lg font-mono text-[9px] text-slate-500 italic">
+                                    "Action Blocked: A member of your JLG is in default."
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="eventDetailModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="modal-container bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
+            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Interaction Traceability</h3>
+                <button onclick="toggleModal('eventDetailModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </header>
+            <div class="p-8 space-y-8">
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Event Payload (Intent)</p>
+                        <div class="bg-slate-900 text-indigo-300 font-mono text-[10px] p-4 rounded-xl">
+                            {<br>
+                            &nbsp;&nbsp;"intent": "/disburse",<br>
+                            &nbsp;&nbsp;"amount": 5000,<br>
+                            &nbsp;&nbsp;"target": "@member_882"<br>
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Snapshot State</p>
+                        <div class="bg-slate-50 text-slate-600 font-mono text-[10px] p-4 rounded-xl border border-slate-100">
+                            {<br>
+                            &nbsp;&nbsp;"kyc": "Verified",<br>
+                            &nbsp;&nbsp;"arrears": 0,<br>
+                            &nbsp;&nbsp;"group_status": "Active"<br>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="pt-6 border-t border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-4">Governance Pillar Decision Logic</p>
+                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                        <p class="text-[11px] font-bold text-indigo-900 mb-2">Rule: POL-KYC (Identity Verification)</p>
+                        <p class="text-[10px] text-indigo-700 leading-relaxed italic">"Verified identity found in Context Graph. Disbursement permitted under current institutional risk parameters."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="timeTravelModal" class="modal-overlay fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="modal-container w-full max-w-4xl p-12 text-center transform scale-110 opacity-0 transition-all duration-500">
+            <h3 class="text-4xl font-black text-white mb-4 tracking-tighter">Chronological Reconstruction</h3>
+            <p class="text-sm text-slate-400 font-bold uppercase tracking-[0.3em] mb-16">Enter Institutional Timestamp</p>
+            
+            <div class="space-y-12">
+                <input type="range" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                <div class="flex justify-between text-xs font-black text-slate-500 uppercase tracking-widest px-2">
+                    <span>March 01, 2026</span>
+                    <span class="text-white text-lg tracking-tighter">Current View: May 05, 2026</span>
+                    <span>Future Simulation</span>
+                </div>
+                <div class="pt-12">
+                    <button onclick="toggleModal('timeTravelModal')" class="px-12 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.4em] shadow-2xl shadow-indigo-500/20 hover:bg-indigo-500 transition-all">
+                        Initiate Time-Travel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const container = modal.querySelector('.modal-container');
+            if (modal.classList.contains('opacity-0')) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => container.classList.remove('scale-95', 'scale-110', 'opacity-0'), 10);
+            } else {
+                container.classList.add('scale-95');
+                if(modalId === 'timeTravelModal') container.classList.add('scale-110');
+                setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
+            }
+        }
+    </script>
+</body>
+</html>
