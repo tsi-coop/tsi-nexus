@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSI Nexus - Seeding & Simulation</title>
+    <title>TSI Nexus - Intelligence Tuning</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
         .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
+        .code-editor { font-family: 'Fira Code', monospace; background-color: #0f172a; color: #94a3b8; }
         .modal-overlay { transition: opacity 0.3s ease; }
         .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
-        .clock-ring { border: 2px solid #e2e8f0; border-top-color: #6366f1; animation: spin 4s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -42,7 +41,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 Policy Manifest
             </a>
-            <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+            <a href="intelligence_tuning.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
                 Intelligence Tuning
             </a>
@@ -58,7 +57,7 @@
             </a>
 
             <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
-            <a href="seeding_simulation.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
+            <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                 Seeding & Simulation
             </a>
@@ -89,121 +88,130 @@
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 text-slate-800">
-            <h2 class="text-lg font-bold uppercase tracking-tight">Seeding & Scenario Engine</h2>
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
+            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Intelligence Routing & Tuning</h2>
             <div class="flex space-x-3">
-                <button onclick="toggleModal('simulationClockModal')" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Simulation Clock</button>
-                <button onclick="toggleModal('newScenarioModal')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">+ Deploy Scenario</button>
+                <button onclick="toggleModal('aliasModal')" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Alias Registry</button>
+                <button onclick="toggleModal('deployConfigModal')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">Deploy Global Config</button>
             </div>
         </header>
 
         <section class="flex-1 overflow-y-auto p-8 space-y-8">
-            <div class="bg-indigo-900 rounded-[32px] p-10 text-white relative overflow-hidden shadow-2xl">
-                <div class="relative z-10">
-                    <p class="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Current Active Seed</p>
-                    <h3 class="text-3xl font-black tracking-tight mb-6">Microfinance Pilot (Coimbatore Region)</h3>
-                    <div class="flex space-x-12">
-                        <div>
-                            <p class="text-[10px] font-bold uppercase opacity-50 mb-1">Entities Seeded</p>
-                            <p class="text-xl font-black">12,480</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-bold uppercase opacity-50 mb-1">Graph Integrity</p>
-                            <p class="text-xl font-black text-emerald-400">99.8%</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-bold uppercase opacity-50 mb-1">Scenario Lifecycle</p>
-                            <p class="text-xl font-black">Day 142 of 365</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none">
-                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="#FFF" d="M44.7,-76.4C58.1,-69.2,69.2,-58.1,76.4,-44.7C83.7,-31.3,87.1,-15.7,85.5,-0.9C83.9,13.8,77.3,27.7,68.9,40.1C60.4,52.5,50.1,63.5,37.5,71.5C24.9,79.5,10,84.5,-4.7,82.8C-19.4,81.1,-34,72.7,-46.8,63.1C-59.6,53.5,-70.6,42.7,-77.7,29.8C-84.8,16.8,-88.1,1.8,-86.1,-12.6C-84.1,-27,-76.8,-40.8,-66.2,-51.7C-55.6,-62.6,-41.7,-70.6,-28,-76.3C-14.3,-82,0.4,-85.4,15.1,-83.4C29.8,-81.4,44.7,-76.4,44.7,-76.4Z" transform="translate(100 100)" /></svg>
-                </div>
-            </div>
-
             <div>
-                <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Available Seed Packages</h3>
-                <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+                <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Task-Model Purpose Registry</h3>
+                <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
                     <table class="w-full text-left">
                         <thead class="bg-slate-50 border-b border-slate-100">
                             <tr>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Scenario Name</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Target Vertical</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Last Sync</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Actions</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Operational Purpose</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Assigned Model</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Latency Target</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50">
-                            <tr class="hover:bg-slate-50/50 transition-colors">
+                            <tr class="hover:bg-slate-50/50">
                                 <td class="px-6 py-4">
-                                    <p class="text-sm font-bold text-slate-800">Retail Banking Initial</p>
-                                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Seed Code: RB_GENESIS_01</p>
+                                    <p class="text-sm font-bold text-slate-800">Natural Language Intent Translation</p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase">Critical: Fast Response</p>
                                 </td>
-                                <td class="px-6 py-4 font-semibold text-xs text-slate-600 uppercase tracking-widest">Retail</td>
-                                <td class="px-6 py-4 text-xs text-slate-500">2h ago</td>
-                                <td class="px-6 py-4 flex space-x-3">
-                                    <button class="text-indigo-600 font-bold text-[10px] uppercase">Deploy</button>
-                                    <button class="text-slate-400 font-bold text-[10px] uppercase">Export SQL</button>
+                                <td class="px-6 py-4">
+                                    <select class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-2 rounded-xl outline-none">
+                                        <option>Gemma 4b (Optimized)</option>
+                                        <option>Gemma 2b (Edge)</option>
+                                    </select>
                                 </td>
+                                <td class="px-6 py-4 text-xs font-semibold text-slate-500">&lt; 200ms</td>
+                                <td class="px-6 py-4"><button class="text-indigo-600 font-bold text-[10px] uppercase">Test Latency</button></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                    <header class="p-6 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="text-[10px] font-black text-slate-800 uppercase tracking-widest">Master Cognitive Prompt</h3>
+                    </header>
+                    <textarea class="h-64 p-8 prompt-editor text-sm outline-none resize-none leading-relaxed" spellcheck="false">You are the TSI Nexus Intelligence Layer. 
+Map the user's Natural Language into JSON Intents.
+
+Example: 
+User: "Give a loan of 5k to Rahul"
+Output: { "intent": "/disburse", "target": "@rahul", "amount": 5000 }</textarea>
+                </div>
+
+                <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Model Safety & Global Config</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between p-4 bg-rose-50 border border-rose-100 rounded-2xl">
+                            <div>
+                                <p class="text-xs font-bold text-rose-900">Emergency Offline Mode</p>
+                                <p class="text-[10px] text-rose-600">Switch to quantized 1b model if compute exceeds 90%</p>
+                            </div>
+                            <input type="checkbox" checked class="h-5 w-5 accent-rose-600">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">Model Temperature (Global)</label>
+                            <input type="range" class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
-    <div id="newScenarioModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
-            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Deploy Institutional Scenario</h3>
-                <button onclick="toggleModal('newScenarioModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </header>
-            <div class="p-8 space-y-6">
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">Initialization Mode</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <button class="p-4 border-2 border-indigo-600 rounded-2xl bg-indigo-50 text-left">
-                            <p class="text-xs font-black text-indigo-700 uppercase mb-1">Golden Record Seed</p>
-                            <p class="text-[9px] text-indigo-500 leading-relaxed italic">Initializes organization from pre-defined institutional templates.</p>
-                        </button>
-                        <button class="p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-left hover:border-indigo-400 transition-colors">
-                            <p class="text-xs font-black text-slate-800 uppercase mb-1">Scenario Fuzzer</p>
-                            <p class="text-[9px] text-slate-400 leading-relaxed italic">Generates synthetic Digital Twins based on schema probability.</p>
-                        </button>
-                    </div>
+    <div id="aliasModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="modal-container bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col p-10">
+            <h3 class="text-2xl font-black text-slate-950 mb-2 tracking-tight">Synonym & Alias Registry</h3>
+            <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-8">Map local terminology to Nexus logic</p>
+            
+            <div class="space-y-4 max-h-[40vh] overflow-y-auto mb-8 pr-2">
+                <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <input type="text" class="flex-1 bg-transparent outline-none text-sm font-bold text-slate-800" value="Group Leader">
+                    <span class="text-slate-300">→</span>
+                    <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">@coordinator</span>
                 </div>
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">Seed Configuration (YAML/JSON)</label>
-                    <textarea class="w-full bg-slate-900 text-indigo-300 font-mono p-5 rounded-2xl text-[11px] h-32 outline-none" placeholder="institution: TSI Coop&#10;entities:&#10;  - type: Branch&#10;    count: 10"></textarea>
+                <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <input type="text" class="flex-1 bg-transparent outline-none text-sm font-bold text-slate-800" value="Grant Credit">
+                    <span class="text-slate-300">→</span>
+                    <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">/disburse</span>
                 </div>
-                <button class="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-xl shadow-indigo-100">Initialize Genesis Flow</button>
             </div>
+
+            <button class="w-full py-5 bg-slate-900 text-white font-black text-xs uppercase tracking-[0.3em] rounded-[24px] shadow-xl mb-4">Add New Alias</button>
+            <button onclick="toggleModal('aliasModal')" class="w-full py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Close Registry</button>
         </div>
     </div>
 
-    <div id="simulationClockModal" class="modal-overlay fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col p-10 text-center">
-            <div class="w-20 h-20 clock-ring rounded-full mx-auto mb-6 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <div id="deployConfigModal" class="modal-overlay fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="modal-container w-full max-w-xl p-10 transform scale-110 opacity-0 transition-all duration-500 text-center">
+            <div class="w-20 h-20 bg-indigo-600/20 rounded-full mx-auto mb-8 flex items-center justify-center border border-indigo-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-indigo-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             </div>
-            <h3 class="text-2xl font-black text-slate-950 mb-2">Temporal Control</h3>
-            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-8">Fast-Forward Institutional State</p>
+            <h3 class="text-3xl font-black text-white mb-2">Deploy Global Intelligence</h3>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-[0.3em] mb-12">Synchronizing weights across foundation</p>
             
-            <div class="space-y-6">
-                <div>
-                    <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase px-1 mb-2">
-                        <span>Simulation Speed</span>
-                        <span class="text-indigo-600">30 Days / Sec</span>
+            <div class="space-y-4 mb-10">
+                <div class="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl text-left">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-500 uppercase">LoRA Adapter Sync</p>
+                        <p class="text-sm font-bold text-white">Institutional_Risk_v4.bin</p>
                     </div>
-                    <input type="range" class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                    <span class="text-[9px] font-black bg-indigo-500 text-white px-2 py-1 rounded uppercase">Pending</span>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <button class="py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">Start Evolution</button>
-                    <button onclick="toggleModal('simulationClockModal')" class="py-4 bg-slate-100 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest">Reset Clock</button>
+                <div class="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl text-left">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-500 uppercase">Cognitive System Prompt</p>
+                        <p class="text-sm font-bold text-white">Institutional_Law_Manifest.txt</p>
+                    </div>
+                    <span class="text-[9px] font-black bg-emerald-500 text-white px-2 py-1 rounded uppercase">Ready</span>
                 </div>
             </div>
+
+            <button class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-indigo-500 transition-all">Execute Foundation Update</button>
+            <button onclick="toggleModal('deployConfigModal')" class="mt-6 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white">Cancel</button>
         </div>
     </div>
 
@@ -213,9 +221,10 @@
             const container = modal.querySelector('.modal-container');
             if (modal.classList.contains('opacity-0')) {
                 modal.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => container.classList.remove('scale-95', 'opacity-0'), 10);
+                setTimeout(() => container.classList.remove('scale-95', 'scale-110', 'opacity-0'), 10);
             } else {
                 container.classList.add('scale-95', 'opacity-0');
+                if(modalId === 'deployConfigModal') container.classList.add('scale-110');
                 setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
             }
         }
