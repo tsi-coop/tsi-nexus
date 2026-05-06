@@ -1,121 +1,120 @@
 -- ============================================================================
--- TSI NEXUS: THE UNIFIED SOVEREIGN CORE
--- Version: 2.1 (Decoupled & Generic)
+-- TSI NEXUS: THE UNIFIED SOVEREIGN CORE (V3 - INSTITUTIONAL UPGRADE)
 -- ============================================================================
 
--- 0. INFRASTRUCTURE
+-- 0. INFRASTRUCTURE 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- 1. UNIVERSAL TYPES
--- We use standard TEXT for types to allow "Vertical Collapse" without ENUM migrations
--- However, we keep a check constraint for core system roles.
-CREATE TYPE policy_outcome AS ENUM ('allow', 'block', 'require_dual_auth', 'flag');
+-- 1. THE SOVEREIGN ROOT (Organisation)
+-- Every Nexus instance is anchored by a Root Organisation.
+CREATE TABLE root_organisation (
+    org_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    legal_identifier TEXT UNIQUE,
+    domain_slang JSONB DEFAULT '{"Group Leader": "@coordinator"}', -- For Alias Registry
+    config JSONB DEFAULT '{
+        "emergency_offline_mode": true,
+        "global_temperature": 0.2
+    }', -- Synced with Intelligence Tuning Safety
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- 2. THE ENTITY VAULT (Digital Twins)
+-- Accommodates Members, Officers, and Branches
 CREATE TABLE digital_twins (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type TEXT NOT NULL,                -- e.g., 'member', 'machine', 'officer'
-    external_id TEXT UNIQUE NOT NULL,  -- The @handle used in Liquid
+    org_id UUID REFERENCES root_organisation(org_id),
+    type TEXT NOT NULL,                -- 'member', 'officer', 'branch', 'skill'
+    external_id TEXT UNIQUE NOT NULL,  -- The @handle (e.g., @officer_rahul)
     current_state JSONB NOT NULL DEFAULT '{}', 
     version_count INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. THE GRAPH PILLAR (Relationships)
--- This was missing from the previous version; essential for "Graph Walks"
+-- 3. THE GRAPH PILLAR (Relationships & Skills)
+-- Maps Tribal Knowledge & Skills
 CREATE TABLE twin_relationships (
     rel_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     from_twin_id UUID REFERENCES digital_twins(id) ON DELETE CASCADE,
     to_twin_id UUID REFERENCES digital_twins(id) ON DELETE CASCADE,
-    relationship_type TEXT NOT NULL,   -- e.g., 'SPOUSE_OF', 'MANAGES', 'OPERATES'
-    metadata JSONB DEFAULT '{}',
+    relationship_type TEXT NOT NULL,   -- 'SPOUSE_OF', 'MANAGES', 'HAS_SKILL'
+    metadata JSONB DEFAULT '{}',       -- Stores "How-to" tribal knowledge
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. THE TEMPORAL ANCESTRY (History)
-CREATE TABLE twin_state_history (
-    history_id BIGSERIAL PRIMARY KEY,
-    twin_id UUID REFERENCES digital_twins(id) ON DELETE CASCADE,
-    snapshot JSONB NOT NULL,
-    reason TEXT,               
-    actor_id UUID,             
-    recorded_at TIMESTAMPTZ DEFAULT NOW()
+-- 4. INTELLIGENCE TUNING (Model Routing)
+-- Configuration for Task-Model Purpose Registry
+CREATE TABLE intelligence_tuning (
+    tuning_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    purpose_key TEXT UNIQUE NOT NULL,  -- 'INTENT_TRANSLATION', 'GOVERNANCE_SIM'
+    assigned_model TEXT NOT NULL,      -- 'Gemma 4b', 'Llama 3'
+    system_prompt TEXT NOT NULL,       -- The "Constitution" for this task
+    latency_target_ms INTEGER,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
--- 5. SEMANTIC INTERACTION STREAM (Memory)
+-- 5. EXTERNAL SERVICE REGISTRY
+-- Manages API Gateways and Health Checks
+CREATE TABLE service_registry (
+    service_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    identifier TEXT UNIQUE NOT NULL,   -- 'AADHAAR_KYC', 'CIBIL_PROXY'
+    api_base_url TEXT NOT NULL,
+    auth_config JSONB,                 -- Keys/Secrets
+    status TEXT DEFAULT 'Active',      -- 'Active', 'Degraded', 'Offline'
+    last_health_check TIMESTAMPTZ,
+    uptime_percentage NUMERIC DEFAULT 100.00
+);
+
+-- 6. APP ACCESS & RBAC (Sovereign Access Keys)
+-- Securely authorizes external apps for DTwin/Stream access
+CREATE TABLE app_access_registry (
+    app_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    app_name TEXT NOT NULL,
+    api_key TEXT UNIQUE NOT NULL,
+    api_secret_hash TEXT NOT NULL,
+    authorized_scopes TEXT[],         -- ['DTWIN_WRITE', 'STREAM_LOG']
+    assigned_model_id UUID REFERENCES intelligence_tuning(tuning_id),
+    status TEXT DEFAULT 'Active',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. INTERACTION STREAM (Institutional Memory)
+-- The immutable timeline of Tribal Knowledge
 CREATE TABLE interaction_stream (
     id BIGSERIAL PRIMARY KEY,
     owner_id UUID REFERENCES digital_twins(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
+    intent_mapped TEXT,                -- The interpreted command (e.g., /disburse)
     embedding vector(1536),    
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. INTERACTION SCHEMA (Generic Form Registry)
--- Each row defines a capture form: what fields to collect, how to validate,
--- what to write back to current_state, and how to log to interaction_stream.
--- Zero sector-specific Java — adding KYC / survey / doc-upload is a DB INSERT.
-CREATE TABLE interaction_schema (
-    schema_id    TEXT PRIMARY KEY,
-    label        TEXT NOT NULL,
-    applies_to   TEXT NOT NULL DEFAULT '*',   -- 'member', 'officer', '*'
-    action_type  TEXT NOT NULL,               -- links to policy_manifest for guardrails
-    fields       JSONB NOT NULL,
-    -- Each field: {key, label, type, required, pattern, hint, state_key, state_transform}
-    --   state_key       : override the key written to current_state (default = key)
-    --   state_transform : 'last4' | 'uppercase' | 'omit' (default = store as-is)
-    state_patch  JSONB NOT NULL DEFAULT '{}', -- fixed KV merged into current_state on success
-    stream_tmpl  TEXT NOT NULL,               -- {field_key} placeholders filled at runtime
-    is_active    BOOLEAN DEFAULT TRUE,
-    created_at   TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 7. THE POLICY MANIFEST (Governance)
--- This is the "Business Compiler" table.
+-- 8. THE POLICY MANIFEST (Governance Core)
+-- The "Business Compiler"
 CREATE TABLE policy_manifest (
     policy_id TEXT PRIMARY KEY,
-    action_type TEXT NOT NULL,         -- Matches the /command verb (e.g., DISBURSE)
-    description TEXT,
-    query_logic TEXT NOT NULL,         -- The SQL executed at runtime
-    error_message TEXT NOT NULL,       -- Liquid feedback string (denial reason or analytics label)
-    execution_mode TEXT NOT NULL DEFAULT 'GUARDRAIL'
-        CHECK (execution_mode IN ('GUARDRAIL', 'ANALYTICS')),
-                                       -- GUARDRAIL: blocks if COUNT > 0; ANALYTICS: returns rows as data
-    is_active BOOLEAN DEFAULT TRUE,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    action_type TEXT NOT NULL,         -- Matches command verbs
+    query_logic TEXT NOT NULL,         -- The SQL enforced at runtime
+    error_message TEXT NOT NULL,       -- Liquid feedback on denial
+    execution_mode TEXT NOT NULL DEFAULT 'GUARDRAIL',
+    is_active BOOLEAN DEFAULT TRUE
 );
 
--- 7. COMMAND MANIFEST
--- Defines every slash command available in this deployment.
--- component_type drives UI routing; multi_target/has_value drive argument parsing.
--- Adding a new command = one INSERT here + any governance rows in policy_manifest.
-CREATE TABLE command_manifest (
-    command_verb   TEXT PRIMARY KEY,
-    label          TEXT NOT NULL,
-    args_hint      TEXT NOT NULL DEFAULT '@entity',
-    hint           TEXT NOT NULL,
-    component_type TEXT NOT NULL DEFAULT 'universal_action_confirm',
-    action_type    TEXT NOT NULL,
-    multi_target   BOOLEAN NOT NULL DEFAULT FALSE,
-    has_value      BOOLEAN NOT NULL DEFAULT FALSE,
-    is_active      BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at     TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 8. ACTION & AUDIT LOG
+-- 9. ACTION & AUDIT LOG (Time-Travel Auditing)
+-- Final ledger of every human intent and result
 CREATE TABLE action_audit_log (
     audit_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     actor_id UUID REFERENCES digital_twins(id),
-    intent_raw TEXT,           
-    action_executed JSONB,     
+    intent_raw TEXT,                   -- The human's actual words
+    action_executed JSONB,             -- The resulting JSON command
     policy_id TEXT REFERENCES policy_manifest(policy_id),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. AUTOMATION: LINEAGE TRIGGER
+-- 10. SYSTEM TRIGGERS & SEEDS
 CREATE OR REPLACE FUNCTION fn_nexus_track_lineage()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -133,12 +132,8 @@ CREATE TRIGGER trg_nexus_lineage
 BEFORE UPDATE ON digital_twins
 FOR EACH ROW EXECUTE FUNCTION fn_nexus_track_lineage();
 
--- 9. FUZZY SEARCH INDEX
--- Enables word_similarity() for name-based entity lookup at lakh scale
-CREATE INDEX IF NOT EXISTS idx_twins_name_trgm
-    ON digital_twins USING gin((current_state->>'name') gin_trgm_ops);
-
--- 10. SYSTEM SEED (Essential only)
-INSERT INTO digital_twins (id, type, external_id, current_state) VALUES
-('00000000-0000-0000-0000-000000000000', 'system', 'system_actor', '{"role":"governance_core"}')
+-- SEED: Root Organisation & System Actor
+INSERT INTO root_organisation (name) VALUES ('TSI Nexus Global') ON CONFLICT DO NOTHING;
+INSERT INTO digital_twins (id, type, external_id, current_state) 
+VALUES ('00000000-0000-0000-0000-000000000000', 'system', 'governance_node', '{"role":"governance_core"}')
 ON CONFLICT DO NOTHING;
