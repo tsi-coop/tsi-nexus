@@ -26,6 +26,20 @@ import java.util.regex.Pattern;
  */
 public class Policy implements Action {
 
+    private static final String POLICY_SQL_PROMPT =
+        "You are the Nexus Policy Logic Engine. Translate a natural language institutional governance rule into a single PostgreSQL query.\n\n" +
+        "SCHEMA (core tables):\n" +
+        "  digital_twins(id UUID, type TEXT, external_id TEXT, current_state JSONB, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)\n" +
+        "  twin_relationships(rel_id UUID, from_twin_id UUID, to_twin_id UUID, relationship_type TEXT, metadata JSONB, created_at TIMESTAMPTZ)\n" +
+        "  interaction_stream(id BIGSERIAL, owner_id UUID, content TEXT, intent_mapped TEXT, created_at TIMESTAMPTZ)\n\n" +
+        "RULES:\n" +
+        "  - Always use ? as the placeholder for the target entity external_id (the @ handle, @ prefix stripped)\n" +
+        "  - For GUARDRAIL mode: return COUNT(*) — action is blocked when count > 0\n" +
+        "  - For ANALYTICS mode: return meaningful rows with named columns\n" +
+        "  - Access JSONB fields with ->> operator (e.g. current_state->>'kyc')\n" +
+        "  - Join via external_id: SELECT ... FROM digital_twins WHERE external_id = ?\n" +
+        "  - Output ONLY the raw SQL. No explanation, no markdown, no code fences.";
+
     /* ── GET ─────────────────────────────────────────────────────────────── */
 
     @Override
@@ -266,9 +280,12 @@ public class Policy implements Action {
         }
         vllmUrl = vllmUrl.replaceAll("/$", "");
 
-        // Load system prompt from intelligence_tuning (or use built-in fallback)
-        String systemPrompt = loadTuningPrompt(conn, "POLICY_GENERATION");
-        String model        = loadTuningModel(conn, "POLICY_GENERATION");
+        String systemPrompt = POLICY_SQL_PROMPT;
+        String model        = System.getenv("VLLM_MODEL");
+        if (model == null || model.isBlank()) {
+            OutputProcessor.errorResponse(res, 503, "Not available",
+                "VLLM_MODEL is not configured — set it in docker-compose.yml", req.getRequestURI()); return;
+        }
 
         // Enrich prompt with live schema context
         String schemaContext = buildSchemaContext(conn);
@@ -307,34 +324,6 @@ public class Policy implements Action {
         result.put("success", true);
         result.put("sql",     cleanSql);
         OutputProcessor.send(res, 200, result);
-    }
-
-    private String loadTuningPrompt(Connection conn, String purposeKey) {
-        String fallback =
-            "You are the Nexus Policy Logic Engine. Translate natural language governance rules into PostgreSQL.\n" +
-            "Schema: digital_twins(id, type, external_id, current_state JSONB), twin_relationships(from_twin_id, to_twin_id, relationship_type, created_at).\n" +
-            "Use ? as the placeholder. For GUARDRAIL return COUNT(*). Output ONLY raw SQL, no markdown.";
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT system_prompt FROM intelligence_tuning WHERE purpose_key = ? AND is_active = TRUE")) {
-            ps.setString(1, purposeKey);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) { String p = rs.getString("system_prompt"); return (p != null && !p.isBlank()) ? p : fallback; }
-            }
-        } catch (Exception ignore) {}
-        return fallback;
-    }
-
-    private String loadTuningModel(Connection conn, String purposeKey) {
-        String envModel = System.getenv("VLLM_MODEL");
-        String fallback = (envModel != null && !envModel.isBlank()) ? envModel : "google/gemma-3-12b-it";
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT assigned_model FROM intelligence_tuning WHERE purpose_key = ? AND is_active = TRUE")) {
-            ps.setString(1, purposeKey);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) { String m = rs.getString("assigned_model"); return (m != null && !m.isBlank()) ? m : fallback; }
-            }
-        } catch (Exception ignore) {}
-        return fallback;
     }
 
     private String buildSchemaContext(Connection conn) {

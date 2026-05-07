@@ -14,11 +14,6 @@
         .modal-box { transition: transform 0.2s ease, opacity 0.2s ease; }
         .input-field { width:100%; padding:.75rem 1rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; font-size:.875rem; outline:none; transition: border-color .15s; }
         .input-field:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
-        .code-field { font-family:'Fira Code','Courier New',monospace; width:100%; background:#0f172a; color:#a5b4fc; border:none; border-radius:.75rem; padding:1rem; font-size:.72rem; line-height:1.6; outline:none; resize:vertical; }
-        .code-field:focus { box-shadow:0 0 0 2px #6366f1; }
-        .purpose-card { transition: box-shadow .15s; }
-        .purpose-card:hover { box-shadow: 0 4px 20px -4px rgba(0,0,0,.08); }
-        .prompt-preview { font-family:'Fira Code','Courier New',monospace; font-size:.7rem; line-height:1.5; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -72,7 +67,7 @@
             Seeding & Simulation
         </a>
         <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 11.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
             Interaction Stream
         </a>
         <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
@@ -111,19 +106,18 @@
     <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
         <div class="flex items-center gap-4">
             <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Intelligence Setup</h2>
-            <!-- vLLM status chip -->
             <div id="statusChip" class="hidden flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase"></div>
         </div>
-        <button onclick="openUpsertModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+        <button onclick="openTermModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-            Add Purpose
+            Add Term
         </button>
     </header>
 
     <!-- Offline banner -->
     <div id="offlineBanner" class="hidden bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-        <p class="text-xs font-semibold text-amber-800">Intelligence Module is offline — set <code class="font-mono bg-amber-100 px-1 rounded">VLLM_URL</code> in docker-compose.yml and rebuild. Purpose configs can still be saved.</p>
+        <p class="text-xs font-semibold text-amber-800">Intelligence module is offline — set <code class="font-mono bg-amber-100 px-1 rounded">VLLM_URL</code> and <code class="font-mono bg-amber-100 px-1 rounded">VLLM_MODEL</code> in docker-compose.yml and rebuild. Vocabulary can still be managed.</p>
     </div>
 
     <!-- Loading -->
@@ -142,65 +136,85 @@
     <!-- Content -->
     <section id="mainContent" class="hidden flex-1 overflow-y-auto p-8">
 
-        <!-- Section label -->
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Task-Model Purpose Registry</p>
-        <p class="text-xs text-slate-500 mb-6 max-w-2xl">Each purpose routes a specific AI task to the right model with a tuned system prompt. Configure and test every purpose here before using it in Policy Manifest or other modules.</p>
-
-        <div id="purposesList" class="space-y-4 max-w-4xl"></div>
-
-        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-24 text-center">
-            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
+        <!-- Engine info -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-8 max-w-4xl">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Intelligence Engine</p>
+            <div class="flex items-center gap-10 flex-wrap">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Endpoint</p>
+                    <p id="vllmEndpoint" class="font-mono text-sm font-semibold text-slate-700">—</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Active Model</p>
+                    <p id="vllmModel" class="font-mono text-sm font-semibold text-slate-700">—</p>
+                </div>
+                <p class="text-xs text-slate-400 ml-auto self-center">Configured in <code class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">docker-compose.yml</code></p>
             </div>
-            <p class="text-sm font-bold text-slate-500">No purposes configured</p>
-            <p class="text-xs text-slate-400 mt-1">Add your first purpose to connect an AI model to a task</p>
         </div>
+
+        <!-- Vocabulary section -->
+        <div class="flex items-start justify-between mb-2 max-w-4xl">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Institutional Vocabulary</p>
+                <p class="text-xs text-slate-500 max-w-xl">Abbreviations, role names, and field slang that the AI should understand when interpreting queries, generating policies, and producing narrative insights.</p>
+            </div>
+        </div>
+
+        <!-- Vocab count hint -->
+        <p id="vocabCount" class="text-[11px] text-slate-400 font-semibold mb-4 max-w-4xl"></p>
+
+        <!-- Term list -->
+        <div id="vocabList" class="max-w-4xl space-y-2"></div>
+
+        <!-- Empty state -->
+        <div id="emptyVocab" class="hidden max-w-4xl mt-8">
+            <div class="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
+                <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                </div>
+                <p class="text-sm font-bold text-slate-600 mb-1">No vocabulary defined yet</p>
+                <p class="text-xs text-slate-400 mb-5">Add abbreviations, role titles, or field slang so the AI understands your organisation's language</p>
+                <button onclick="openTermModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                    Add First Term
+                </button>
+            </div>
+        </div>
+
     </section>
 </main>
 
 <!-- ══════════════════════════════════════════════════════════════════════
-     MODAL: Create / Edit Purpose
+     MODAL: Add / Edit Term
 ════════════════════════════════════════════════════════════════════════ -->
-<div id="upsertModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
-    <div class="modal-box bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 max-h-[90vh] flex flex-col">
-        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+<div id="termModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div>
-                <h3 id="upsertTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Add AI Purpose</h3>
-                <p class="text-[11px] text-slate-400 mt-0.5">Assign a model and system prompt to a task purpose</p>
+                <h3 id="termModalTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Add Term</h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">Teach the AI your organisation's language</p>
             </div>
-            <button onclick="closeModal('upsertModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+            <button onclick="closeModal('termModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-        <div class="p-8 space-y-5 overflow-y-auto">
-            <div id="upsertFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center"></div>
+        <div class="p-8 space-y-5">
+            <div id="termFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center"></div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Purpose Key</label>
-                    <input id="fPurposeKey" type="text" class="input-field" placeholder="POLICY_GENERATION">
-                    <p class="text-[10px] text-slate-400 mt-1 px-1">Uppercase identifier used by the system</p>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Assigned Model</label>
-                    <input id="fModel" type="text" class="input-field" placeholder="google/gemma-3-12b-it">
-                    <p class="text-[10px] text-slate-400 mt-1 px-1">Must match the model name in vLLM</p>
-                </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Term or Abbreviation</label>
+                <input id="fTerm" type="text" class="input-field" placeholder="GL, JLG, PAR, center meeting…">
+                <p class="text-[10px] text-slate-400 mt-1.5 px-1">Exactly as it appears in officer messages or voice commands</p>
             </div>
 
             <div>
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Latency Target <span class="normal-case font-normal text-slate-400">(ms)</span></label>
-                <input id="fLatency" type="number" class="input-field" placeholder="3000" min="100" max="60000">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Definition</label>
+                <textarea id="fDefinition" rows="3" class="input-field resize-none" placeholder="Group Leader — the elected head of a five-member borrower group, responsible for repayment coordination"></textarea>
+                <p class="text-[10px] text-slate-400 mt-1.5 px-1">Include sector context if the meaning is non-obvious</p>
             </div>
 
-            <div>
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">System Prompt</label>
-                <textarea id="fSystemPrompt" rows="10" class="code-field" placeholder="You are the Nexus Logic Engine…"></textarea>
-                <p class="text-[10px] text-slate-400 mt-1.5 px-1">The "constitution" for this AI task — be specific about output format and constraints.</p>
-            </div>
-
-            <button id="upsertBtn" onclick="submitUpsert()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
-                Save Purpose
+            <button id="termSaveBtn" onclick="saveTerm()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+                Save Term
             </button>
         </div>
     </div>
@@ -208,9 +222,8 @@
 
 <script>
 /* ── state ──────────────────────────────────────────────────────────── */
-let allPurposes = [];
-const purposeMap = {};
-let vllmOnline = false;
+let vocab = {};
+let editingTerm = null;
 
 /* ── load ───────────────────────────────────────────────────────────── */
 async function loadTuning() {
@@ -219,12 +232,9 @@ async function loadTuning() {
         const data = await res.json();
         if (!data.success) throw new Error('Server error');
 
-        vllmOnline  = data.vllm_online;
-        allPurposes = data.purposes;
-        allPurposes.forEach(p => { purposeMap[p.purpose_key] = p; });
-
+        vocab = data.vocab || {};
         renderStatus(data);
-        renderPurposes(allPurposes);
+        renderVocab();
 
         document.getElementById('loadingState').classList.add('hidden');
         document.getElementById('mainContent').classList.remove('hidden');
@@ -242,255 +252,134 @@ function renderStatus(data) {
 
     if (data.vllm_online) {
         chip.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-50 text-emerald-700';
-        chip.innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online · ${esc(data.vllm_model || 'model detected')}`;
+        chip.innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online`;
         banner.classList.add('hidden');
     } else {
         chip.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-red-50 text-red-600';
         chip.innerHTML = `<span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Offline`;
         banner.classList.remove('hidden');
     }
+
+    document.getElementById('vllmEndpoint').textContent = data.vllm_url  || 'Not configured';
+    document.getElementById('vllmModel').textContent    = data.vllm_model || 'Not configured';
 }
 
-/* ── render ─────────────────────────────────────────────────────────── */
-const PURPOSE_COLORS = {
-    POLICY_GENERATION:    { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: '#6366f1' },
-    INTENT_TRANSLATION:   { bg: 'bg-violet-50',  text: 'text-violet-700',  border: '#7c3aed' },
-    GOVERNANCE_SIM:       { bg: 'bg-rose-50',    text: 'text-rose-700',    border: '#e11d48' },
-    NARRATIVE_GENERATION: { bg: 'bg-amber-50',   text: 'text-amber-700',   border: '#d97706' },
-};
-function colorFor(key) {
-    return PURPOSE_COLORS[key] || { bg: 'bg-slate-50', text: 'text-slate-700', border: '#94a3b8' };
-}
-
-function renderPurposes(purposes) {
-    const list  = document.getElementById('purposesList');
-    const empty = document.getElementById('emptyState');
+/* ── render vocab ───────────────────────────────────────────────────── */
+function renderVocab() {
+    const list   = document.getElementById('vocabList');
+    const empty  = document.getElementById('emptyVocab');
+    const count  = document.getElementById('vocabCount');
     list.innerHTML = '';
 
-    if (!purposes.length) { empty.classList.remove('hidden'); return; }
+    const entries = Object.entries(vocab).sort((a, b) => a[0].localeCompare(b[0]));
+
+    count.textContent = entries.length ? `${entries.length} term${entries.length !== 1 ? 's' : ''} defined` : '';
+
+    if (!entries.length) { empty.classList.remove('hidden'); return; }
     empty.classList.add('hidden');
 
-    purposes.forEach(p => list.appendChild(buildCard(p)));
+    entries.forEach(([term, def]) => {
+        const row = document.createElement('div');
+        row.id = `term-row-${CSS.escape(term)}`;
+        row.className = 'bg-white rounded-xl border border-slate-100 flex items-center gap-4 px-5 py-4 shadow-sm hover:border-slate-200 transition-colors group';
+        row.innerHTML = `
+            <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[11px] font-black rounded-lg tracking-wide shrink-0 min-w-[3rem] text-center">${esc(term)}</span>
+            <span class="text-sm text-slate-600 flex-1 leading-relaxed">${esc(def || '—')}</span>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <button onclick="openTermModal(${JSON.stringify(term)})"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button onclick="initiateDelete(${JSON.stringify(term)}, this)"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>`;
+        list.appendChild(row);
+    });
 }
 
-function buildCard(p) {
-    purposeMap[p.purpose_key] = p;
-    const c = colorFor(p.purpose_key);
-
-    const card = document.createElement('div');
-    card.id        = `card-${p.purpose_key}`;
-    card.className = 'purpose-card bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm';
-
-    const promptPreview = (p.system_prompt || '').split('\n').slice(0, 3).join('\n');
-
-    card.innerHTML = `
-      <div class="flex items-start gap-4 p-5" style="border-left:4px solid ${c.border}">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center flex-wrap gap-2 mb-2">
-            <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md tracking-widest ${c.bg} ${c.text} border border-current/20">
-              ${esc(p.purpose_key)}
-            </span>
-            <span class="text-xs font-bold text-slate-600">${esc(p.assigned_model)}</span>
-            <span class="ml-auto text-[10px] text-slate-400 font-semibold">target: ${p.latency_target_ms}ms</span>
-          </div>
-          <div class="bg-slate-950 rounded-xl px-4 py-3 cursor-pointer group" onclick="togglePrompt('${p.purpose_key}')">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">System Prompt</span>
-              <svg id="chevron-${p.purpose_key}" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-600 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-            </div>
-            <pre id="prompt-preview-${p.purpose_key}" class="prompt-preview text-slate-400 whitespace-pre-wrap line-clamp-3">${esc(promptPreview)}${(p.system_prompt||'').split('\n').length > 3 ? '\n…' : ''}</pre>
-            <pre id="prompt-full-${p.purpose_key}" class="prompt-preview text-slate-300 whitespace-pre-wrap hidden">${esc(p.system_prompt || '')}</pre>
-          </div>
-        </div>
-      </div>
-
-      <!-- Test panel -->
-      <div id="testPanel-${p.purpose_key}" class="hidden border-t border-slate-50 bg-slate-50/60 p-5 space-y-3">
-        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Model Test</p>
-        <textarea id="testInput-${p.purpose_key}" rows="2" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 transition-colors resize-none font-mono text-xs"
-          placeholder="Type a test prompt, or leave blank to use the default health-check…"></textarea>
-        <div class="flex items-center gap-2">
-          <button id="testRunBtn-${p.purpose_key}" onclick="runTest('${p.purpose_key}')"
-            class="flex items-center gap-1.5 px-4 py-2 bg-slate-950 text-white text-[10px] font-black uppercase rounded-xl hover:bg-slate-800 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Run Test
-          </button>
-          <span id="testLatency-${p.purpose_key}" class="hidden text-[10px] font-black text-slate-500 uppercase"></span>
-        </div>
-        <div id="testResponse-${p.purpose_key}" class="hidden bg-white border border-slate-200 rounded-xl p-4">
-          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Model Response</p>
-          <p id="testResponseText-${p.purpose_key}" class="text-xs text-slate-700 leading-relaxed font-mono whitespace-pre-wrap"></p>
-        </div>
-      </div>
-
-      <div id="footer-${p.purpose_key}" class="px-5 py-3.5 border-t border-slate-50 flex items-center gap-2">
-        <button onclick="toggleTestPanel('${p.purpose_key}')"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-black uppercase rounded-lg transition-colors ${!vllmOnline ? 'opacity-50 cursor-not-allowed' : ''}"
-          ${!vllmOnline ? 'title="Intelligence Module offline"' : ''}>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Test
-        </button>
-        <button onclick="openUpsertModal('${p.purpose_key}')"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-black uppercase rounded-lg transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-          Edit
-        </button>
-        <button onclick="initiateDelete('${p.purpose_key}')"
-          class="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[10px] font-black uppercase rounded-lg transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          Delete
-        </button>
-      </div>`;
-
-    return card;
+/* ── modal ──────────────────────────────────────────────────────────── */
+function openTermModal(term) {
+    editingTerm = term || null;
+    const isEdit = !!editingTerm;
+    document.getElementById('termModalTitle').textContent = isEdit ? 'Edit Term' : 'Add Term';
+    document.getElementById('fTerm').value      = isEdit ? editingTerm          : '';
+    document.getElementById('fTerm').readOnly   = isEdit;
+    document.getElementById('fTerm').className  = `input-field${isEdit ? ' bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`;
+    document.getElementById('fDefinition').value = isEdit ? (vocab[editingTerm] || '') : '';
+    document.getElementById('termSaveBtn').textContent = isEdit ? 'Update Term' : 'Save Term';
+    document.getElementById('termFeedback').classList.add('hidden');
+    openModal('termModal');
 }
 
-/* ── prompt expand/collapse ─────────────────────────────────────────── */
-function togglePrompt(key) {
-    const preview  = document.getElementById(`prompt-preview-${key}`);
-    const full     = document.getElementById(`prompt-full-${key}`);
-    const chevron  = document.getElementById(`chevron-${key}`);
-    const expanded = !full.classList.contains('hidden');
-    preview.classList.toggle('hidden', !expanded);
-    full.classList.toggle('hidden', expanded);
-    chevron.style.transform = expanded ? '' : 'rotate(180deg)';
-}
+async function saveTerm() {
+    const term = editingTerm || document.getElementById('fTerm').value.trim();
+    const def  = document.getElementById('fDefinition').value.trim();
+    const btn  = document.getElementById('termSaveBtn');
 
-/* ── test panel ─────────────────────────────────────────────────────── */
-function toggleTestPanel(key) {
-    if (!vllmOnline) return;
-    const panel = document.getElementById(`testPanel-${key}`);
-    panel.classList.toggle('hidden');
-}
-
-async function runTest(key) {
-    const input   = document.getElementById(`testInput-${key}`).value.trim();
-    const btn     = document.getElementById(`testRunBtn-${key}`);
-    const latency = document.getElementById(`testLatency-${key}`);
-    const respBox = document.getElementById(`testResponse-${key}`);
-    const respTxt = document.getElementById(`testResponseText-${key}`);
-
-    btn.disabled = true;
-    btn.innerHTML = '<svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Running…';
-    latency.classList.add('hidden');
-    respBox.classList.add('hidden');
-
-    try {
-        const res  = await fetch('/api/tuning', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'test', purpose_key: key, test_input: input })
-        });
-        const data = await res.json();
-
-        if (!res.ok || !data.success) throw new Error(data.message || 'Test failed');
-
-        const ms = data.latency_ms;
-        const targetMs = (purposeMap[key] || {}).latency_target_ms || 3000;
-        const pass = ms <= targetMs;
-
-        latency.textContent = `${ms}ms — ${pass ? '✓ within target' : '⚠ over target'}`;
-        latency.className = `text-[10px] font-black uppercase ${pass ? 'text-emerald-600' : 'text-amber-600'}`;
-        latency.classList.remove('hidden');
-
-        respTxt.textContent = data.response || '(empty response)';
-        respBox.classList.remove('hidden');
-    } catch (err) {
-        latency.textContent = `Error: ${err.message}`;
-        latency.className = 'text-[10px] font-black uppercase text-red-500';
-        latency.classList.remove('hidden');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Run Test';
-    }
-}
-
-/* ── upsert modal ───────────────────────────────────────────────────── */
-function openUpsertModal(purposeKey) {
-    const p = purposeKey ? purposeMap[purposeKey] : null;
-    document.getElementById('upsertTitle').textContent = p ? 'Edit AI Purpose' : 'Add AI Purpose';
-    document.getElementById('fPurposeKey').value     = p ? p.purpose_key       : '';
-    document.getElementById('fPurposeKey').readOnly  = !!p;
-    document.getElementById('fPurposeKey').className = `input-field ${p ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`;
-    document.getElementById('fModel').value          = p ? p.assigned_model    : '';
-    document.getElementById('fLatency').value        = p ? p.latency_target_ms : '3000';
-    document.getElementById('fSystemPrompt').value   = p ? p.system_prompt     : '';
-    document.getElementById('upsertBtn').textContent = p ? 'Update Purpose' : 'Save Purpose';
-    document.getElementById('upsertFeedback').classList.add('hidden');
-    openModal('upsertModal');
-}
-
-async function submitUpsert() {
-    const purposeKey = document.getElementById('fPurposeKey').value.trim();
-    const model      = document.getElementById('fModel').value.trim();
-    const latency    = document.getElementById('fLatency').value.trim();
-    const prompt     = document.getElementById('fSystemPrompt').value.trim();
-    const btn        = document.getElementById('upsertBtn');
-
-    if (!purposeKey || !model) {
-        showFeedback('upsertFeedback', 'Purpose Key and Assigned Model are required', true); return;
-    }
+    if (!term) { showFeedback('termFeedback', 'Term is required', true); return; }
 
     btn.disabled = true; btn.textContent = 'Saving…';
 
     try {
         const res  = await fetch('/api/tuning', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'upsert', purpose_key: purposeKey, assigned_model: model,
-                system_prompt: prompt, latency_target_ms: latency || '3000' })
+            body: JSON.stringify({ action: 'add_term', term, definition: def })
         });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.message || 'Save failed');
 
-        showFeedback('upsertFeedback', `${data.purpose_key} saved`, false);
-        await reload();
-        setTimeout(() => closeModal('upsertModal'), 900);
+        vocab[term] = def;
+        renderVocab();
+        showFeedback('termFeedback', `"${term}" saved`, false);
+        setTimeout(() => closeModal('termModal'), 700);
     } catch (err) {
-        showFeedback('upsertFeedback', err.message, true);
+        showFeedback('termFeedback', err.message, true);
     } finally {
         btn.disabled = false;
-        btn.textContent = document.getElementById('fPurposeKey').readOnly ? 'Update Purpose' : 'Save Purpose';
+        btn.textContent = editingTerm ? 'Update Term' : 'Save Term';
     }
 }
 
 /* ── delete ─────────────────────────────────────────────────────────── */
-function initiateDelete(key) {
-    const footer = document.getElementById(`footer-${key}`);
-    if (!footer) return;
-    footer.innerHTML = `
-      <span class="text-xs font-bold text-red-600 mr-2">Delete "${key}"? This cannot be undone.</span>
-      <button onclick="cancelDelete('${key}')" class="px-3 py-1.5 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
-      <button onclick="executeDelete('${key}')" class="px-3 py-1.5 bg-red-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-red-700 transition-colors">Confirm Delete</button>`;
+function initiateDelete(term, btn) {
+    const row = document.getElementById(`term-row-${CSS.escape(term)}`);
+    if (!row) return;
+    const actionDiv = btn.closest('div');
+    actionDiv.innerHTML = `
+        <button onclick="cancelDelete(${JSON.stringify(term)})"
+            class="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
+        <button onclick="executeDelete(${JSON.stringify(term)})"
+            class="px-2.5 py-1 bg-red-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-red-700 transition-colors">Delete</button>`;
+    row.classList.add('border-red-100', 'bg-red-50/30');
 }
 
-function cancelDelete(key) { reload(); }
+function cancelDelete(term) {
+    delete vocab[term]; vocab[term] = vocab[term]; // no-op; re-render to restore buttons
+    renderVocab();
+}
 
-async function executeDelete(key) {
+async function executeDelete(term) {
     try {
         const res  = await fetch('/api/tuning', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'delete', purpose_key: key })
+            body: JSON.stringify({ action: 'delete_term', term })
         });
         const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message);
-        const card = document.getElementById(`card-${key}`);
-        if (card) { card.style.opacity = '0'; card.style.transition = 'opacity .2s'; setTimeout(() => card.remove(), 200); }
-        await reload();
-    } catch (err) { alert('Delete failed: ' + err.message); }
-}
+        if (!res.ok || !data.success) throw new Error(data.message || 'Delete failed');
 
-/* ── helpers ────────────────────────────────────────────────────────── */
-async function reload() {
-    const res  = await fetch('/api/tuning');
-    const data = await res.json();
-    if (data.success) {
-        vllmOnline  = data.vllm_online;
-        allPurposes = data.purposes;
-        allPurposes.forEach(p => { purposeMap[p.purpose_key] = p; });
-        renderStatus(data);
-        renderPurposes(allPurposes);
+        delete vocab[term];
+        const row = document.getElementById(`term-row-${CSS.escape(term)}`);
+        if (row) { row.style.opacity = '0'; row.style.transition = 'opacity .15s'; setTimeout(() => row.remove(), 150); }
+        setTimeout(renderVocab, 200);
+    } catch (err) {
+        alert('Delete failed: ' + err.message);
+        renderVocab();
     }
 }
 
+/* ── helpers ────────────────────────────────────────────────────────── */
 function openModal(id) {
     const m = document.getElementById(id);
     m.classList.remove('opacity-0', 'pointer-events-none');
@@ -512,7 +401,7 @@ function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-document.getElementById('upsertModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('upsertModal'); });
+document.getElementById('termModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('termModal'); });
 
 try {
     const u = JSON.parse(localStorage.getItem('nexus_user') || '{}');

@@ -31,7 +31,7 @@ public class Intent implements Action {
         String url   = System.getenv("VLLM_URL");
         String model = System.getenv("VLLM_MODEL");
         VLLM_URL   = (url   != null && !url.isEmpty())   ? url.replaceAll("/$", "") : null;
-        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : "google/gemma-3-12b-it";
+        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : null;
     }
 
     @Override
@@ -90,7 +90,7 @@ public class Intent implements Action {
 
     @SuppressWarnings("unchecked")
     private String llmParseIntent(String rawInput, List<JSONObject> commands) {
-        if (VLLM_URL == null || rawInput == null) return null;
+        if (VLLM_URL == null || VLLM_MODEL == null || rawInput == null) return null;
         if (rawInput.trim().startsWith("/")) return null;
 
         try {

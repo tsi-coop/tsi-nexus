@@ -45,18 +45,7 @@ CREATE TABLE twin_relationships (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. INTELLIGENCE TUNING (Model Routing)
--- Configuration for Task-Model Purpose Registry
-CREATE TABLE intelligence_tuning (
-    tuning_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    purpose_key TEXT UNIQUE NOT NULL,  -- 'INTENT_TRANSLATION', 'GOVERNANCE_SIM'
-    assigned_model TEXT NOT NULL,      -- 'Gemma 4b', 'Llama 3'
-    system_prompt TEXT NOT NULL,       -- The "Constitution" for this task
-    latency_target_ms INTEGER,
-    is_active BOOLEAN DEFAULT TRUE
-);
-
--- 5. EXTERNAL SERVICE REGISTRY
+-- 4. EXTERNAL SERVICE REGISTRY
 -- Manages API Gateways and Health Checks
 CREATE TABLE service_registry (
     service_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -76,7 +65,6 @@ CREATE TABLE app_access_registry (
     api_key TEXT UNIQUE NOT NULL,
     api_secret_hash TEXT NOT NULL,
     authorized_scopes TEXT[],         -- ['DTWIN_WRITE', 'STREAM_LOG']
-    assigned_model_id UUID REFERENCES intelligence_tuning(tuning_id),
     status TEXT DEFAULT 'Active',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -179,25 +167,3 @@ INSERT INTO digital_twins (id, type, external_id, current_state)
 VALUES ('00000000-0000-0000-0000-000000000000', 'system', 'governance_node', '{"role":"governance_core"}')
 ON CONFLICT DO NOTHING;
 
--- SEED: Intelligence Tuning — Policy SQL Generation
-INSERT INTO intelligence_tuning (purpose_key, assigned_model, system_prompt, latency_target_ms, is_active)
-VALUES (
-    'POLICY_GENERATION',
-    'google/gemma-3-12b-it',
-    'You are the Nexus Policy Logic Engine. Translate a natural language institutional governance rule into a single PostgreSQL query.
-
-SCHEMA (core tables):
-  digital_twins(id UUID, type TEXT, external_id TEXT, current_state JSONB, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)
-  twin_relationships(rel_id UUID, from_twin_id UUID, to_twin_id UUID, relationship_type TEXT, metadata JSONB, created_at TIMESTAMPTZ)
-  interaction_stream(id BIGSERIAL, owner_id UUID, content TEXT, intent_mapped TEXT, created_at TIMESTAMPTZ)
-
-RULES:
-  - Always use ? as the placeholder for the target entity external_id (the @ handle, @ prefix stripped)
-  - For GUARDRAIL mode: return COUNT(*) — action is blocked when count > 0
-  - For ANALYTICS mode: return meaningful rows with named columns
-  - Access JSONB fields with ->> operator (e.g. current_state->>''kyc'')
-  - Join via external_id: SELECT ... FROM digital_twins WHERE external_id = ?
-  - Output ONLY the raw SQL. No explanation, no markdown, no code fences.',
-    3000,
-    TRUE
-) ON CONFLICT (purpose_key) DO UPDATE SET system_prompt = EXCLUDED.system_prompt, assigned_model = EXCLUDED.assigned_model;

@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -17,10 +18,9 @@ import java.time.Duration;
 /**
  * TSI Nexus: Intelligence Setup API
  *
- * GET  /api/tuning  → all configured purposes + vLLM connectivity status
- * POST /api/tuning  { action:"upsert",  purpose_key, assigned_model, system_prompt, latency_target_ms }
- * POST /api/tuning  { action:"delete",  purpose_key }
- * POST /api/tuning  { action:"test",    purpose_key, test_input }
+ * GET  /api/tuning  → vLLM connectivity status + institutional vocabulary
+ * POST /api/tuning  { action:"add_term",    term, definition }
+ * POST /api/tuning  { action:"delete_term", term }
  */
 public class Tuning implements Action {
 
@@ -35,24 +35,6 @@ public class Tuning implements Action {
             pool = new PoolDB();
             conn = pool.getConnection();
 
-            JSONArray purposes = new JSONArray();
-            String sql = "SELECT tuning_id::text, purpose_key, assigned_model, system_prompt, " +
-                         "COALESCE(latency_target_ms, 3000) AS latency_target_ms, is_active " +
-                         "FROM intelligence_tuning ORDER BY purpose_key";
-            try (PreparedStatement ps = conn.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    JSONObject p = new JSONObject();
-                    p.put("tuning_id",        rs.getString("tuning_id"));
-                    p.put("purpose_key",       rs.getString("purpose_key"));
-                    p.put("assigned_model",    rs.getString("assigned_model"));
-                    p.put("system_prompt",     rs.getString("system_prompt"));
-                    p.put("latency_target_ms", rs.getInt("latency_target_ms"));
-                    p.put("is_active",         rs.getBoolean("is_active"));
-                    purposes.add(p);
-                }
-            }
-
             String vllmUrl   = System.getenv("VLLM_URL");
             String vllmModel = System.getenv("VLLM_MODEL");
             boolean online   = false;
@@ -62,7 +44,7 @@ public class Tuning implements Action {
 
             JSONObject out = new JSONObject();
             out.put("success",     true);
-            out.put("purposes",    purposes);
+            out.put("vocab",       loadVocab(conn));
             out.put("vllm_online", online);
             out.put("vllm_url",    vllmUrl   != null ? vllmUrl   : "");
             out.put("vllm_model",  vllmModel != null ? vllmModel : "");
@@ -90,9 +72,8 @@ public class Tuning implements Action {
             conn = pool.getConnection();
 
             switch (action) {
-                case "upsert": upsert(conn, req, res, input);        break;
-                case "delete": deletePurpose(conn, req, res, input); break;
-                case "test":   testPurpose(conn, req, res, input);   break;
+                case "add_term":    addTerm(conn, req, res, input);    break;
+                case "delete_term": deleteTerm(conn, req, res, input); break;
                 default: OutputProcessor.errorResponse(res, 400, "Bad request", "Unknown action: " + action, req.getRequestURI());
             }
         } catch (Exception e) {
@@ -103,133 +84,61 @@ public class Tuning implements Action {
         }
     }
 
-    /* ── upsert ──────────────────────────────────────────────────────────── */
+    /* ── add / update vocabulary term ───────────────────────────────────── */
 
     @SuppressWarnings("unchecked")
-    private void upsert(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
-        String purposeKey = str(in, "purpose_key").toUpperCase().replaceAll("[^A-Z0-9_]", "_");
-        String model      = str(in, "assigned_model");
-        String prompt     = str(in, "system_prompt");
-        String latStr     = str(in, "latency_target_ms");
-        int    latency    = latStr.isEmpty() ? 3000 : Integer.parseInt(latStr);
-
-        if (purposeKey.isEmpty() || model.isEmpty()) {
-            OutputProcessor.errorResponse(res, 400, "Bad request",
-                "purpose_key and assigned_model are required", req.getRequestURI()); return;
+    private void addTerm(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String term = str(in, "term");
+        String def  = str(in, "definition");
+        if (term.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "term is required", req.getRequestURI()); return;
         }
-
-        String sql =
-            "INSERT INTO intelligence_tuning (purpose_key, assigned_model, system_prompt, latency_target_ms, is_active) " +
-            "VALUES (?, ?, ?, ?, TRUE) " +
-            "ON CONFLICT (purpose_key) DO UPDATE SET " +
-            "  assigned_model = EXCLUDED.assigned_model, " +
-            "  system_prompt = EXCLUDED.system_prompt, " +
-            "  latency_target_ms = EXCLUDED.latency_target_ms";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, purposeKey);
-            ps.setString(2, model);
-            ps.setString(3, prompt);
-            ps.setInt(4, latency);
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE root_organisation SET domain_slang = domain_slang || jsonb_build_object(?::text, ?::text)")) {
+            ps.setString(1, term);
+            ps.setString(2, def);
             ps.executeUpdate();
         }
-
         JSONObject result = new JSONObject();
-        result.put("success",     true);
-        result.put("purpose_key", purposeKey);
+        result.put("success", true);
+        result.put("term", term);
         OutputProcessor.send(res, 200, result);
     }
 
-    /* ── delete ──────────────────────────────────────────────────────────── */
+    /* ── delete vocabulary term ──────────────────────────────────────────── */
 
     @SuppressWarnings("unchecked")
-    private void deletePurpose(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
-        String purposeKey = str(in, "purpose_key");
-        if (purposeKey.isEmpty()) {
-            OutputProcessor.errorResponse(res, 400, "Bad request", "purpose_key is required", req.getRequestURI()); return;
+    private void deleteTerm(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String term = str(in, "term");
+        if (term.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "term is required", req.getRequestURI()); return;
         }
         try (PreparedStatement ps = conn.prepareStatement(
-                "DELETE FROM intelligence_tuning WHERE purpose_key = ?")) {
-            ps.setString(1, purposeKey);
-            if (ps.executeUpdate() == 0) {
-                OutputProcessor.errorResponse(res, 404, "Not found", purposeKey, req.getRequestURI()); return;
-            }
+                "UPDATE root_organisation SET domain_slang = domain_slang - ?")) {
+            ps.setString(1, term);
+            ps.executeUpdate();
         }
         JSONObject result = new JSONObject();
         result.put("success", true);
         OutputProcessor.send(res, 200, result);
     }
 
-    /* ── test ────────────────────────────────────────────────────────────── */
+    /* ── load vocab from org ─────────────────────────────────────────────── */
 
     @SuppressWarnings("unchecked")
-    private void testPurpose(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
-        String purposeKey = str(in, "purpose_key");
-        String testInput  = str(in, "test_input");
-
-        if (purposeKey.isEmpty()) {
-            OutputProcessor.errorResponse(res, 400, "Bad request", "purpose_key is required", req.getRequestURI()); return;
-        }
-
-        String vllmUrl = System.getenv("VLLM_URL");
-        if (vllmUrl == null || vllmUrl.isBlank()) {
-            OutputProcessor.errorResponse(res, 503, "Offline",
-                "VLLM_URL is not configured — set it in docker-compose.yml", req.getRequestURI()); return;
-        }
-        vllmUrl = vllmUrl.replaceAll("/$", "");
-
-        String envModel   = System.getenv("VLLM_MODEL");
-        String model      = (envModel != null && !envModel.isBlank()) ? envModel : "google/gemma-3-12b-it";
-        String sysPrompt  = "You are a helpful assistant. Respond concisely.";
-
+    private JSONObject loadVocab(Connection conn) {
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT system_prompt, assigned_model FROM intelligence_tuning WHERE purpose_key = ?")) {
-            ps.setString(1, purposeKey);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    String sp = rs.getString("system_prompt");
-                    String am = rs.getString("assigned_model");
-                    if (sp != null && !sp.isBlank()) sysPrompt = sp;
-                    if (am != null && !am.isBlank()) model     = am;
-                } else {
-                    OutputProcessor.errorResponse(res, 404, "Not found", purposeKey, req.getRequestURI()); return;
+                "SELECT domain_slang FROM root_organisation LIMIT 1");
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                String raw = rs.getString("domain_slang");
+                if (raw != null) {
+                    Object parsed = new JSONParser().parse(raw);
+                    if (parsed instanceof JSONObject) return (JSONObject) parsed;
                 }
             }
-        }
-
-        String userContent = testInput.isEmpty()
-            ? "Confirm you are operational and describe your assigned role in one sentence."
-            : testInput;
-
-        JSONArray messages = new JSONArray();
-        JSONObject sys = new JSONObject(); sys.put("role", "system"); sys.put("content", sysPrompt);     messages.add(sys);
-        JSONObject usr = new JSONObject(); usr.put("role", "user");   usr.put("content", userContent);   messages.add(usr);
-
-        JSONObject body = new JSONObject();
-        body.put("model",       model);
-        body.put("messages",    messages);
-        body.put("max_tokens",  256);
-        body.put("temperature", 0.3);
-
-        long start = System.currentTimeMillis();
-        HttpClient http = new HttpClient();
-        JSONObject llmResp = http.sendPost(vllmUrl + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
-        long latencyMs = System.currentTimeMillis() - start;
-
-        String content = "";
-        try {
-            JSONArray choices = (JSONArray) llmResp.get("choices");
-            if (choices != null && !choices.isEmpty()) {
-                JSONObject msg = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-                if (msg != null) content = (String) msg.get("content");
-            }
         } catch (Exception ignore) {}
-
-        JSONObject result = new JSONObject();
-        result.put("success",    true);
-        result.put("response",   content != null ? content.trim() : "");
-        result.put("latency_ms", latencyMs);
-        result.put("model",      model);
-        OutputProcessor.send(res, 200, result);
+        return new JSONObject();
     }
 
     /* ── helpers ─────────────────────────────────────────────────────────── */

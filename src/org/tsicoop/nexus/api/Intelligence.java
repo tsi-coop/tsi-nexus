@@ -8,7 +8,7 @@ import org.json.simple.JSONObject;
  * Calls a vLLM-hosted model via its OpenAI-compatible /v1/chat/completions endpoint.
  * Configure via environment variables:
  *   VLLM_URL   — base URL of the vLLM server (e.g. http://192.168.1.10:8000)
- *   VLLM_MODEL — model name as registered in vLLM (e.g. google/gemma-3-12b-it)
+ *   VLLM_MODEL — model name as registered in vLLM (e.g. google/gemma-4-E4B-it)
  */
 public class Intelligence {
 
@@ -19,7 +19,7 @@ public class Intelligence {
         String url = System.getenv("VLLM_URL");
         String model = System.getenv("VLLM_MODEL");
         VLLM_URL = (url != null && !url.isEmpty()) ? url.replaceAll("/$", "") : null;
-        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : "google/gemma-3-12b-it";
+        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : null;
     }
 
     private static final String SYSTEM_PROMPT =
@@ -32,7 +32,7 @@ public class Intelligence {
 
     @SuppressWarnings("unchecked")
     public static String generateNarrative(String actionType, JSONArray metrics, JSONArray memberContexts) {
-        if (VLLM_URL == null) return "";
+        if (VLLM_URL == null || VLLM_MODEL == null) return "";
         try {
             JSONArray messages = new JSONArray();
 
