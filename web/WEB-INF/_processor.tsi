@@ -4,6 +4,7 @@
 /api/governance=org.tsicoop.nexus.api.Governance
 /api/capture=org.tsicoop.nexus.api.Capture
 /api/entities=org.tsicoop.nexus.api.Entities
+/api/graph=org.tsicoop.nexus.api.Graph
 
 # Auth & Setup
 /api/setup=org.tsicoop.nexus.api.User
