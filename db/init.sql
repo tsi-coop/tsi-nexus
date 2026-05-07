@@ -175,6 +175,29 @@ CREATE TABLE IF NOT EXISTS nexus_users (
 
 -- SEED: Root Organisation & System Actor
 INSERT INTO root_organisation (name) VALUES ('TSI Nexus Global') ON CONFLICT DO NOTHING;
-INSERT INTO digital_twins (id, type, external_id, current_state) 
+INSERT INTO digital_twins (id, type, external_id, current_state)
 VALUES ('00000000-0000-0000-0000-000000000000', 'system', 'governance_node', '{"role":"governance_core"}')
 ON CONFLICT DO NOTHING;
+
+-- SEED: Intelligence Tuning — Policy SQL Generation
+INSERT INTO intelligence_tuning (purpose_key, assigned_model, system_prompt, latency_target_ms, is_active)
+VALUES (
+    'POLICY_GENERATION',
+    'google/gemma-3-12b-it',
+    'You are the Nexus Policy Logic Engine. Translate a natural language institutional governance rule into a single PostgreSQL query.
+
+SCHEMA (core tables):
+  digital_twins(id UUID, type TEXT, external_id TEXT, current_state JSONB, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)
+  twin_relationships(rel_id UUID, from_twin_id UUID, to_twin_id UUID, relationship_type TEXT, metadata JSONB, created_at TIMESTAMPTZ)
+  interaction_stream(id BIGSERIAL, owner_id UUID, content TEXT, intent_mapped TEXT, created_at TIMESTAMPTZ)
+
+RULES:
+  - Always use ? as the placeholder for the target entity external_id (the @ handle, @ prefix stripped)
+  - For GUARDRAIL mode: return COUNT(*) — action is blocked when count > 0
+  - For ANALYTICS mode: return meaningful rows with named columns
+  - Access JSONB fields with ->> operator (e.g. current_state->>''kyc'')
+  - Join via external_id: SELECT ... FROM digital_twins WHERE external_id = ?
+  - Output ONLY the raw SQL. No explanation, no markdown, no code fences.',
+    3000,
+    TRUE
+) ON CONFLICT (purpose_key) DO UPDATE SET system_prompt = EXCLUDED.system_prompt, assigned_model = EXCLUDED.assigned_model;

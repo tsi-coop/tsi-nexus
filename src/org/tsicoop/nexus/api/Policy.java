@@ -11,6 +11,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * TSI Nexus: Policy Manifest CRUD
@@ -98,10 +100,11 @@ public class Policy implements Action {
             conn = pool.getConnection();
 
             switch (action) {
-                case "upsert": upsert(conn, req, res, input); break;
-                case "toggle": toggle(conn, req, res, input); break;
-                case "delete": deletePolicy(conn, req, res, input); break;
-                case "test":   testPolicy(conn, req, res, input);   break;
+                case "upsert":        upsert(conn, req, res, input);        break;
+                case "toggle":        toggle(conn, req, res, input);        break;
+                case "delete":        deletePolicy(conn, req, res, input);  break;
+                case "test":          testPolicy(conn, req, res, input);    break;
+                case "generate_sql":  generateSql(conn, req, res, input);   break;
                 default: OutputProcessor.errorResponse(res, 400, "Bad request", "Unknown action: " + action, req.getRequestURI());
             }
         } catch (Exception e) {
@@ -243,6 +246,137 @@ public class Policy implements Action {
             result.put("message", e.getMessage());
         }
         OutputProcessor.send(res, 200, result);
+    }
+
+    /* ── generate_sql ────────────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void generateSql(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String description = str(in, "description");
+        String actionType  = str(in, "action_type");
+        String execMode    = str(in, "execution_mode");
+        if (description.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "description is required", req.getRequestURI()); return;
+        }
+
+        String vllmUrl = System.getenv("VLLM_URL");
+        if (vllmUrl == null || vllmUrl.isBlank()) {
+            OutputProcessor.errorResponse(res, 503, "Not available",
+                "VLLM_URL is not configured — Intelligence Module is offline", req.getRequestURI()); return;
+        }
+        vllmUrl = vllmUrl.replaceAll("/$", "");
+
+        // Load system prompt from intelligence_tuning (or use built-in fallback)
+        String systemPrompt = loadTuningPrompt(conn, "POLICY_GENERATION");
+        String model        = loadTuningModel(conn, "POLICY_GENERATION");
+
+        // Enrich prompt with live schema context
+        String schemaContext = buildSchemaContext(conn);
+
+        // Build the user message
+        StringBuilder userMsg = new StringBuilder();
+        userMsg.append("Convert this governance rule to PostgreSQL:\n\n");
+        userMsg.append("Rule: ").append(description).append("\n");
+        if (!actionType.isEmpty()) userMsg.append("Action Type: ").append(actionType).append("\n");
+        userMsg.append("Mode: ").append("ANALYTICS".equals(execMode) ? "ANALYTICS (return rows)" : "GUARDRAIL (return COUNT(*), block if > 0)").append("\n");
+        if (!schemaContext.isEmpty()) {
+            userMsg.append("\nLive entity types in this deployment:\n").append(schemaContext);
+        }
+
+        JSONArray messages = new JSONArray();
+        JSONObject sys = new JSONObject(); sys.put("role", "system"); sys.put("content", systemPrompt); messages.add(sys);
+        JSONObject usr = new JSONObject(); usr.put("role", "user");   usr.put("content", userMsg.toString()); messages.add(usr);
+
+        JSONObject body = new JSONObject();
+        body.put("model", model);
+        body.put("messages", messages);
+        body.put("max_tokens", 512);
+        body.put("temperature", 0.1);
+
+        HttpClient http = new HttpClient();
+        JSONObject llmResponse = http.sendPost(vllmUrl + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
+
+        String rawSql = extractContent(llmResponse);
+        if (rawSql == null || rawSql.isBlank()) {
+            OutputProcessor.errorResponse(res, 502, "No output", "Intelligence Module returned empty response", req.getRequestURI()); return;
+        }
+
+        String cleanSql = stripMarkdownFences(rawSql).trim();
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("sql",     cleanSql);
+        OutputProcessor.send(res, 200, result);
+    }
+
+    private String loadTuningPrompt(Connection conn, String purposeKey) {
+        String fallback =
+            "You are the Nexus Policy Logic Engine. Translate natural language governance rules into PostgreSQL.\n" +
+            "Schema: digital_twins(id, type, external_id, current_state JSONB), twin_relationships(from_twin_id, to_twin_id, relationship_type, created_at).\n" +
+            "Use ? as the placeholder. For GUARDRAIL return COUNT(*). Output ONLY raw SQL, no markdown.";
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT system_prompt FROM intelligence_tuning WHERE purpose_key = ? AND is_active = TRUE")) {
+            ps.setString(1, purposeKey);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) { String p = rs.getString("system_prompt"); return (p != null && !p.isBlank()) ? p : fallback; }
+            }
+        } catch (Exception ignore) {}
+        return fallback;
+    }
+
+    private String loadTuningModel(Connection conn, String purposeKey) {
+        String envModel = System.getenv("VLLM_MODEL");
+        String fallback = (envModel != null && !envModel.isBlank()) ? envModel : "google/gemma-3-12b-it";
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT assigned_model FROM intelligence_tuning WHERE purpose_key = ? AND is_active = TRUE")) {
+            ps.setString(1, purposeKey);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) { String m = rs.getString("assigned_model"); return (m != null && !m.isBlank()) ? m : fallback; }
+            }
+        } catch (Exception ignore) {}
+        return fallback;
+    }
+
+    private String buildSchemaContext(Connection conn) {
+        StringBuilder sb = new StringBuilder();
+        // Entity types
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT type, COUNT(*) AS cnt, array_agg(DISTINCT jsonb_object_keys(current_state)) " +
+                "FROM digital_twins WHERE type != 'system' GROUP BY type ORDER BY type")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    sb.append("  entity type='").append(rs.getString("type"))
+                      .append("' count=").append(rs.getLong("cnt")).append("\n");
+                }
+            }
+        } catch (Exception ignore) {}
+        // Relationship types
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT DISTINCT relationship_type FROM twin_relationships ORDER BY relationship_type")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) sb.append("  relationship_type='").append(rs.getString("relationship_type")).append("'\n");
+            }
+        } catch (Exception ignore) {}
+        return sb.toString();
+    }
+
+    private String extractContent(JSONObject llmResponse) {
+        try {
+            JSONArray choices = (JSONArray) llmResponse.get("choices");
+            if (choices != null && !choices.isEmpty()) {
+                JSONObject msg = (JSONObject) ((JSONObject) choices.get(0)).get("message");
+                if (msg != null) return (String) msg.get("content");
+            }
+        } catch (Exception ignore) {}
+        return null;
+    }
+
+    private String stripMarkdownFences(String text) {
+        // Remove ```sql ... ``` or ``` ... ``` wrappers
+        Pattern p = Pattern.compile("```(?:sql)?\\s*([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(text.trim());
+        if (m.find()) return m.group(1).trim();
+        return text.trim();
     }
 
     /* ── helpers ─────────────────────────────────────────────────────────── */

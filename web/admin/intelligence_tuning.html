@@ -3,247 +3,526 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSI Nexus - Intelligence Tuning</title>
+    <title>TSI Nexus - Intelligence Setup</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
-        .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
-        .code-editor { font-family: 'Fira Code', monospace; background-color: #0f172a; color: #94a3b8; }
-        .modal-overlay { transition: opacity 0.3s ease; }
-        .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
+        .nav-item:hover { background-color: rgba(99,102,241,.1); color: #6366f1; }
+        .nav-active { background-color: rgba(99,102,241,.15); color: #6366f1; border-right: 4px solid #6366f1; }
+        .modal { transition: opacity 0.2s ease; }
+        .modal-box { transition: transform 0.2s ease, opacity 0.2s ease; }
+        .input-field { width:100%; padding:.75rem 1rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; font-size:.875rem; outline:none; transition: border-color .15s; }
+        .input-field:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+        .code-field { font-family:'Fira Code','Courier New',monospace; width:100%; background:#0f172a; color:#a5b4fc; border:none; border-radius:.75rem; padding:1rem; font-size:.72rem; line-height:1.6; outline:none; resize:vertical; }
+        .code-field:focus { box-shadow:0 0 0 2px #6366f1; }
+        .purpose-card { transition: box-shadow .15s; }
+        .purpose-card:hover { box-shadow: 0 4px 20px -4px rgba(0,0,0,.08); }
+        .prompt-preview { font-family:'Fira Code','Courier New',monospace; font-size:.7rem; line-height:1.5; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
-        <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
-            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-            </div>
-            <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
+    <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
+        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
-
-        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
-            <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                Dashboard
-            </a>
-            <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
-            <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Digital Twin & Graph
-            </a>
-            <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                Policy Manifest
-            </a>
-            <a href="intelligence_tuning.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
-                Intelligence Tuning
-            </a>
-            <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                API Keys
-            </a>
-            <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                Users & Roles
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
-            <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
-                Liquid Templates
-            </a>
-            <a href="form_builder.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                Form Builder
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
-            <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                Seeding & Simulation
-            </a>
-            <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                Interaction Stream
-            </a>
-            <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
-                Service Registry
-            </a>
-            <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Audit Trail
-            </a>
-            <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Reports
-            </a>
-        </nav>
-
-        <div class="p-6 border-t border-slate-800">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
-                    <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
-                        <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
-                    </div>
+        <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-6 space-y-1 text-sm">
+        <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            Dashboard
+        </a>
+        <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
+        <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            Context Graph
+        </a>
+        <a href="intelligence_tuning.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
+            Intelligence Setup
+        </a>
+        <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Policy Manifest
+        </a>
+        <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            API Keys
+        </a>
+        <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            Users & Roles
+        </a>
+        <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
+        <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+            Liquid Templates
+        </a>
+        <a href="form_builder.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Form Builder
+        </a>
+        <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
+        <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            Seeding & Simulation
+        </a>
+        <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            Interaction Stream
+        </a>
+        <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+            Service Registry
+        </a>
+        <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Audit Trail
+        </a>
+        <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Reports
+        </a>
+    </nav>
+    <div class="p-6 border-t border-slate-800">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div id="sidebarAvatar" class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
+                <div>
+                    <p id="sidebarName" class="text-xs font-bold text-white">Admin</p>
+                    <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
                 </div>
-                <button onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                </button>
             </div>
+            <button onclick="localStorage.removeItem('nexus_token');localStorage.removeItem('nexus_user');window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
         </div>
-    </aside>
+    </div>
+</aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Intelligence Routing & Tuning</h2>
-            <div class="flex space-x-3">
-                <button onclick="toggleModal('aliasModal')" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Alias Registry</button>
-                <button onclick="toggleModal('deployConfigModal')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">Deploy Global Config</button>
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-4">
+            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Intelligence Setup</h2>
+            <!-- vLLM status chip -->
+            <div id="statusChip" class="hidden flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase"></div>
+        </div>
+        <button onclick="openUpsertModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            Add Purpose
+        </button>
+    </header>
+
+    <!-- Offline banner -->
+    <div id="offlineBanner" class="hidden bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <p class="text-xs font-semibold text-amber-800">Intelligence Module is offline — set <code class="font-mono bg-amber-100 px-1 rounded">VLLM_URL</code> in docker-compose.yml and rebuild. Purpose configs can still be saved.</p>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingState" class="flex-1 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Checking intelligence module…</p>
+        </div>
+    </div>
+
+    <!-- Error -->
+    <div id="errorState" class="hidden flex-1 flex items-center justify-center">
+        <p class="text-red-500 font-bold text-sm">Failed to load — <span id="errorMsg" class="font-normal text-slate-400"></span></p>
+    </div>
+
+    <!-- Content -->
+    <section id="mainContent" class="hidden flex-1 overflow-y-auto p-8">
+
+        <!-- Section label -->
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Task-Model Purpose Registry</p>
+        <p class="text-xs text-slate-500 mb-6 max-w-2xl">Each purpose routes a specific AI task to the right model with a tuned system prompt. Configure and test every purpose here before using it in Policy Manifest or other modules.</p>
+
+        <div id="purposesList" class="space-y-4 max-w-4xl"></div>
+
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
             </div>
-        </header>
+            <p class="text-sm font-bold text-slate-500">No purposes configured</p>
+            <p class="text-xs text-slate-400 mt-1">Add your first purpose to connect an AI model to a task</p>
+        </div>
+    </section>
+</main>
 
-        <section class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Create / Edit Purpose
+════════════════════════════════════════════════════════════════════════ -->
+<div id="upsertModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 max-h-[90vh] flex flex-col">
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
             <div>
-                <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Task-Model Purpose Registry</h3>
-                <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50 border-b border-slate-100">
-                            <tr>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Operational Purpose</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Assigned Model</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Latency Target</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50">
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="px-6 py-4">
-                                    <p class="text-sm font-bold text-slate-800">Natural Language Intent Translation</p>
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase">Critical: Fast Response</p>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <select class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-2 rounded-xl outline-none">
-                                        <option>Gemma 4b (Optimized)</option>
-                                        <option>Gemma 2b (Edge)</option>
-                                    </select>
-                                </td>
-                                <td class="px-6 py-4 text-xs font-semibold text-slate-500">&lt; 200ms</td>
-                                <td class="px-6 py-4"><button class="text-indigo-600 font-bold text-[10px] uppercase">Test Latency</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <h3 id="upsertTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Add AI Purpose</h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">Assign a model and system prompt to a task purpose</p>
+            </div>
+            <button onclick="closeModal('upsertModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-8 space-y-5 overflow-y-auto">
+            <div id="upsertFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center"></div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Purpose Key</label>
+                    <input id="fPurposeKey" type="text" class="input-field" placeholder="POLICY_GENERATION">
+                    <p class="text-[10px] text-slate-400 mt-1 px-1">Uppercase identifier used by the system</p>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Assigned Model</label>
+                    <input id="fModel" type="text" class="input-field" placeholder="google/gemma-3-12b-it">
+                    <p class="text-[10px] text-slate-400 mt-1 px-1">Must match the model name in vLLM</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                    <header class="p-6 border-b border-slate-100 bg-slate-50/50">
-                        <h3 class="text-[10px] font-black text-slate-800 uppercase tracking-widest">Master Cognitive Prompt</h3>
-                    </header>
-                    <textarea class="h-64 p-8 prompt-editor text-sm outline-none resize-none leading-relaxed" spellcheck="false">You are the TSI Nexus Intelligence Layer. 
-Map the user's Natural Language into JSON Intents.
-
-Example: 
-User: "Give a loan of 5k to Rahul"
-Output: { "intent": "/disburse", "target": "@rahul", "amount": 5000 }</textarea>
-                </div>
-
-                <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Model Safety & Global Config</h3>
-                    <div class="space-y-6">
-                        <div class="flex items-center justify-between p-4 bg-rose-50 border border-rose-100 rounded-2xl">
-                            <div>
-                                <p class="text-xs font-bold text-rose-900">Emergency Offline Mode</p>
-                                <p class="text-[10px] text-rose-600">Switch to quantized 1b model if compute exceeds 90%</p>
-                            </div>
-                            <input type="checkbox" checked class="h-5 w-5 accent-rose-600">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">Model Temperature (Global)</label>
-                            <input type="range" class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <div id="aliasModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col p-10">
-            <h3 class="text-2xl font-black text-slate-950 mb-2 tracking-tight">Synonym & Alias Registry</h3>
-            <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-8">Map local terminology to Nexus logic</p>
-            
-            <div class="space-y-4 max-h-[40vh] overflow-y-auto mb-8 pr-2">
-                <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <input type="text" class="flex-1 bg-transparent outline-none text-sm font-bold text-slate-800" value="Group Leader">
-                    <span class="text-slate-300">→</span>
-                    <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">@coordinator</span>
-                </div>
-                <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <input type="text" class="flex-1 bg-transparent outline-none text-sm font-bold text-slate-800" value="Grant Credit">
-                    <span class="text-slate-300">→</span>
-                    <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">/disburse</span>
-                </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Latency Target <span class="normal-case font-normal text-slate-400">(ms)</span></label>
+                <input id="fLatency" type="number" class="input-field" placeholder="3000" min="100" max="60000">
             </div>
 
-            <button class="w-full py-5 bg-slate-900 text-white font-black text-xs uppercase tracking-[0.3em] rounded-[24px] shadow-xl mb-4">Add New Alias</button>
-            <button onclick="toggleModal('aliasModal')" class="w-full py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Close Registry</button>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">System Prompt</label>
+                <textarea id="fSystemPrompt" rows="10" class="code-field" placeholder="You are the Nexus Logic Engine…"></textarea>
+                <p class="text-[10px] text-slate-400 mt-1.5 px-1">The "constitution" for this AI task — be specific about output format and constraints.</p>
+            </div>
+
+            <button id="upsertBtn" onclick="submitUpsert()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+                Save Purpose
+            </button>
         </div>
     </div>
+</div>
 
-    <div id="deployConfigModal" class="modal-overlay fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container w-full max-w-xl p-10 transform scale-110 opacity-0 transition-all duration-500 text-center">
-            <div class="w-20 h-20 bg-indigo-600/20 rounded-full mx-auto mb-8 flex items-center justify-center border border-indigo-500/30">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-indigo-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-            </div>
-            <h3 class="text-3xl font-black text-white mb-2">Deploy Global Intelligence</h3>
-            <p class="text-xs text-slate-400 font-bold uppercase tracking-[0.3em] mb-12">Synchronizing weights across foundation</p>
-            
-            <div class="space-y-4 mb-10">
-                <div class="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl text-left">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-500 uppercase">LoRA Adapter Sync</p>
-                        <p class="text-sm font-bold text-white">Institutional_Risk_v4.bin</p>
-                    </div>
-                    <span class="text-[9px] font-black bg-indigo-500 text-white px-2 py-1 rounded uppercase">Pending</span>
-                </div>
-                <div class="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl text-left">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-500 uppercase">Cognitive System Prompt</p>
-                        <p class="text-sm font-bold text-white">Institutional_Law_Manifest.txt</p>
-                    </div>
-                    <span class="text-[9px] font-black bg-emerald-500 text-white px-2 py-1 rounded uppercase">Ready</span>
-                </div>
-            </div>
+<script>
+/* ── state ──────────────────────────────────────────────────────────── */
+let allPurposes = [];
+const purposeMap = {};
+let vllmOnline = false;
 
-            <button class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-indigo-500 transition-all">Execute Foundation Update</button>
-            <button onclick="toggleModal('deployConfigModal')" class="mt-6 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white">Cancel</button>
+/* ── load ───────────────────────────────────────────────────────────── */
+async function loadTuning() {
+    try {
+        const res  = await fetch('/api/tuning');
+        const data = await res.json();
+        if (!data.success) throw new Error('Server error');
+
+        vllmOnline  = data.vllm_online;
+        allPurposes = data.purposes;
+        allPurposes.forEach(p => { purposeMap[p.purpose_key] = p; });
+
+        renderStatus(data);
+        renderPurposes(allPurposes);
+
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+    } catch (err) {
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('errorState').classList.remove('hidden');
+        document.getElementById('errorMsg').textContent = err.message;
+    }
+}
+
+function renderStatus(data) {
+    const chip   = document.getElementById('statusChip');
+    const banner = document.getElementById('offlineBanner');
+    chip.classList.remove('hidden');
+
+    if (data.vllm_online) {
+        chip.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-50 text-emerald-700';
+        chip.innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online · ${esc(data.vllm_model || 'model detected')}`;
+        banner.classList.add('hidden');
+    } else {
+        chip.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-red-50 text-red-600';
+        chip.innerHTML = `<span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Offline`;
+        banner.classList.remove('hidden');
+    }
+}
+
+/* ── render ─────────────────────────────────────────────────────────── */
+const PURPOSE_COLORS = {
+    POLICY_GENERATION:    { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: '#6366f1' },
+    INTENT_TRANSLATION:   { bg: 'bg-violet-50',  text: 'text-violet-700',  border: '#7c3aed' },
+    GOVERNANCE_SIM:       { bg: 'bg-rose-50',    text: 'text-rose-700',    border: '#e11d48' },
+    NARRATIVE_GENERATION: { bg: 'bg-amber-50',   text: 'text-amber-700',   border: '#d97706' },
+};
+function colorFor(key) {
+    return PURPOSE_COLORS[key] || { bg: 'bg-slate-50', text: 'text-slate-700', border: '#94a3b8' };
+}
+
+function renderPurposes(purposes) {
+    const list  = document.getElementById('purposesList');
+    const empty = document.getElementById('emptyState');
+    list.innerHTML = '';
+
+    if (!purposes.length) { empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+
+    purposes.forEach(p => list.appendChild(buildCard(p)));
+}
+
+function buildCard(p) {
+    purposeMap[p.purpose_key] = p;
+    const c = colorFor(p.purpose_key);
+
+    const card = document.createElement('div');
+    card.id        = `card-${p.purpose_key}`;
+    card.className = 'purpose-card bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm';
+
+    const promptPreview = (p.system_prompt || '').split('\n').slice(0, 3).join('\n');
+
+    card.innerHTML = `
+      <div class="flex items-start gap-4 p-5" style="border-left:4px solid ${c.border}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center flex-wrap gap-2 mb-2">
+            <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md tracking-widest ${c.bg} ${c.text} border border-current/20">
+              ${esc(p.purpose_key)}
+            </span>
+            <span class="text-xs font-bold text-slate-600">${esc(p.assigned_model)}</span>
+            <span class="ml-auto text-[10px] text-slate-400 font-semibold">target: ${p.latency_target_ms}ms</span>
+          </div>
+          <div class="bg-slate-950 rounded-xl px-4 py-3 cursor-pointer group" onclick="togglePrompt('${p.purpose_key}')">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">System Prompt</span>
+              <svg id="chevron-${p.purpose_key}" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-600 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <pre id="prompt-preview-${p.purpose_key}" class="prompt-preview text-slate-400 whitespace-pre-wrap line-clamp-3">${esc(promptPreview)}${(p.system_prompt||'').split('\n').length > 3 ? '\n…' : ''}</pre>
+            <pre id="prompt-full-${p.purpose_key}" class="prompt-preview text-slate-300 whitespace-pre-wrap hidden">${esc(p.system_prompt || '')}</pre>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <script>
-        function toggleModal(modalId) {
-            const modal = document.getElementById(modalId);
-            const container = modal.querySelector('.modal-container');
-            if (modal.classList.contains('opacity-0')) {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => container.classList.remove('scale-95', 'scale-110', 'opacity-0'), 10);
-            } else {
-                container.classList.add('scale-95', 'opacity-0');
-                if(modalId === 'deployConfigModal') container.classList.add('scale-110');
-                setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
-            }
-        }
-    </script>
+      <!-- Test panel -->
+      <div id="testPanel-${p.purpose_key}" class="hidden border-t border-slate-50 bg-slate-50/60 p-5 space-y-3">
+        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Model Test</p>
+        <textarea id="testInput-${p.purpose_key}" rows="2" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 transition-colors resize-none font-mono text-xs"
+          placeholder="Type a test prompt, or leave blank to use the default health-check…"></textarea>
+        <div class="flex items-center gap-2">
+          <button id="testRunBtn-${p.purpose_key}" onclick="runTest('${p.purpose_key}')"
+            class="flex items-center gap-1.5 px-4 py-2 bg-slate-950 text-white text-[10px] font-black uppercase rounded-xl hover:bg-slate-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Run Test
+          </button>
+          <span id="testLatency-${p.purpose_key}" class="hidden text-[10px] font-black text-slate-500 uppercase"></span>
+        </div>
+        <div id="testResponse-${p.purpose_key}" class="hidden bg-white border border-slate-200 rounded-xl p-4">
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Model Response</p>
+          <p id="testResponseText-${p.purpose_key}" class="text-xs text-slate-700 leading-relaxed font-mono whitespace-pre-wrap"></p>
+        </div>
+      </div>
+
+      <div id="footer-${p.purpose_key}" class="px-5 py-3.5 border-t border-slate-50 flex items-center gap-2">
+        <button onclick="toggleTestPanel('${p.purpose_key}')"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-black uppercase rounded-lg transition-colors ${!vllmOnline ? 'opacity-50 cursor-not-allowed' : ''}"
+          ${!vllmOnline ? 'title="Intelligence Module offline"' : ''}>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Test
+        </button>
+        <button onclick="openUpsertModal('${p.purpose_key}')"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-black uppercase rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          Edit
+        </button>
+        <button onclick="initiateDelete('${p.purpose_key}')"
+          class="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[10px] font-black uppercase rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Delete
+        </button>
+      </div>`;
+
+    return card;
+}
+
+/* ── prompt expand/collapse ─────────────────────────────────────────── */
+function togglePrompt(key) {
+    const preview  = document.getElementById(`prompt-preview-${key}`);
+    const full     = document.getElementById(`prompt-full-${key}`);
+    const chevron  = document.getElementById(`chevron-${key}`);
+    const expanded = !full.classList.contains('hidden');
+    preview.classList.toggle('hidden', !expanded);
+    full.classList.toggle('hidden', expanded);
+    chevron.style.transform = expanded ? '' : 'rotate(180deg)';
+}
+
+/* ── test panel ─────────────────────────────────────────────────────── */
+function toggleTestPanel(key) {
+    if (!vllmOnline) return;
+    const panel = document.getElementById(`testPanel-${key}`);
+    panel.classList.toggle('hidden');
+}
+
+async function runTest(key) {
+    const input   = document.getElementById(`testInput-${key}`).value.trim();
+    const btn     = document.getElementById(`testRunBtn-${key}`);
+    const latency = document.getElementById(`testLatency-${key}`);
+    const respBox = document.getElementById(`testResponse-${key}`);
+    const respTxt = document.getElementById(`testResponseText-${key}`);
+
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Running…';
+    latency.classList.add('hidden');
+    respBox.classList.add('hidden');
+
+    try {
+        const res  = await fetch('/api/tuning', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'test', purpose_key: key, test_input: input })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) throw new Error(data.message || 'Test failed');
+
+        const ms = data.latency_ms;
+        const targetMs = (purposeMap[key] || {}).latency_target_ms || 3000;
+        const pass = ms <= targetMs;
+
+        latency.textContent = `${ms}ms — ${pass ? '✓ within target' : '⚠ over target'}`;
+        latency.className = `text-[10px] font-black uppercase ${pass ? 'text-emerald-600' : 'text-amber-600'}`;
+        latency.classList.remove('hidden');
+
+        respTxt.textContent = data.response || '(empty response)';
+        respBox.classList.remove('hidden');
+    } catch (err) {
+        latency.textContent = `Error: ${err.message}`;
+        latency.className = 'text-[10px] font-black uppercase text-red-500';
+        latency.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Run Test';
+    }
+}
+
+/* ── upsert modal ───────────────────────────────────────────────────── */
+function openUpsertModal(purposeKey) {
+    const p = purposeKey ? purposeMap[purposeKey] : null;
+    document.getElementById('upsertTitle').textContent = p ? 'Edit AI Purpose' : 'Add AI Purpose';
+    document.getElementById('fPurposeKey').value     = p ? p.purpose_key       : '';
+    document.getElementById('fPurposeKey').readOnly  = !!p;
+    document.getElementById('fPurposeKey').className = `input-field ${p ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`;
+    document.getElementById('fModel').value          = p ? p.assigned_model    : '';
+    document.getElementById('fLatency').value        = p ? p.latency_target_ms : '3000';
+    document.getElementById('fSystemPrompt').value   = p ? p.system_prompt     : '';
+    document.getElementById('upsertBtn').textContent = p ? 'Update Purpose' : 'Save Purpose';
+    document.getElementById('upsertFeedback').classList.add('hidden');
+    openModal('upsertModal');
+}
+
+async function submitUpsert() {
+    const purposeKey = document.getElementById('fPurposeKey').value.trim();
+    const model      = document.getElementById('fModel').value.trim();
+    const latency    = document.getElementById('fLatency').value.trim();
+    const prompt     = document.getElementById('fSystemPrompt').value.trim();
+    const btn        = document.getElementById('upsertBtn');
+
+    if (!purposeKey || !model) {
+        showFeedback('upsertFeedback', 'Purpose Key and Assigned Model are required', true); return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    try {
+        const res  = await fetch('/api/tuning', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'upsert', purpose_key: purposeKey, assigned_model: model,
+                system_prompt: prompt, latency_target_ms: latency || '3000' })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Save failed');
+
+        showFeedback('upsertFeedback', `${data.purpose_key} saved`, false);
+        await reload();
+        setTimeout(() => closeModal('upsertModal'), 900);
+    } catch (err) {
+        showFeedback('upsertFeedback', err.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = document.getElementById('fPurposeKey').readOnly ? 'Update Purpose' : 'Save Purpose';
+    }
+}
+
+/* ── delete ─────────────────────────────────────────────────────────── */
+function initiateDelete(key) {
+    const footer = document.getElementById(`footer-${key}`);
+    if (!footer) return;
+    footer.innerHTML = `
+      <span class="text-xs font-bold text-red-600 mr-2">Delete "${key}"? This cannot be undone.</span>
+      <button onclick="cancelDelete('${key}')" class="px-3 py-1.5 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
+      <button onclick="executeDelete('${key}')" class="px-3 py-1.5 bg-red-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-red-700 transition-colors">Confirm Delete</button>`;
+}
+
+function cancelDelete(key) { reload(); }
+
+async function executeDelete(key) {
+    try {
+        const res  = await fetch('/api/tuning', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', purpose_key: key })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message);
+        const card = document.getElementById(`card-${key}`);
+        if (card) { card.style.opacity = '0'; card.style.transition = 'opacity .2s'; setTimeout(() => card.remove(), 200); }
+        await reload();
+    } catch (err) { alert('Delete failed: ' + err.message); }
+}
+
+/* ── helpers ────────────────────────────────────────────────────────── */
+async function reload() {
+    const res  = await fetch('/api/tuning');
+    const data = await res.json();
+    if (data.success) {
+        vllmOnline  = data.vllm_online;
+        allPurposes = data.purposes;
+        allPurposes.forEach(p => { purposeMap[p.purpose_key] = p; });
+        renderStatus(data);
+        renderPurposes(allPurposes);
+    }
+}
+
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('opacity-0', 'pointer-events-none');
+    setTimeout(() => { const b = m.querySelector('.modal-box'); b.classList.remove('scale-95', 'opacity-0'); }, 10);
+}
+function closeModal(id) {
+    const m = document.getElementById(id), b = m.querySelector('.modal-box');
+    b.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => m.classList.add('opacity-0', 'pointer-events-none'), 200);
+}
+function showFeedback(id, msg, isError) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = `text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center ` +
+        (isError ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100');
+    el.classList.remove('hidden');
+}
+function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('upsertModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('upsertModal'); });
+
+try {
+    const u = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+    if (u.name) {
+        document.getElementById('sidebarName').textContent = u.name;
+        document.getElementById('sidebarAvatar').textContent = u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    }
+} catch(_) {}
+
+loadTuning();
+</script>
 </body>
 </html>
