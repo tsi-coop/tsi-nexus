@@ -8,6 +8,7 @@
 
 # Auth & Setup
 /api/apikeys=org.tsicoop.nexus.api.ApiKeys
+/api/users=org.tsicoop.nexus.api.Users
 /api/policy=org.tsicoop.nexus.api.Policy
 /api/tuning=org.tsicoop.nexus.api.Tuning
 /api/setup=org.tsicoop.nexus.api.User

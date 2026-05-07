@@ -3,226 +3,513 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Identity & Governance | TSI Nexus</title>
+    <title>Users & Roles | TSI Nexus</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
-        .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
+        .nav-item { transition: all 0.15s; }
+        .nav-item:hover { background-color: rgba(99,102,241,0.1); color: #6366f1; }
+        .nav-active { background-color: rgba(99,102,241,0.15); color: #6366f1; border-right: 4px solid #6366f1; }
         .card { background: white; border-radius: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-        .tab-btn.active { color: var(--nexus-accent); border-bottom: 3px solid var(--nexus-accent); }
         .mono { font-family: 'JetBrains Mono', monospace; }
-        .modal-backdrop { background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(12px); }
+        .modal-backdrop { background: rgba(2,6,23,0.85); backdrop-filter: blur(12px); }
+        .modal-box { transition: transform 0.2s ease, opacity 0.2s ease; }
+        .modal-hidden { transform: scale(0.96) translateY(8px); opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
+    <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <aside id="sidebar" class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
         <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
             <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
             <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
         </div>
-
         <nav class="flex-1 overflow-y-auto py-6 space-y-1">
             <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                 Dashboard
             </a>
             <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
             <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                 Context Graph
             </a>
             <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
                 Intelligence Setup
             </a>
             <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 Policy Manifest
             </a>
             <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                 API Keys
             </a>
             <a href="users.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 Users & Roles
             </a>
-
             <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
             <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
                 Liquid Templates
             </a>
             <a href="form_builder.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Form Builder
             </a>
-
             <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
             <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
                 Seeding & Simulation
             </a>
             <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 Interaction Stream
             </a>
             <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
                 Service Registry
             </a>
             <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 Audit Trail
             </a>
             <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 Reports
             </a>
         </nav>
-
         <div class="p-6 border-t border-slate-800">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
+                    <div id="navAvatar" class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">--</div>
                     <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
-                        <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
+                        <p id="navName" class="text-xs font-bold text-white">Loading…</p>
+                        <p id="navRole" class="text-[10px] text-slate-500 uppercase">—</p>
                     </div>
                 </div>
-                <button onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                <button type="button" onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 </button>
             </div>
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10">
-            <div class="flex items-center gap-4">
-                <button onclick="toggleSidebar()" class="p-2 text-slate-400 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg></button>
-                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">Institutional Actor Registry</h2>
+    <!-- ── Main ────────────────────────────────────────────────────────── -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
+            <div>
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">Users & Roles</h2>
             </div>
-            <button onclick="openUserModal()" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">+ Add Institutional Actor</button>
+            <button type="button" onclick="openCreateModal()" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">+ Add User</button>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-10 custom-scrollbar">
-            <div class="mb-10">
-                <h1 class="text-3xl font-black text-slate-900 tracking-tighter">Identity & Intent Governance</h1>
-                <p class="text-slate-500 mt-2 text-sm max-w-2xl">Manage administrative twins and assign sovereign access policies. Every action taken by an actor is cross-referenced against the Policy Manifest.</p>
+        <div class="flex-1 overflow-y-auto p-10">
+            <!-- Page heading -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter">Users & Roles</h1>
+                <p class="text-slate-500 mt-2 text-sm">Manage admin and staff access. Every user signs in with email + password.</p>
             </div>
 
-            <div class="mb-8 border-b border-slate-100">
-                <div class="flex gap-10">
-                    <button onclick="switchTab('users')" id="tab-users" class="tab-btn active pb-4 text-xs font-black uppercase tracking-widest transition-all">Administrative Twins</button>
-                    <button onclick="switchTab('roles')" id="tab-roles" class="tab-btn pb-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">Governance Policies</button>
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-6 mb-10">
+                <div class="card p-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Users</p>
+                    <p id="statTotal" class="text-3xl font-black text-slate-900">—</p>
+                </div>
+                <div class="card p-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Admins</p>
+                    <p id="statAdmins" class="text-3xl font-black text-indigo-600">—</p>
+                </div>
+                <div class="card p-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Staff</p>
+                    <p id="statStaff" class="text-3xl font-black text-slate-900">—</p>
+                </div>
+                <div class="card p-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Inactive</p>
+                    <p id="statInactive" class="text-3xl font-black text-slate-400">—</p>
                 </div>
             </div>
 
-            <div id="users-view" class="space-y-6">
-                <div class="card overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50/50 border-b border-slate-100">
-                            <tr>
-                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Institutional Actor</th>
-                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cognitive Scope</th>
-                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50">
-                            <tr class="hover:bg-slate-50/30 transition-colors">
-                                <td class="px-8 py-6">
-                                    <div class="flex items-center gap-4">
-                                        <div class="h-10 w-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-bold">RA</div>
-                                        <div>
-                                            <span class="block font-bold text-slate-900">Rahul Amin</span>
-                                            <span class="text-[10px] text-slate-400 mono">rahul@nexus.local</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-8 py-6"><span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">Full Foundation Access</span></td>
-                                <td class="px-8 py-6"><span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase">Authorized</span></td>
-                                <td class="px-8 py-6 text-right">
-                                    <button class="text-indigo-600 text-[10px] font-black uppercase hover:underline mr-4">Edit Manifest</button>
-                                    <button class="text-slate-300 hover:text-red-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="roles-view" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="card p-8 hover:border-indigo-400 transition-all cursor-pointer">
-                    <h3 class="text-lg font-black text-slate-900 tracking-tight mb-2 uppercase">Institutional Auditor</h3>
-                    <p class="text-xs text-slate-500 leading-relaxed">Full read access to Interaction Streams and Time-Travel Audit logs.</p>
-                    <div class="mt-6 pt-6 border-t border-slate-50 flex justify-between items-center">
-                        <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded uppercase">System Policy</span>
-                        <span class="text-[10px] text-slate-400 font-bold uppercase">4 Actors Assigned</span>
-                    </div>
-                </div>
+            <!-- Users table -->
+            <div class="card overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50/50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">User</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Joined</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody" class="divide-y divide-slate-50">
+                        <tr><td colspan="5" class="px-8 py-12 text-center text-slate-400 text-sm">Loading…</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>
 
-    <div id="userModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-        <div class="bg-white w-full max-w-xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col">
+    <!-- ── Create / Edit Modal ────────────────────────────────────────── -->
+    <div id="upsertModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="modal-box modal-hidden bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col" id="upsertBox">
             <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <div>
-                    <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter">Define Actor Twin</h3>
-                    <p class="text-[10px] text-indigo-600 font-bold uppercase tracking-widest mt-1">Foundation Access Control</p>
+                    <h3 id="upsertTitle" class="text-xl font-black text-slate-900 uppercase tracking-tighter">Add User</h3>
+                    <p class="text-[10px] text-indigo-600 font-bold uppercase tracking-widest mt-1">User Management</p>
                 </div>
-                <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                <button type="button" onclick="closeModal('upsertModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
-            
-            <form class="p-10 space-y-8">
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Actor Identity (Display Name)</label>
-                        <input type="text" placeholder="e.g. Field Officer J. Doe" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-indigo-500 outline-none transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Digital Identity (Email)</label>
-                        <input type="email" placeholder="officer.doe@nexus.local" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-indigo-500 outline-none transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Assigned Governance Policy</label>
-                        <select class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none">
-                            <option>Institutional Auditor</option>
-                            <option>Branch Manager (Governance Only)</option>
-                            <option>Field Officer (Assisted Operation)</option>
-                        </select>
+            <div class="p-8 space-y-5">
+                <input type="hidden" id="upsertId">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Full Name</label>
+                    <input type="text" id="upsertName" placeholder="Jane Smith" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div id="emailRow">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Email</label>
+                    <input type="email" id="upsertEmail" placeholder="jane@example.com" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div id="passwordRow">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Password <span class="text-slate-300 normal-case font-normal">(min 8 chars)</span></label>
+                    <input type="password" id="upsertPassword" placeholder="••••••••" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Role</label>
+                    <div class="flex gap-3">
+                        <button type="button" id="roleAdmin" onclick="selectRole('admin')" class="flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border-2 transition-all border-slate-200 text-slate-400">Admin</button>
+                        <button type="button" id="roleStaff" onclick="selectRole('staff')" class="flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border-2 transition-all border-indigo-500 bg-indigo-50 text-indigo-700">Staff</button>
                     </div>
                 </div>
-                <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeUserModal()" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Cancel</button>
-                    <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-100">Authorize Actor</button>
+                <p id="upsertError" class="hidden text-red-500 text-xs font-bold"></p>
+            </div>
+            <div class="px-8 pb-8 flex gap-4">
+                <button type="button" onclick="closeModal('upsertModal')" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                <button type="button" id="upsertSubmit" onclick="submitUpsert()" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">Save User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Reset Password Modal ───────────────────────────────────────── -->
+    <div id="resetModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="modal-box modal-hidden bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden flex flex-col" id="resetBox">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter">Reset Password</h3>
+                    <p id="resetTarget" class="text-[10px] text-indigo-600 font-bold uppercase tracking-widest mt-1">—</p>
                 </div>
-            </form>
+                <button type="button" onclick="closeModal('resetModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-8 space-y-5">
+                <input type="hidden" id="resetId">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">New Password <span class="text-slate-300 normal-case font-normal">(min 8 chars)</span></label>
+                    <input type="password" id="resetPassword" placeholder="••••••••" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <p id="resetError" class="hidden text-red-500 text-xs font-bold"></p>
+            </div>
+            <div class="px-8 pb-8 flex gap-4">
+                <button type="button" onclick="closeModal('resetModal')" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                <button type="button" onclick="submitReset()" class="flex-1 py-4 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-100">Reset Password</button>
+            </div>
         </div>
     </div>
 
     <script>
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
-        function openUserModal() { document.getElementById('userModal').classList.remove('hidden'); }
-        function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.id === `tab-${tabId}`);
-                btn.classList.toggle('text-slate-400', btn.id !== `tab-${tabId}`);
-            });
-            document.getElementById('users-view').classList.toggle('hidden', tabId !== 'users');
-            document.getElementById('roles-view').classList.toggle('hidden', tabId !== 'roles');
+    const TOKEN = localStorage.getItem('nexus_token');
+    if (!TOKEN) window.location.href = 'index.html';
+
+    let allUsers = [];
+    let currentUserEmail = '';
+    let selectedRole = 'staff';
+    let editingUserId = '';
+
+    function authHeaders() {
+        return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+    }
+
+    /* ── Boot ──────────────────────────────────────────────────────────── */
+    (function init() {
+        try {
+            const payload = JSON.parse(atob(TOKEN.split('.')[1]));
+            currentUserEmail = (payload.sub || '').toLowerCase();
+            const initials = (payload.name || '--').split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+            document.getElementById('navAvatar').textContent = initials;
+            document.getElementById('navName').textContent   = payload.name || '—';
+            document.getElementById('navRole').textContent   = payload.role || '—';
+        } catch (e) {}
+        loadUsers();
+    })();
+
+    async function loadUsers() {
+        try {
+            const res = await fetch('/api/users', { headers: authHeaders() });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Failed to load');
+            allUsers = data.users;
+            renderStats(data.stats);
+            renderTable(data.users);
+        } catch (e) {
+            document.getElementById('usersBody').innerHTML =
+                `<tr><td colspan="5" class="px-8 py-12 text-center text-red-400 text-sm">${e.message}</td></tr>`;
         }
+    }
+
+    function renderStats(s) {
+        document.getElementById('statTotal').textContent   = s.total;
+        document.getElementById('statAdmins').textContent  = s.admins;
+        document.getElementById('statStaff').textContent   = s.staff;
+        document.getElementById('statInactive').textContent = s.inactive;
+    }
+
+    function avatarColor(role) {
+        return role === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600';
+    }
+
+    function renderTable(users) {
+        const tbody = document.getElementById('usersBody');
+        if (!users.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-8 py-12 text-center text-slate-400 text-sm">No users yet.</td></tr>';
+            return;
+        }
+        const activeAdminCount = users.filter(u => u.role === 'admin' && u.is_active).length;
+        tbody.innerHTML = users.map(u => {
+            const initials = u.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+            const isMe = u.email.toLowerCase() === currentUserEmail;
+            const rolePill = u.role === 'admin'
+                ? '<span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight">Admin</span>'
+                : '<span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight">Staff</span>';
+            const statusPill = u.is_active
+                ? '<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded text-[9px] font-black uppercase">Active</span>'
+                : '<span class="bg-slate-100 text-slate-400 px-2 py-1 rounded text-[9px] font-black uppercase">Inactive</span>';
+            const meBadge = isMe ? '<span class="ml-2 bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">You</span>' : '';
+            const isLastAdmin = u.role === 'admin' && u.is_active && activeAdminCount === 1;
+            const toggleLabel = u.is_active ? 'Deactivate' : 'Activate';
+            let toggleBtn;
+            if (isLastAdmin) {
+                toggleBtn = `<span class="text-slate-300 text-[10px] font-black uppercase tracking-wide cursor-not-allowed" title="At least one active admin is required">Deactivate</span>`;
+            } else {
+                const toggleColor = u.is_active ? 'text-amber-500 hover:text-amber-700' : 'text-emerald-500 hover:text-emerald-700';
+                toggleBtn = `<button type="button" onclick="doToggle('${u.user_id}')" class="${toggleColor} text-[10px] font-black uppercase tracking-wide transition-colors">${toggleLabel}</button>`;
+            }
+            return `<tr class="hover:bg-slate-50/30 transition-colors" id="row-${u.user_id}">
+                <td class="px-8 py-6">
+                    <div class="flex items-center gap-4">
+                        <div class="h-10 w-10 rounded-xl flex items-center justify-center font-bold text-sm ${avatarColor(u.role)}">${initials}</div>
+                        <div>
+                            <span class="block font-bold text-slate-900">${esc(u.name)}${meBadge}</span>
+                            <span class="text-[10px] text-slate-400 mono">${esc(u.email)}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-8 py-6">${rolePill}</td>
+                <td class="px-8 py-6">${statusPill}</td>
+                <td class="px-8 py-6 text-xs text-slate-400 font-medium">${esc(u.created)}</td>
+                <td class="px-8 py-6" id="actions-${u.user_id}">
+                    <div class="flex items-center justify-end gap-4">
+                        <button type="button" onclick="openEditModal('${u.user_id}')" class="text-indigo-500 hover:text-indigo-700 text-[10px] font-black uppercase tracking-wide transition-colors">Edit</button>
+                        <button type="button" onclick="openResetModal('${u.user_id}', '${esc(u.name)}')" class="text-slate-400 hover:text-slate-600 text-[10px] font-black uppercase tracking-wide transition-colors">Reset PW</button>
+                        ${toggleBtn}
+                        <button type="button" onclick="confirmDelete('${u.user_id}')" class="text-slate-300 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    /* ── Create modal ──────────────────────────────────────────────────── */
+    function openCreateModal() {
+        editingUserId = '';
+        document.getElementById('upsertTitle').textContent    = 'Add User';
+        document.getElementById('upsertId').value            = '';
+        document.getElementById('upsertName').value          = '';
+        document.getElementById('upsertEmail').value         = '';
+        document.getElementById('upsertPassword').value      = '';
+        document.getElementById('emailRow').classList.remove('hidden');
+        document.getElementById('passwordRow').classList.remove('hidden');
+        document.getElementById('upsertError').classList.add('hidden');
+        selectRole('staff');
+        openModal('upsertModal');
+    }
+
+    /* ── Edit modal ────────────────────────────────────────────────────── */
+    function openEditModal(userId) {
+        const u = allUsers.find(x => x.user_id === userId);
+        if (!u) return;
+        editingUserId = userId;
+        document.getElementById('upsertTitle').textContent    = 'Edit User';
+        document.getElementById('upsertId').value            = u.user_id;
+        document.getElementById('upsertName').value          = u.name;
+        document.getElementById('upsertEmail').value         = u.email;
+        document.getElementById('upsertPassword').value      = '';
+        document.getElementById('emailRow').classList.add('hidden');
+        document.getElementById('passwordRow').classList.add('hidden');
+        document.getElementById('upsertError').classList.add('hidden');
+        selectRole(u.role);
+        openModal('upsertModal');
+    }
+
+    function selectRole(role) {
+        selectedRole = role;
+        const adminBtn = document.getElementById('roleAdmin');
+        const staffBtn = document.getElementById('roleStaff');
+        if (role === 'admin') {
+            adminBtn.className = 'flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border-2 transition-all border-indigo-500 bg-indigo-50 text-indigo-700';
+            staffBtn.className = 'flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border-2 transition-all border-slate-200 text-slate-400';
+        } else {
+            staffBtn.className = 'flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border-2 transition-all border-indigo-500 bg-indigo-50 text-indigo-700';
+            adminBtn.className = 'flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border-2 transition-all border-slate-200 text-slate-400';
+        }
+    }
+
+    async function submitUpsert() {
+        const id       = document.getElementById('upsertId').value;
+        const name     = document.getElementById('upsertName').value.trim();
+        const email    = document.getElementById('upsertEmail').value.trim();
+        const password = document.getElementById('upsertPassword').value;
+        const errEl    = document.getElementById('upsertError');
+
+        if (!name) { showErr(errEl, 'Name is required'); return; }
+
+        if (id && selectedRole === 'staff') {
+            const activeAdminCount = allUsers.filter(u => u.role === 'admin' && u.is_active).length;
+            const editingUser = allUsers.find(u => u.user_id === id);
+            if (editingUser && editingUser.role === 'admin' && editingUser.is_active && activeAdminCount === 1) {
+                showErr(errEl, 'Cannot demote the last active admin'); return;
+            }
+        }
+
+        let body;
+        if (!id) {
+            if (!email) { showErr(errEl, 'Email is required'); return; }
+            if (password.length < 8) { showErr(errEl, 'Password must be at least 8 characters'); return; }
+            body = { action: 'create', name, email, password, role: selectedRole };
+        } else {
+            body = { action: 'update', user_id: id, name, role: selectedRole };
+        }
+
+        const btn = document.getElementById('upsertSubmit');
+        btn.disabled = true; btn.textContent = 'Saving…';
+        try {
+            const res  = await fetch('/api/users', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.detail || data.error || 'Failed');
+            closeModal('upsertModal');
+            loadUsers();
+        } catch (e) {
+            showErr(errEl, e.message);
+        } finally {
+            btn.disabled = false; btn.textContent = 'Save User';
+        }
+    }
+
+    /* ── Reset password modal ──────────────────────────────────────────── */
+    function openResetModal(userId, name) {
+        document.getElementById('resetId').value          = userId;
+        document.getElementById('resetTarget').textContent = name;
+        document.getElementById('resetPassword').value    = '';
+        document.getElementById('resetError').classList.add('hidden');
+        openModal('resetModal');
+    }
+
+    async function submitReset() {
+        const userId   = document.getElementById('resetId').value;
+        const password = document.getElementById('resetPassword').value;
+        const errEl    = document.getElementById('resetError');
+
+        if (password.length < 8) { showErr(errEl, 'Password must be at least 8 characters'); return; }
+
+        try {
+            const res  = await fetch('/api/users', { method: 'POST', headers: authHeaders(),
+                body: JSON.stringify({ action: 'reset_password', user_id: userId, password }) });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.detail || data.error || 'Failed');
+            closeModal('resetModal');
+        } catch (e) {
+            showErr(errEl, e.message);
+        }
+    }
+
+    /* ── Toggle active ─────────────────────────────────────────────────── */
+    async function doToggle(userId) {
+        try {
+            const res  = await fetch('/api/users', { method: 'POST', headers: authHeaders(),
+                body: JSON.stringify({ action: 'toggle', user_id: userId }) });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.detail || data.error || 'Failed');
+            loadUsers();
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    /* ── Delete (inline confirm) ───────────────────────────────────────── */
+    function confirmDelete(userId) {
+        const cell = document.getElementById('actions-' + userId);
+        cell.innerHTML = `
+            <div class="flex items-center justify-end gap-3">
+                <span class="text-[10px] text-slate-400 font-bold">Delete?</span>
+                <button type="button" onclick="cancelDelete('${userId}')" class="text-slate-400 hover:text-slate-600 text-[10px] font-black uppercase tracking-wide transition-colors">Cancel</button>
+                <button type="button" onclick="executeDelete('${userId}')" class="text-red-500 hover:text-red-700 text-[10px] font-black uppercase tracking-wide transition-colors">Delete</button>
+            </div>`;
+    }
+
+    function cancelDelete(userId) {
+        loadUsers();
+    }
+
+    async function executeDelete(userId) {
+        try {
+            const res  = await fetch('/api/users', { method: 'POST', headers: authHeaders(),
+                body: JSON.stringify({ action: 'delete', user_id: userId }) });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.detail || data.error || 'Failed');
+            loadUsers();
+        } catch (e) {
+            alert(e.message);
+            loadUsers();
+        }
+    }
+
+    /* ── Modal helpers ─────────────────────────────────────────────────── */
+    function openModal(id) {
+        const overlay = document.getElementById(id);
+        const box     = overlay.querySelector('.modal-box');
+        overlay.classList.remove('hidden');
+        requestAnimationFrame(() => box.classList.remove('modal-hidden'));
+    }
+
+    function closeModal(id) {
+        const overlay = document.getElementById(id);
+        const box     = overlay.querySelector('.modal-box');
+        box.classList.add('modal-hidden');
+        setTimeout(() => overlay.classList.add('hidden'), 200);
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') ['upsertModal','resetModal'].forEach(closeModal); });
+
+    function showErr(el, msg) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    }
+
+    function esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
     </script>
 </body>
 </html>
