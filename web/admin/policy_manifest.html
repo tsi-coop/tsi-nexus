@@ -176,7 +176,7 @@
                 <h3 id="upsertTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Create Governance Rule</h3>
                 <p class="text-[11px] text-slate-400 mt-0.5">All fields stored verbatim — no sector-specific defaults</p>
             </div>
-            <button onclick="closeModal('upsertModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+            <button type="button" onclick="closeModal('upsertModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -242,19 +242,11 @@
                             <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Describe the rule in plain language</label>
                             <textarea id="aiIntent" rows="3" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 transition-colors resize-none" placeholder="e.g. Block disbursement if the member has no KYC verification, or has been in the group less than 30 days"></textarea>
                         </div>
-                        <button type="button" id="aiGenerateBtn" onclick="generateSql()" class="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-indigo-700 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                            Generate SQL
-                        </button>
-                        <!-- Generated SQL preview -->
-                        <div id="aiResult" class="hidden space-y-2">
-                            <div class="flex items-center justify-between">
-                                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Generated SQL — review before accepting</p>
-                                <button type="button" onclick="acceptGeneratedSql()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-700 transition-colors">
-                                    Use this SQL →
-                                </button>
-                            </div>
-                            <pre id="aiGeneratedSql" class="text-[11px] text-indigo-300 leading-relaxed whitespace-pre-wrap bg-slate-950 p-4 rounded-xl max-h-40 overflow-y-auto"></pre>
+                        <div class="flex items-center gap-3">
+                            <button type="button" id="aiGenerateBtn" onclick="generateSql()" class="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-indigo-700 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                Generate SQL
+                            </button>
                             <p id="aiError" class="hidden text-[11px] text-red-500 font-semibold"></p>
                         </div>
                     </div>
@@ -273,7 +265,7 @@
                 <p id="errorMsgHint" class="text-[10px] text-slate-400 mt-1 px-1">Shown to the user when a GUARDRAIL blocks the action. For ANALYTICS, used as the report label.</p>
             </div>
 
-            <button id="upsertBtn" onclick="submitUpsert()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+            <button type="button" id="upsertBtn" onclick="submitUpsert()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
                 Commit Rule
             </button>
         </div>
@@ -538,10 +530,9 @@ function openUpsertModal(policyId) {
     document.getElementById('aiPanel').classList.add('hidden');
     document.getElementById('aiChevron').style.transform = '';
     document.getElementById('aiIntent').value = '';
-    document.getElementById('aiResult').classList.add('hidden');
     document.getElementById('aiGate').classList.add('hidden');
     document.getElementById('aiPanelBody').classList.remove('hidden');
-    generatedSqlText = '';
+    document.getElementById('aiError').classList.add('hidden');
     openModal('upsertModal');
 }
 
@@ -699,7 +690,6 @@ function showTestResult(data) {
 }
 
 /* ── AI SQL generation ──────────────────────────────────────────────── */
-let generatedSqlText = '';
 
 async function checkIntelligenceStatus() {
     try {
@@ -730,16 +720,15 @@ function toggleAiPanel() {
 }
 
 async function generateSql() {
-    const intent  = document.getElementById('aiIntent').value.trim();
-    const btn     = document.getElementById('aiGenerateBtn');
-    const result  = document.getElementById('aiResult');
-    const sqlPre  = document.getElementById('aiGeneratedSql');
-    const errEl   = document.getElementById('aiError');
+    const intent = document.getElementById('aiIntent').value.trim();
+    const btn    = document.getElementById('aiGenerateBtn');
+    const errEl  = document.getElementById('aiError');
 
     if (!intent) { document.getElementById('aiIntent').focus(); return; }
 
     btn.disabled = true;
     btn.innerHTML = '<svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Generating…';
+    errEl.classList.add('hidden');
 
     const actionType = getSelectedActionType();
     const execMode   = document.querySelector('input[name="execMode"]:checked').value;
@@ -751,38 +740,22 @@ async function generateSql() {
         });
         const data = await res.json();
 
-        result.classList.remove('hidden');
-        errEl.classList.add('hidden');
-
         if (!res.ok || !data.success) {
             errEl.textContent = data.message || data.error || 'Generation failed';
             errEl.classList.remove('hidden');
-            sqlPre.textContent = '';
-            generatedSqlText = '';
         } else {
-            generatedSqlText = data.sql;
-            sqlPre.textContent = generatedSqlText;
-            errEl.classList.add('hidden');
+            document.getElementById('fQueryLogic').value = data.sql;
+            document.getElementById('aiPanel').classList.add('hidden');
+            document.getElementById('aiChevron').style.transform = '';
+            document.getElementById('fQueryLogic').focus();
         }
     } catch (err) {
-        result.classList.remove('hidden');
         errEl.textContent = err.message;
         errEl.classList.remove('hidden');
-        generatedSqlText = '';
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Generate SQL';
     }
-}
-
-function acceptGeneratedSql() {
-    if (!generatedSqlText) return;
-    document.getElementById('fQueryLogic').value = generatedSqlText;
-    // Collapse the AI panel
-    document.getElementById('aiPanel').classList.add('hidden');
-    document.getElementById('aiChevron').style.transform = '';
-    // Focus the SQL field so the admin can review
-    document.getElementById('fQueryLogic').focus();
 }
 
 /* ── helpers ────────────────────────────────────────────────────────── */
@@ -826,10 +799,8 @@ function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Close modals on backdrop click
-['upsertModal','testModal'].forEach(id => {
-    document.getElementById(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
-});
+// Close test modal on backdrop click (upsertModal requires explicit close/submit)
+document.getElementById('testModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('testModal'); });
 
 // Update label hints when mode changes
 document.querySelectorAll('input[name="execMode"]').forEach(r => r.addEventListener('change', () => {
