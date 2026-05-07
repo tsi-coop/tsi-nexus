@@ -4,5 +4,6 @@
 .env
 .help
 .help2
+/.claude/
 /server/.env
 

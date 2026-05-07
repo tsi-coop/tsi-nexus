@@ -132,6 +132,17 @@ CREATE TRIGGER trg_nexus_lineage
 BEFORE UPDATE ON digital_twins
 FOR EACH ROW EXECUTE FUNCTION fn_nexus_track_lineage();
 
+-- 11. NEXUS USERS (Admin & Staff Accounts)
+CREATE TABLE IF NOT EXISTS nexus_users (
+    user_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name          TEXT NOT NULL,
+    email         TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'admin',  -- 'admin', 'staff'
+    is_active     BOOLEAN DEFAULT TRUE,
+    created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- SEED: Root Organisation & System Actor
 INSERT INTO root_organisation (name) VALUES ('TSI Nexus Global') ON CONFLICT DO NOTHING;
 INSERT INTO digital_twins (id, type, external_id, current_state) 

@@ -5,3 +5,7 @@
 /api/capture=org.tsicoop.nexus.api.Capture
 /api/entities=org.tsicoop.nexus.api.Entities
 
+# Auth & Setup
+/api/setup=org.tsicoop.nexus.api.User
+/api/auth=org.tsicoop.nexus.api.User
+

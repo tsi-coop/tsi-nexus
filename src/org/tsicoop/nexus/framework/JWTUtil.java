@@ -15,10 +15,16 @@ public class JWTUtil {
 
     private static final long EXPIRATION_TIME = 864000000; // 10 days
     
-    // Persistent secret key derived from environment variable to ensure session persistence across restarts
-    private static final String JWT_SECRET = System.getenv("TSI_PRIVACY_VAULT_JWT_SECRET"); 
+    private static final String JWT_SECRET;
+    private static final Key SECRET_KEY;
 
-    private static final Key SECRET_KEY = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
+    static {
+        String envSecret = System.getenv("TSI_NEXUS_JWT_SECRET");
+        JWT_SECRET = (envSecret != null && envSecret.length() >= 32)
+                ? envSecret
+                : "tsi-nexus-default-dev-secret-key-256-bits-minimum!!";
+        SECRET_KEY = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
+    }
 
     public static String generateAppLoginToken(String email, String type, String username, String role, String state, String city) {
         Map<String, String> claims = new HashMap<String,String>();
