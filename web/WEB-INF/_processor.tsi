@@ -7,6 +7,7 @@
 /api/graph=org.tsicoop.nexus.api.Graph
 
 # Auth & Setup
+/api/policy=org.tsicoop.nexus.api.Policy
 /api/setup=org.tsicoop.nexus.api.User
 /api/auth=org.tsicoop.nexus.api.User
 

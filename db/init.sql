@@ -92,6 +92,36 @@ CREATE TABLE interaction_stream (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7b. COMMAND MANIFEST (Intent → Action Routing)
+-- Defines every slash-command the system understands; drives Intent resolution and Policy targeting
+CREATE TABLE command_manifest (
+    command_id    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    command_verb  TEXT UNIQUE NOT NULL,  -- 'disburse', 'onboard', 'collect'
+    label         TEXT NOT NULL,         -- Human-readable: 'Fund Release'
+    action_type   TEXT NOT NULL,         -- Uppercase verb used in policy_manifest: 'DISBURSE'
+    args_hint     TEXT DEFAULT '',       -- '@target [amount]'
+    hint          TEXT DEFAULT '',       -- Short description for LLM prompt
+    component_type TEXT DEFAULT 'action', -- UI component hint
+    multi_target  BOOLEAN DEFAULT FALSE,
+    has_value     BOOLEAN DEFAULT FALSE,
+    is_active     BOOLEAN DEFAULT TRUE,
+    created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7c. INTERACTION SCHEMA (Form-driven Capture)
+-- Each row is a schema-driven form; its action_type hooks into policy_manifest
+CREATE TABLE interaction_schema (
+    schema_id     TEXT PRIMARY KEY,      -- 'KYC_UPDATE', 'FIELD_VISIT'
+    label         TEXT NOT NULL,         -- 'KYC Verification Update'
+    applies_to    TEXT NOT NULL,         -- Entity type: 'member', 'officer'
+    action_type   TEXT NOT NULL,         -- Uppercase: 'KYC_UPDATE'
+    fields        JSONB NOT NULL DEFAULT '[]',
+    state_patch   JSONB DEFAULT '{}',    -- Keys to merge into current_state on submit
+    stream_tmpl   TEXT DEFAULT '',       -- Liquid template for interaction_stream entry
+    is_active     BOOLEAN DEFAULT TRUE,
+    created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 8. THE POLICY MANIFEST (Governance Core)
 -- The "Business Compiler"
 CREATE TABLE policy_manifest (

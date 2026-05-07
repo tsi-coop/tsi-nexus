@@ -6,257 +6,710 @@
     <title>TSI Nexus - Policy Manifest</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
-        .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
-        .code-editor { font-family: 'Fira Code', monospace; background-color: #0f172a; }
-        .modal-overlay { transition: opacity 0.3s ease; }
-        .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
+        .nav-item:hover { background-color: rgba(99,102,241,.1); color: #6366f1; }
+        .nav-active { background-color: rgba(99,102,241,.15); color: #6366f1; border-right: 4px solid #6366f1; }
+        .modal { transition: opacity 0.2s ease; }
+        .modal-box { transition: transform 0.2s ease, opacity 0.2s ease; }
+        .input-field { width:100%; padding:.75rem 1rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; font-size:.875rem; outline:none; transition: border-color .15s; }
+        .input-field:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+        pre, .code-field { font-family:'Fira Code','Courier New',monospace; }
+        .code-field { width:100%; background:#0f172a; color:#a5b4fc; border:none; border-radius:.75rem; padding:1rem; font-size:.72rem; line-height:1.6; outline:none; resize:vertical; }
+        .code-field:focus { box-shadow:0 0 0 2px #6366f1; }
+        .policy-card { transition: box-shadow .15s; }
+        .policy-card:hover { box-shadow: 0 4px 20px -4px rgba(0,0,0,.08); }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
-        <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
-            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-            </div>
-            <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
+    <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
+        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
-
-        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
-            <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                Dashboard
-            </a>
-            <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
-            <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Digital Twin & Graph
-            </a>
-            <a href="policy_manifest.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                Policy Manifest
-            </a>
-            <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
-                Intelligence Tuning
-            </a>
-            <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                API Keys
-            </a>
-            <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                Users & Roles
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
-            <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
-                Liquid Templates
-            </a>
-            <a href="form_builder.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                Form Builder
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
-            <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                Seeding & Simulation
-            </a>
-            <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                Interaction Stream
-            </a>
-            <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
-                Service Registry
-            </a>
-            <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Audit Trail
-            </a>
-            <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Reports
-            </a>
-        </nav>
-
-        <div class="p-6 border-t border-slate-800">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
-                    <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
-                        <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
-                    </div>
+        <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-6 space-y-1 text-sm">
+        <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            Dashboard
+        </a>
+        <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
+        <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            Digital Twin & Graph
+        </a>
+        <a href="policy_manifest.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Policy Manifest
+        </a>
+        <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
+            Intelligence Tuning
+        </a>
+        <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            API Keys
+        </a>
+        <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            Users & Roles
+        </a>
+        <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
+        <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+            Liquid Templates
+        </a>
+        <a href="form_builder.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Form Builder
+        </a>
+        <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
+        <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            Seeding & Simulation
+        </a>
+        <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            Interaction Stream
+        </a>
+        <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+            Service Registry
+        </a>
+        <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Audit Trail
+        </a>
+        <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Reports
+        </a>
+    </nav>
+    <div class="p-6 border-t border-slate-800">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div id="sidebarAvatar" class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
+                <div>
+                    <p id="sidebarName" class="text-xs font-bold text-white">Admin</p>
+                    <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
                 </div>
-                <button onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                </button>
             </div>
+            <button onclick="localStorage.removeItem('nexus_token');localStorage.removeItem('nexus_user');window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
         </div>
-    </aside>
+    </div>
+</aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 text-slate-800">
-            <h2 class="text-lg font-bold uppercase tracking-tight">Policy Manifest</h2>
-            <div class="flex space-x-3">
-                <button onclick="toggleModal('sandboxModal')" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Policy Sandbox</button>
-                <button onclick="toggleModal('createRuleModal')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">+ Create Rule</button>
-            </div>
-        </header>
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main class="flex-1 flex flex-col overflow-hidden">
 
-        <section class="flex-1 overflow-y-auto p-8">
-            <div class="space-y-6">
-                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                    <div class="p-6 border-b border-slate-50">
-                        <div class="flex items-center space-x-3 mb-1">
-                            <h4 class="text-sm font-bold text-slate-800">Identity Verification (POL-KYC)</h4>
-                            <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded uppercase tracking-widest">Guardrail</span>
-                        </div>
-                        <p class="text-xs text-slate-500">Action Blocked: KYC documentation is missing or pending.</p>
-                    </div>
-                    <div class="bg-slate-900 p-4 font-mono text-[11px] text-indigo-300">
-                        <pre><code>SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND current_state->>'kyc' != 'Verified'</code></pre>
-                    </div>
-                </div>
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+        <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Policy Manifest</h2>
+        <div class="flex items-center gap-3">
+            <!-- Stats chips -->
+            <div id="statsBar" class="hidden flex items-center gap-2 mr-2">
+                <span class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-lg text-[10px] font-black uppercase text-slate-500">
+                    <span id="statTotal">0</span> Total
+                </span>
+                <span class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-lg text-[10px] font-black uppercase text-emerald-700">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                    <span id="statActive">0</span> Active
+                </span>
+                <span class="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 rounded-lg text-[10px] font-black uppercase text-indigo-600">
+                    <span id="statGuardrail">0</span> Guardrail
+                </span>
+                <span class="flex items-center gap-1.5 px-2.5 py-1 bg-violet-50 rounded-lg text-[10px] font-black uppercase text-violet-600">
+                    <span id="statAnalytics">0</span> Analytics
+                </span>
+            </div>
+            <button onclick="openUpsertModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                Create Rule
+            </button>
+        </div>
+    </header>
 
-                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                    <div class="p-6 border-b border-slate-50">
-                        <div class="flex items-center space-x-3 mb-1">
-                            <h4 class="text-sm font-bold text-slate-800">Group Liability Check (POL-JLG)</h4>
-                            <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded uppercase tracking-widest">Guardrail</span>
-                        </div>
-                        <p class="text-xs text-slate-500">Action Blocked: A member of your Joint Liability Group is in default.</p>
-                    </div>
-                    <div class="bg-slate-900 p-4 font-mono text-[11px] text-indigo-300">
-                        <pre><code>SELECT COUNT(*) FROM digital_twins t
-JOIN twin_relationships r1 ON t.id = r1.from_twin_id
-JOIN twin_relationships r2 ON r1.to_twin_id = r2.to_twin_id
-JOIN digital_twins m ON r2.from_twin_id = m.id
-WHERE t.external_id = ? AND m.current_state->>'status' = 'NPA'</code></pre>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
+    <!-- Search bar -->
+    <div id="searchBar" class="hidden bg-white border-b border-slate-100 px-8 py-3">
+        <input id="filterInput" type="text" placeholder="Filter by policy ID, action type or description…"
+            class="w-full max-w-md px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 transition-colors">
+    </div>
 
-    <div id="createRuleModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Create Governance Rule</h3>
-                <button onclick="toggleModal('createRuleModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div class="p-8 space-y-5">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Policy ID</label>
-                        <input type="text" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 outline-none" placeholder="POL-X">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Action Type</label>
-                        <select class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 outline-none"><option>DISBURSE</option><option>ONBOARD</option></select>
-                    </div>
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">SQL Query Logic</label>
-                    <textarea class="w-full px-4 py-3 bg-slate-900 text-indigo-300 font-mono rounded-xl text-[11px] h-32 focus:border-indigo-500 outline-none" placeholder="SELECT..."></textarea>
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">Error Message</label>
-                    <input type="text" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 outline-none">
-                </div>
-                <button class="w-full py-4 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg">Commit Rule</button>
-            </div>
+    <!-- Loading -->
+    <div id="loadingState" class="flex-1 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Loading policies…</p>
         </div>
     </div>
 
-    <div id="sandboxModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-4xl h-[70vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all">
-            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <div>
-                    <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Policy Sandbox</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Simulate Rule Impact</p>
-                </div>
-                <button onclick="toggleModal('sandboxModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </header>
-            
-            <div class="flex-1 flex overflow-hidden">
-                <div class="w-1/2 p-8 border-r border-slate-100 flex flex-col">
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-3 px-1">Test Logic</label>
-                    <textarea id="sandboxQuery" class="flex-1 code-editor text-indigo-300 p-6 rounded-2xl text-xs outline-none resize-none leading-relaxed" spellcheck="false">SELECT CASE 
-  WHEN count(previous_denials) > 2 THEN 'DENY'
-  ELSE 'ALLOW'
-END AS verdict
-FROM interaction_stream 
-WHERE member_id = :actor_id</textarea>
-                    <button onclick="runSimulation()" class="mt-4 py-4 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg">Run Simulation</button>
-                </div>
+    <!-- Error -->
+    <div id="errorState" class="hidden flex-1 flex items-center justify-center">
+        <p class="text-red-500 font-bold text-sm">Failed to load — <span id="errorMsg" class="font-normal text-slate-400"></span></p>
+    </div>
 
-                <div id="simulationResult" class="w-1/2 p-8 bg-slate-50/50 flex flex-col opacity-30">
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-4">Impact Report</label>
-                    <div class="grid grid-cols-2 gap-4 mb-8">
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                            <p class="text-[9px] text-slate-400 font-bold uppercase mb-1">Actions Blocked</p>
-                            <p id="blockedCount" class="text-2xl font-black text-rose-500">--</p>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                            <p class="text-[9px] text-slate-400 font-bold uppercase mb-1">Success Rate</p>
-                            <p id="successRate" class="text-2xl font-black text-indigo-600">--%</p>
-                        </div>
+    <!-- Policies -->
+    <section id="mainContent" class="hidden flex-1 overflow-y-auto p-8">
+        <div id="policiesList" class="space-y-4 max-w-4xl"></div>
+        <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <p class="text-sm font-bold text-slate-500">No policies yet</p>
+            <p class="text-xs text-slate-400 mt-1">Create your first governance rule to get started</p>
+        </div>
+    </section>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Create / Edit Rule
+════════════════════════════════════════════════════════════════════════ -->
+<div id="upsertModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 max-h-[90vh] flex flex-col">
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+            <div>
+                <h3 id="upsertTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Create Governance Rule</h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">All fields stored verbatim — no sector-specific defaults</p>
+            </div>
+            <button onclick="closeModal('upsertModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-8 space-y-5 overflow-y-auto">
+            <div id="upsertFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center"></div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Policy ID</label>
+                    <input id="fPolicyId" type="text" class="input-field" placeholder="POL-KYC">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Action Type</label>
+                    <select id="fActionTypeSelect" class="input-field" onchange="onActionTypeSelect(this.value)">
+                        <option value="">— Select a system action —</option>
+                    </select>
+                    <input id="fActionTypeCustom" type="text" class="input-field mt-2 hidden" placeholder="Custom action type (e.g. DISBURSE)">
+                    <p class="text-[10px] text-slate-400 mt-1 px-1">Policy will run whenever this command or form is triggered</p>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Description <span class="normal-case font-normal text-slate-400">(optional)</span></label>
+                <input id="fDescription" type="text" class="input-field" placeholder="e.g. Prevents disbursement without KYC verification">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Execution Mode</label>
+                <div class="flex gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="execMode" id="modeGuardrail" value="GUARDRAIL" checked class="accent-indigo-600">
+                        <span class="text-sm font-semibold text-slate-700">GUARDRAIL</span>
+                        <span class="text-[10px] text-slate-400">— blocks the action if query returns count &gt; 0</span>
+                    </label>
+                </div>
+                <div class="flex gap-3 mt-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="execMode" id="modeAnalytics" value="ANALYTICS" class="accent-indigo-600">
+                        <span class="text-sm font-semibold text-slate-700">ANALYTICS</span>
+                        <span class="text-[10px] text-slate-400">— runs query and returns data rows as intelligence</span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">SQL Query Logic</label>
+                <textarea id="fQueryLogic" rows="6" class="code-field" placeholder="SELECT COUNT(*) FROM digital_twins&#10;WHERE external_id = ?&#10;AND current_state->>'kyc' != 'Verified'"></textarea>
+                <p class="text-[10px] text-slate-400 mt-1.5 px-1">Use <code class="text-indigo-500 bg-indigo-50 px-1 rounded">?</code> as the placeholder for the target entity's <code class="text-indigo-500 bg-indigo-50 px-1 rounded">external_id</code>. For GUARDRAIL, return a COUNT — blocked if &gt; 0.</p>
+            </div>
+
+            <div>
+                <label id="errorMsgLabel" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Error / Label Message</label>
+                <input id="fErrorMessage" type="text" class="input-field" placeholder="Action Blocked: reason shown to user">
+                <p id="errorMsgHint" class="text-[10px] text-slate-400 mt-1 px-1">Shown to the user when a GUARDRAIL blocks the action. For ANALYTICS, used as the report label.</p>
+            </div>
+
+            <button id="upsertBtn" onclick="submitUpsert()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+                Commit Rule
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Test Rule
+════════════════════════════════════════════════════════════════════════ -->
+<div id="testModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Test Policy</h3>
+                <p id="testPolicyLabel" class="text-[11px] text-slate-400 mt-0.5"></p>
+            </div>
+            <button onclick="closeModal('testModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-8 space-y-5">
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Entity ID</label>
+                <input id="testEntityId" type="text" class="input-field" placeholder="@satish_01 or satish_01">
+                <p class="text-[10px] text-slate-400 mt-1.5 px-1">The <code class="text-indigo-500 bg-indigo-50 px-1 rounded">external_id</code> to test against the policy query.</p>
+            </div>
+
+            <button id="testRunBtn" onclick="runTest()" class="w-full py-3.5 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+                Run Test
+            </button>
+
+            <!-- Result -->
+            <div id="testResult" class="hidden rounded-2xl overflow-hidden border">
+                <div id="testVerdict" class="px-6 py-4 flex items-center gap-3">
+                    <span id="testVerdictIcon" class="text-2xl"></span>
+                    <div>
+                        <p id="testVerdictLabel" class="text-sm font-black uppercase tracking-widest"></p>
+                        <p id="testVerdictMsg" class="text-xs mt-0.5"></p>
                     </div>
-                    <div class="flex-1 bg-white rounded-2xl border border-slate-100 p-5 overflow-y-auto">
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">Traceability Logs</p>
-                        <div id="traceLog" class="space-y-3 text-[10px] font-medium text-slate-500 italic text-center pt-10">
-                            Awaiting simulation results...
-                        </div>
-                    </div>
+                    <span id="testCount" class="ml-auto text-xs font-bold px-2 py-0.5 rounded-lg"></span>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        function toggleModal(modalId) {
-            const modal = document.getElementById(modalId);
-            const container = modal.querySelector('.modal-container');
-            if (modal.classList.contains('opacity-0')) {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => container.classList.remove('scale-95', 'opacity-0'), 10);
-            } else {
-                container.classList.add('scale-95', 'opacity-0');
-                setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
-            }
-        }
+<script>
+/* ── state ──────────────────────────────────────────────────────────── */
+let allPolicies  = [];
+const policyMap  = {};
+let testPolicyId = null;
+let allActionTypes = [];  // { action_type, label, source }
 
-        function runSimulation() {
-            const resultPanel = document.getElementById('simulationResult');
-            const btn = event.target;
-            btn.innerText = "SIMULATING...";
-            btn.disabled = true;
+/* ── load ───────────────────────────────────────────────────────────── */
+async function loadPolicies() {
+    try {
+        const res  = await fetch('/api/policy');
+        const data = await res.json();
+        if (!data.success) throw new Error('Server error');
 
-            setTimeout(() => {
-                resultPanel.classList.remove('opacity-30');
-                document.getElementById('blockedCount').innerText = "142";
-                document.getElementById('successRate').innerText = "94.2";
-                document.getElementById('traceLog').innerHTML = `
-                    <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-[10px]">
-                        <strong>BLOCKED:</strong> /disburse for @member_882 (History: 3 Denials)
-                    </div>
-                    <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-[10px]">
-                        <strong>BLOCKED:</strong> /disburse for @member_104 (History: 5 Denials)
-                    </div>
-                `;
-                btn.innerText = "RUN SIMULATION";
-                btn.disabled = false;
-            }, 800);
-        }
-    </script>
+        allPolicies = data.policies;
+        allPolicies.forEach(p => { policyMap[p.policy_id] = p; });
+        allActionTypes = data.action_types || [];
+
+        updateStats(data.stats);
+        populateActionTypeSelect();
+        renderPolicies(allPolicies);
+
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        document.getElementById('statsBar').classList.remove('hidden');
+        document.getElementById('searchBar').classList.remove('hidden');
+    } catch (err) {
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('errorState').classList.remove('hidden');
+        document.getElementById('errorMsg').textContent = err.message;
+    }
+}
+
+function updateStats(s) {
+    document.getElementById('statTotal').textContent     = s.total;
+    document.getElementById('statActive').textContent    = s.active;
+    document.getElementById('statGuardrail').textContent = s.guardrail;
+    document.getElementById('statAnalytics').textContent = s.analytics;
+}
+
+/* ── render ─────────────────────────────────────────────────────────── */
+function renderPolicies(policies) {
+    const list  = document.getElementById('policiesList');
+    const empty = document.getElementById('emptyState');
+    list.innerHTML = '';
+
+    if (!policies.length) { empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+
+    // Group by action_type
+    const groups = {};
+    policies.forEach(p => { (groups[p.action_type] = groups[p.action_type] || []).push(p); });
+
+    Object.entries(groups).forEach(([actionType, group]) => {
+        const groupEl = document.createElement('div');
+        groupEl.innerHTML = `<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 mt-6 first:mt-0">${actionType}</p>`;
+        group.forEach(p => groupEl.appendChild(buildCard(p)));
+        list.appendChild(groupEl);
+    });
+}
+
+function buildCard(p) {
+    policyMap[p.policy_id] = p;
+    const isGuard = p.execution_mode === 'GUARDRAIL';
+    const borderColor = p.is_active ? (isGuard ? '#10b981' : '#8b5cf6') : '#e2e8f0';
+
+    const card = document.createElement('div');
+    card.id        = `card-${p.policy_id}`;
+    card.className = 'policy-card bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm';
+
+    card.innerHTML = `
+      <div class="flex items-start gap-4 p-5" style="border-left:4px solid ${borderColor}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center flex-wrap gap-2 mb-1.5">
+            <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md tracking-widest ${isGuard ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-violet-50 text-violet-700 border border-violet-200'}">
+              ${p.execution_mode}
+            </span>
+            <span class="text-sm font-black text-slate-800">${esc(p.policy_id)}</span>
+            <span class="text-slate-200">·</span>
+            <span class="text-xs font-bold text-slate-500">${esc(p.action_type)}</span>
+            <span class="ml-auto flex items-center gap-1.5 text-[10px] font-bold ${p.is_active ? 'text-emerald-600' : 'text-slate-400'}">
+              <span class="w-1.5 h-1.5 rounded-full ${p.is_active ? 'bg-emerald-500' : 'bg-slate-300'}"></span>
+              ${p.is_active ? 'Active' : 'Paused'}
+            </span>
+          </div>
+          ${p.description ? `<p class="text-xs text-slate-400 mb-2">${esc(p.description)}</p>` : ''}
+          <p class="text-xs text-slate-500 italic flex items-start gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-300 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+            "${esc(p.error_message)}"
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-slate-950 px-5 py-3.5">
+        <pre class="text-[11px] text-indigo-300 leading-relaxed whitespace-pre-wrap">${esc(p.query_logic)}</pre>
+      </div>
+
+      <div id="footer-${p.policy_id}" class="px-5 py-3.5 border-t border-slate-50 flex items-center gap-2">
+        <button onclick="openTestModal('${p.policy_id}')"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-black uppercase rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Test
+        </button>
+        <button onclick="openUpsertModal('${p.policy_id}')"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-black uppercase rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          Edit
+        </button>
+        <button id="toggleBtn-${p.policy_id}" onclick="togglePolicy('${p.policy_id}')"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-colors ${p.is_active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}">
+          ${p.is_active ? 'Pause' : 'Resume'}
+        </button>
+        <button onclick="initiateDelete('${p.policy_id}')"
+          class="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[10px] font-black uppercase rounded-lg transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Delete
+        </button>
+      </div>`;
+
+    return card;
+}
+
+/* ── filter ─────────────────────────────────────────────────────────── */
+document.getElementById('filterInput').addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    const filtered = q
+        ? allPolicies.filter(p =>
+            p.policy_id.toLowerCase().includes(q) ||
+            p.action_type.toLowerCase().includes(q) ||
+            p.description.toLowerCase().includes(q))
+        : allPolicies;
+    renderPolicies(filtered);
+});
+
+/* ── action type select helpers ─────────────────────────────────────── */
+function populateActionTypeSelect() {
+    const sel = document.getElementById('fActionTypeSelect');
+    const current = sel.value;
+    // Keep the placeholder option
+    while (sel.options.length > 1) sel.remove(1);
+
+    const sourceLabel = { command: '⚡ Command', schema: '📋 Form', existing: '📌 Existing' };
+    allActionTypes.forEach(at => {
+        const opt = document.createElement('option');
+        opt.value = at.action_type;
+        const src = sourceLabel[at.source] || '';
+        opt.textContent = `${src}  ${at.action_type}${at.label && at.label !== at.action_type ? '  — ' + at.label : ''}`;
+        sel.appendChild(opt);
+    });
+
+    // Custom option always last
+    const customOpt = document.createElement('option');
+    customOpt.value = '__custom__';
+    customOpt.textContent = '✏️  Custom — type manually…';
+    sel.appendChild(customOpt);
+
+    // Restore previous value if still present
+    if (current) sel.value = current;
+}
+
+function onActionTypeSelect(val) {
+    const customInput = document.getElementById('fActionTypeCustom');
+    if (val === '__custom__') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+    } else {
+        customInput.classList.add('hidden');
+        customInput.value = '';
+    }
+}
+
+function getSelectedActionType() {
+    const sel = document.getElementById('fActionTypeSelect');
+    if (sel.value === '__custom__') {
+        return document.getElementById('fActionTypeCustom').value.trim().toUpperCase();
+    }
+    return sel.value;
+}
+
+function setActionTypeValue(actionType) {
+    const sel = document.getElementById('fActionTypeSelect');
+    const customInput = document.getElementById('fActionTypeCustom');
+    // Check if the type exists as an option
+    const exists = Array.from(sel.options).some(o => o.value === actionType);
+    if (exists) {
+        sel.value = actionType;
+        customInput.classList.add('hidden');
+        customInput.value = '';
+    } else {
+        sel.value = '__custom__';
+        customInput.classList.remove('hidden');
+        customInput.value = actionType;
+    }
+}
+
+/* ── upsert modal ───────────────────────────────────────────────────── */
+function openUpsertModal(policyId) {
+    const p = policyId ? policyMap[policyId] : null;
+    document.getElementById('upsertTitle').textContent = p ? 'Edit Governance Rule' : 'Create Governance Rule';
+    document.getElementById('fPolicyId').value     = p ? p.policy_id     : '';
+    document.getElementById('fPolicyId').readOnly  = !!p;
+    document.getElementById('fPolicyId').className = `input-field ${p ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`;
+    if (p) setActionTypeValue(p.action_type); else { document.getElementById('fActionTypeSelect').value = ''; document.getElementById('fActionTypeCustom').classList.add('hidden'); }
+    document.getElementById('fDescription').value  = p ? p.description   : '';
+    document.getElementById('fQueryLogic').value   = p ? p.query_logic   : '';
+    document.getElementById('fErrorMessage').value = p ? p.error_message : '';
+    document.getElementById('modeGuardrail').checked = !p || p.execution_mode === 'GUARDRAIL';
+    document.getElementById('modeAnalytics').checked = p && p.execution_mode === 'ANALYTICS';
+    document.getElementById('upsertBtn').textContent = p ? 'Update Rule' : 'Commit Rule';
+    document.getElementById('upsertFeedback').classList.add('hidden');
+    openModal('upsertModal');
+}
+
+async function submitUpsert() {
+    const policyId    = document.getElementById('fPolicyId').value.trim();
+    const actionType  = getSelectedActionType();
+    const description = document.getElementById('fDescription').value.trim();
+    const queryLogic  = document.getElementById('fQueryLogic').value.trim();
+    const errorMsg    = document.getElementById('fErrorMessage').value.trim();
+    const execMode    = document.querySelector('input[name="execMode"]:checked').value;
+    const btn         = document.getElementById('upsertBtn');
+
+    if (!policyId || !actionType || !queryLogic || !errorMsg) {
+        showFeedback('upsertFeedback', 'Policy ID, Action Type, Query Logic and Message are required', true); return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    try {
+        const res  = await fetch('/api/policy', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'upsert', policy_id: policyId, action_type: actionType,
+                description, query_logic: queryLogic, error_message: errorMsg, execution_mode: execMode })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Save failed');
+
+        showFeedback('upsertFeedback', `Policy ${data.policy_id} saved`, false);
+        await reload();
+        setTimeout(() => closeModal('upsertModal'), 900);
+    } catch (err) {
+        showFeedback('upsertFeedback', err.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = document.getElementById('fPolicyId').readOnly ? 'Update Rule' : 'Commit Rule';
+    }
+}
+
+/* ── toggle ─────────────────────────────────────────────────────────── */
+async function togglePolicy(policyId) {
+    try {
+        const res  = await fetch('/api/policy', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'toggle', policy_id: policyId })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message);
+        policyMap[policyId].is_active = data.is_active;
+        await reload();
+    } catch (err) {
+        alert('Toggle failed: ' + err.message);
+    }
+}
+
+/* ── delete ─────────────────────────────────────────────────────────── */
+function initiateDelete(policyId) {
+    const footer = document.getElementById(`footer-${policyId}`);
+    if (!footer) return;
+    footer.innerHTML = `
+      <span class="text-xs font-bold text-red-600 mr-2">Delete "${policyId}"? This cannot be undone.</span>
+      <button onclick="cancelDelete('${policyId}')"
+        class="px-3 py-1.5 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-200 transition-colors">
+        Cancel
+      </button>
+      <button onclick="executeDelete('${policyId}')"
+        class="px-3 py-1.5 bg-red-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-red-700 transition-colors">
+        Confirm Delete
+      </button>`;
+}
+
+function cancelDelete(policyId) {
+    const p = policyMap[policyId];
+    if (p) {
+        const footer = document.getElementById(`footer-${policyId}`);
+        if (footer) footer.replaceWith(buildCard(p).querySelector(`#footer-${policyId}`));
+    }
+    reload();
+}
+
+async function executeDelete(policyId) {
+    try {
+        const res  = await fetch('/api/policy', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', policy_id: policyId })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message);
+        const card = document.getElementById(`card-${policyId}`);
+        if (card) { card.style.opacity = '0'; card.style.transition = 'opacity .2s'; setTimeout(() => card.remove(), 200); }
+        await reload();
+    } catch (err) {
+        alert('Delete failed: ' + err.message);
+    }
+}
+
+/* ── test modal ─────────────────────────────────────────────────────── */
+function openTestModal(policyId) {
+    const p = policyMap[policyId];
+    testPolicyId = policyId;
+    document.getElementById('testPolicyLabel').textContent = `${p.policy_id} · ${p.action_type} · ${p.execution_mode}`;
+    document.getElementById('testEntityId').value = '';
+    document.getElementById('testResult').classList.add('hidden');
+    document.getElementById('testRunBtn').disabled = false;
+    document.getElementById('testRunBtn').textContent = 'Run Test';
+    openModal('testModal');
+}
+
+async function runTest() {
+    const testId = document.getElementById('testEntityId').value.trim();
+    const btn    = document.getElementById('testRunBtn');
+    if (!testId) { document.getElementById('testEntityId').focus(); return; }
+
+    btn.disabled = true; btn.textContent = 'Running…';
+
+    try {
+        const res  = await fetch('/api/policy', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'test', policy_id: testPolicyId, test_id: testId })
+        });
+        const data = await res.json();
+        showTestResult(data);
+    } catch (err) {
+        showTestResult({ success: false, verdict: 'ERROR', message: err.message });
+    } finally {
+        btn.disabled = false; btn.textContent = 'Run Test';
+    }
+}
+
+function showTestResult(data) {
+    const box     = document.getElementById('testResult');
+    const verdict = document.getElementById('testVerdict');
+    const icon    = document.getElementById('testVerdictIcon');
+    const label   = document.getElementById('testVerdictLabel');
+    const msg     = document.getElementById('testVerdictMsg');
+    const count   = document.getElementById('testCount');
+
+    box.classList.remove('hidden');
+
+    const styles = {
+        BLOCKED:   { bg: 'bg-red-50 border-red-200',     text: 'text-red-800',    icon: '🚫', countCls: 'bg-red-100 text-red-700' },
+        ALLOWED:   { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800', icon: '✅', countCls: 'bg-emerald-100 text-emerald-700' },
+        ANALYTICS: { bg: 'bg-indigo-50 border-indigo-200',   text: 'text-indigo-800',  icon: '📊', countCls: 'bg-indigo-100 text-indigo-700' },
+        ERROR:     { bg: 'bg-amber-50 border-amber-200',   text: 'text-amber-800',  icon: '⚠️', countCls: 'bg-amber-100 text-amber-700' }
+    };
+    const s = styles[data.verdict] || styles.ERROR;
+    box.className       = `rounded-2xl overflow-hidden border ${s.bg}`;
+    verdict.className   = `px-6 py-4 flex items-center gap-3 ${s.bg}`;
+    icon.textContent    = s.icon;
+    label.className     = `text-sm font-black uppercase tracking-widest ${s.text}`;
+    label.textContent   = data.verdict;
+    msg.className       = `text-xs mt-0.5 ${s.text} opacity-80`;
+    msg.textContent     = data.message || '';
+    count.className     = `ml-auto text-xs font-bold px-2 py-0.5 rounded-lg ${s.countCls}`;
+    count.textContent   = data.count != null ? `count: ${data.count}` : '';
+}
+
+/* ── helpers ────────────────────────────────────────────────────────── */
+async function reload() {
+    const res  = await fetch('/api/policy');
+    const data = await res.json();
+    if (data.success) {
+        allPolicies = data.policies;
+        allPolicies.forEach(p => { policyMap[p.policy_id] = p; });
+        allActionTypes = data.action_types || [];
+        updateStats(data.stats);
+        populateActionTypeSelect();
+        const q = document.getElementById('filterInput').value.toLowerCase();
+        renderPolicies(q ? allPolicies.filter(p =>
+            p.policy_id.toLowerCase().includes(q) ||
+            p.action_type.toLowerCase().includes(q) ||
+            p.description.toLowerCase().includes(q)) : allPolicies);
+    }
+}
+
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('opacity-0','pointer-events-none');
+    setTimeout(() => { const b = m.querySelector('.modal-box'); b.classList.remove('scale-95','opacity-0'); }, 10);
+}
+function closeModal(id) {
+    const m = document.getElementById(id), b = m.querySelector('.modal-box');
+    b.classList.add('scale-95','opacity-0');
+    setTimeout(() => m.classList.add('opacity-0','pointer-events-none'), 200);
+}
+
+function showFeedback(id, msg, isError) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = `text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center ` +
+        (isError ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100');
+    el.classList.remove('hidden');
+}
+
+function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modals on backdrop click
+['upsertModal','testModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
+});
+
+// Update label hints when mode changes
+document.querySelectorAll('input[name="execMode"]').forEach(r => r.addEventListener('change', () => {
+    const isAnalytics = document.getElementById('modeAnalytics').checked;
+    document.getElementById('errorMsgHint').textContent = isAnalytics
+        ? 'Used as the report label returned in the analytics response.'
+        : 'Shown to the user when the GUARDRAIL blocks the action.';
+}));
+
+// Sidebar user
+try {
+    const u = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+    if (u.name) {
+        document.getElementById('sidebarName').textContent = u.name;
+        document.getElementById('sidebarAvatar').textContent = u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    }
+} catch(_) {}
+
+loadPolicies();
+</script>
 </body>
 </html>
