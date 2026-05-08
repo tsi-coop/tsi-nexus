@@ -150,7 +150,19 @@ CREATE TRIGGER trg_nexus_lineage
 BEFORE UPDATE ON digital_twins
 FOR EACH ROW EXECUTE FUNCTION fn_nexus_track_lineage();
 
--- 11. NEXUS USERS (Admin & Staff Accounts)
+-- 11. LIQUID TEMPLATE REGISTRY
+CREATE TABLE liquid_templates (
+    template_id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name          TEXT NOT NULL,
+    entity_type   TEXT NOT NULL,
+    html_content  TEXT NOT NULL DEFAULT '',
+    condition_sql TEXT NOT NULL DEFAULT '',
+    is_active     BOOLEAN DEFAULT TRUE,
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. NEXUS USERS (Admin & Staff Accounts)
 CREATE TABLE IF NOT EXISTS nexus_users (
     user_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name          TEXT NOT NULL,

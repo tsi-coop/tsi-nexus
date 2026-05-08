@@ -10,241 +10,461 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
         .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
-        .code-editor { font-family: 'Fira Code', monospace; background-color: #0f172a; }
-        .modal-overlay { transition: opacity 0.3s ease; }
-        .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
+        .code-editor { font-family: 'Fira Code', 'Courier New', monospace; background-color: #0f172a; }
+        .modal { transition: opacity 0.2s ease; }
+        .modal-box { transition: transform 0.2s ease, opacity 0.2s ease; }
+        .input-field { width:100%; padding:.75rem 1rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; font-size:.875rem; outline:none; transition: border-color .15s; }
+        .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
-        <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
-            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
+    <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
+        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-6 space-y-1 text-sm">
+        <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            Dashboard
+        </a>
+        <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
+        <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            Context Graph
+        </a>
+        <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z"/></svg>
+            Intelligence Setup
+        </a>
+        <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Policy Manifest
+        </a>
+        <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            API Keys
+        </a>
+        <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            Users & Roles
+        </a>
+        <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
+        <a href="liquid_templates.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+            Liquid Templates
+        </a>
+        <a href="form_builder.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Form Builder
+        </a>
+        <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
+        <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            Seeding & Simulation
+        </a>
+        <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            Interaction Stream
+        </a>
+        <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+            Service Registry
+        </a>
+        <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Audit Trail
+        </a>
+        <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 font-semibold transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Reports
+        </a>
+    </nav>
+    <div class="p-6 border-t border-slate-800">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div id="sidebarAvatar" class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
+                <div>
+                    <p id="sidebarName" class="text-xs font-bold text-white">Admin</p>
+                    <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
+                </div>
             </div>
-            <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
+            <button onclick="localStorage.removeItem('nexus_token');localStorage.removeItem('nexus_user');window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
+        </div>
+    </div>
+</aside>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main class="flex-1 flex flex-col overflow-hidden">
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-4">
+            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Liquid Template Registry</h2>
+            <span id="statsChip" class="hidden text-xs text-slate-400 font-semibold"></span>
+        </div>
+        <button onclick="openTemplateModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            New Template
+        </button>
+    </header>
+
+    <!-- Loading -->
+    <div id="loadingState" class="flex-1 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Loading…</p>
+        </div>
+    </div>
+
+    <!-- Empty -->
+    <div id="emptyState" class="hidden flex-1 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+            </div>
+            <p class="text-sm font-bold text-slate-500">No templates yet</p>
+            <p class="text-xs text-slate-400 mt-1">Create your first Liquid template to control how entities are rendered.</p>
+            <button onclick="openTemplateModal()" class="mt-4 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors">New Template</button>
+        </div>
+    </div>
+
+    <!-- Card grid -->
+    <section id="mainContent" class="hidden flex-1 overflow-y-auto p-8">
+        <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </section>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Create / Edit Template
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="templateModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-4xl h-[88vh] rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 flex flex-col">
+
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+            <div>
+                <h3 id="modalTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">New Liquid Template</h3>
+                <p id="modalSub" class="text-[11px] text-slate-400 mt-0.5">Define how an entity type is rendered in the experience layer</p>
+            </div>
+            <button onclick="closeTemplateModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
 
-        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
-            <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                Dashboard
-            </a>
-            <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
-            <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Context Graph
-            </a>
-            <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
-                Intelligence Setup
-            </a>
-            <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                Policy Manifest
-            </a>
-            <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                API Keys
-            </a>
-            <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                Users & Roles
-            </a>
+        <div class="flex-1 flex overflow-hidden">
 
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
-            <a href="liquid_templates.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
-                Liquid Templates
-            </a>
-            <a href="form_builder.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                Form Builder
-            </a>
+            <!-- Left: metadata + editor -->
+            <div class="w-1/2 p-8 border-r border-slate-100 flex flex-col gap-5 overflow-y-auto">
+                <div id="modalFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center"></div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Template Name</label>
+                    <input id="tplName" type="text" class="input-field" placeholder="e.g. Portfolio Card, Delinquency Alert" autocomplete="off">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Base Entity Type</label>
+                    <select id="tplEntityType" class="input-field" onchange="refreshContextVars()">
+                        <option value="">Loading types…</option>
+                    </select>
+                </div>
+                <div class="flex-1 flex flex-col min-h-0">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">HTML Content <span class="text-indigo-400 normal-case font-semibold">(Liquid + Tailwind)</span></label>
+                    <textarea id="tplHtml" class="flex-1 code-editor text-indigo-300 p-5 rounded-2xl text-[11px] outline-none resize-none leading-relaxed min-h-[180px]" spellcheck="false" placeholder='<div class="p-6 bg-white rounded-xl">&#10;  <h3>{{ entity.name }}</h3>&#10;</div>'></textarea>
+                </div>
+            </div>
 
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
-            <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                Seeding & Simulation
-            </a>
-            <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                Interaction Stream
-            </a>
-            <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
-                Service Registry
-            </a>
-            <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Audit Trail
-            </a>
-            <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Reports
-            </a>
-        </nav>
+            <!-- Right: condition + context vars -->
+            <div class="w-1/2 p-8 bg-slate-50/40 flex flex-col gap-6 overflow-y-auto">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Conditional Trigger <span class="text-slate-400 normal-case font-semibold">(SQL — optional)</span></label>
+                    <textarea id="tplCondition" class="w-full code-editor text-green-400 p-4 rounded-xl text-[10px] outline-none resize-none h-24 leading-relaxed" spellcheck="false" placeholder="SELECT 1 FROM digital_twins WHERE external_id = ? AND current_state->>'kyc' = 'verified'"></textarea>
+                    <p class="text-[9px] text-slate-400 mt-1.5 px-1 italic">Template only renders if this query returns rows. Leave blank to always render.</p>
+                </div>
 
-        <div class="p-6 border-t border-slate-800">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
-                    <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
-                        <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
+                <div class="flex-1 flex flex-col min-h-0">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Available Context Variables</h4>
+                    <div id="contextVars" class="flex-1 bg-white rounded-2xl border border-slate-100 p-3 overflow-y-auto space-y-1.5 min-h-[160px]">
+                        <p class="text-[10px] text-slate-400 text-center py-4">Select an entity type to see its variables</p>
                     </div>
                 </div>
-                <button onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+
+                <button id="tplSaveBtn" onclick="saveTemplate()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+                    Commit Template
                 </button>
             </div>
-        </div>
-    </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 text-slate-800">
-            <h2 class="text-lg font-bold uppercase tracking-tight">Liquid Template Registry</h2>
-            <div class="flex space-x-3">
-                <button onclick="toggleModal('componentLibraryModal')" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Component Library</button>
-                <button onclick="toggleModal('createTemplateModal')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">+ New Template</button>
-            </div>
-        </header>
-
-        <section class="flex-1 overflow-y-auto p-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                    <div class="p-6 flex-1">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-black rounded uppercase tracking-widest">Type: Account Summary</span>
-                            <div class="flex space-x-1">
-                                <button class="p-1 text-slate-400 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                                <button class="p-1 text-slate-400 hover:text-rose-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
-                            </div>
-                        </div>
-                        <h4 class="text-sm font-bold text-slate-800 mb-1">Standard Portfolio Card</h4>
-                        <p class="text-[11px] text-slate-500">Materializes the active balance and arrears status for any Member entity.</p>
-                    </div>
-                    <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Status: Live</span>
-                        <button onclick="toggleModal('previewModal')" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800">Preview UI</button>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                    <div class="p-6 flex-1">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[9px] font-black rounded uppercase tracking-widest">Type: Critical Alert</span>
-                            <div class="flex space-x-1">
-                                <button class="p-1 text-slate-400 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                            </div>
-                        </div>
-                        <h4 class="text-sm font-bold text-slate-800 mb-1">Delinquency Notification</h4>
-                        <p class="text-[11px] text-slate-500">Only materializes if <code>days_past_due > 15</code>. Displays collection protocol.</p>
-                    </div>
-                    <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Status: Conditional</span>
-                        <button class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800">Preview UI</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <div id="createTemplateModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-4xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">New Liquid Template</h3>
-                <button onclick="toggleModal('createTemplateModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div class="flex-1 flex overflow-hidden">
-                <div class="w-1/2 p-8 border-r border-slate-100 flex flex-col">
-                    <div class="mb-6 space-y-4">
-                        <input type="text" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:border-indigo-500 outline-none" placeholder="Template Name (e.g. Collection Card)">
-                        <select class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 outline-none">
-                            <option>Base Entity: Member</option>
-                            <option>Base Entity: Group</option>
-                            <option>Base Entity: Officer</option>
-                        </select>
-                    </div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">HTML Content (Tailwind Supported)</label>
-                    <textarea class="flex-1 code-editor text-indigo-300 p-6 rounded-2xl text-[11px] outline-none resize-none leading-relaxed" spellcheck="false">&lt;div class="p-6 bg-white rounded-xl shadow-sm border border-slate-200"&gt;
-  &lt;h3 class="text-lg font-bold"&gt;{{ entity.name }}&lt;/h3&gt;
-  &lt;p class="text-slate-500"&gt;Balance: {{ entity.current_state.balance }}&lt;/p&gt;
-&lt;/div&gt;</textarea>
-                </div>
-                <div class="w-1/2 p-8 bg-slate-50/50 flex flex-col">
-                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Materialization Logic</h4>
-                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-6">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-3">Conditional Trigger (SQL)</label>
-                        <textarea class="w-full bg-slate-900 text-indigo-400 font-mono text-[10px] p-4 rounded-xl h-24 outline-none border-none" placeholder="SELECT 1 FROM current_state WHERE..."></textarea>
-                        <p class="text-[9px] text-slate-400 mt-2 italic">Template will only materialize if this query returns results.</p>
-                    </div>
-                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Available Context Graph Variables</h4>
-                    <div class="flex-1 bg-white rounded-2xl border border-slate-100 p-4 overflow-y-auto space-y-2">
-                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-700">
-                            <span>entity.current_state.kyc_status</span>
-                            <button class="text-indigo-600 hover:underline">Copy Tag</button>
-                        </div>
-                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-700">
-                            <span>entity.current_state.total_arrears</span>
-                            <button class="text-indigo-600 hover:underline">Copy Tag</button>
-                        </div>
-                    </div>
-                    <button class="mt-6 py-4 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg">Commit Template</button>
-                </div>
-            </div>
         </div>
     </div>
+</div>
 
-    <div id="componentLibraryModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-2xl h-[60vh] rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
-            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Adaptive Component Registry</h3>
-                <button onclick="toggleModal('componentLibraryModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </header>
-            <div class="flex-1 p-8 grid grid-cols-2 gap-6 overflow-y-auto">
-                <div class="border border-slate-200 rounded-2xl p-4 flex items-center space-x-4 cursor-pointer hover:border-indigo-500 transition-colors group">
-                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-slate-800 uppercase tracking-tight">Chart Card</p>
-                        <p class="text-[9px] text-slate-400 font-bold">Materializes time-series charts.</p>
-                    </div>
-                </div>
-                </div>
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Delete confirmation
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="deleteModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 p-8 text-center">
+        <div class="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-2">Delete Template?</h3>
+        <p class="text-xs text-slate-500 mb-6">This cannot be undone. The template will be permanently removed.</p>
+        <div class="flex gap-3">
+            <button onclick="closeModal('deleteModal')" class="flex-1 py-3 bg-slate-100 text-slate-700 text-[11px] font-black uppercase rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
+            <button id="deleteConfirmBtn" class="flex-1 py-3 bg-red-600 text-white text-[11px] font-black uppercase rounded-xl hover:bg-red-700 transition-colors">Delete</button>
         </div>
     </div>
+</div>
 
-    <div id="previewModal" class="modal-overlay fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[90] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-slate-100 w-full max-w-md h-[400px] rounded-[32px] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col border-[8px] border-slate-900">
-            <div class="bg-white flex-1 p-8 flex items-center justify-center">
-                <div class="w-full p-6 bg-white rounded-2xl shadow-lg border border-slate-100 text-center">
-                    <h3 class="text-lg font-black text-slate-900">Unity Self-Help Group</h3>
-                    <p class="text-sm text-slate-500 font-bold mt-2">Current Balance: 45,000</p>
-                    <div class="mt-6 pt-6 border-t border-slate-50">
-                        <span class="px-4 py-2 bg-green-50 text-green-600 text-[10px] font-black uppercase rounded-full tracking-widest">Active Snapshot</span>
-                    </div>
-                </div>
-            </div>
-            <button onclick="toggleModal('previewModal')" class="bg-slate-900 text-white py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-colors">Close Simulator</button>
+<script>
+/* ── state ──────────────────────────────────────────────────────────── */
+const token    = localStorage.getItem('nexus_token') || '';
+const headers  = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+const PALETTE  = ['#6366f1','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#f97316','#14b8a6'];
+const _cmap    = {}; let _ci = 0;
+function colorFor(t) { if (!_cmap[t]) _cmap[t] = PALETTE[_ci++ % PALETTE.length]; return _cmap[t]; }
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+let graphData     = null;
+let editingId     = null;
+let pendingDelete = null;
+
+/* ── boot ────────────────────────────────────────────────────────────── */
+async function boot() {
+    try {
+        const [tRes, gRes] = await Promise.all([
+            fetch('/api/templates', { headers }),
+            fetch('/api/graph',     { headers })
+        ]);
+        const tData = await tRes.json();
+        const gData = await gRes.json();
+        if (gData.success) graphData = gData;
+        if (!tData.success) throw new Error('Failed to load templates');
+        render(tData);
+    } catch (err) {
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+        document.getElementById('emptyState').querySelector('p').textContent = 'Load error: ' + err.message;
+    }
+}
+
+/* ── render cards ────────────────────────────────────────────────────── */
+function render(data) {
+    document.getElementById('loadingState').classList.add('hidden');
+
+    const s = data.stats;
+    const chip = document.getElementById('statsChip');
+    chip.textContent = `${s.total} template${s.total !== 1 ? 's' : ''} · ${s.active} active`;
+    chip.classList.remove('hidden');
+
+    if (!data.templates.length) {
+        document.getElementById('emptyState').classList.remove('hidden');
+        return;
+    }
+
+    document.getElementById('mainContent').classList.remove('hidden');
+    const grid = document.getElementById('cardsGrid');
+    grid.innerHTML = '';
+    data.templates.forEach(t => grid.appendChild(makeCard(t)));
+}
+
+function makeCard(t) {
+    const c       = colorFor(t.entity_type);
+    const preview = (t.html_content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90) || '—';
+    const card    = document.createElement('div');
+    card.className = 'bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col' + (t.is_active ? '' : ' opacity-60');
+    card.innerHTML = `
+      <div class="p-6 flex-1">
+        <div class="flex justify-between items-start mb-4">
+          <span class="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-widest" style="background:${c}18;color:${c}">${cap(t.entity_type)}</span>
+          <div class="flex items-center gap-1">
+            <button class="btn-edit p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50" title="Edit">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button class="btn-toggle p-1.5 text-slate-400 hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50" title="${t.is_active ? 'Deactivate' : 'Activate'}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${t.is_active ? 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21' : 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'}"/></svg>
+            </button>
+            <button class="btn-delete p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50" title="Delete">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
         </div>
-    </div>
+        <h4 class="text-sm font-bold text-slate-800 mb-1">${escHtml(t.name)}</h4>
+        <p class="text-[11px] text-slate-400 leading-relaxed">${escHtml(preview)}</p>
+      </div>
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-[10px] font-bold uppercase tracking-wider" style="color:${t.is_active ? '#10b981' : '#94a3b8'}">${t.is_active ? 'Active' : 'Inactive'}</span>
+        <span class="text-[10px] text-slate-400">Updated ${t.updated || t.created}</span>
+      </div>`;
 
-    <script>
-        function toggleModal(modalId) {
-            const modal = document.getElementById(modalId);
-            const container = modal.querySelector('.modal-container');
-            if (modal.classList.contains('opacity-0')) {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => container.classList.remove('scale-95', 'opacity-0'), 10);
-            } else {
-                container.classList.add('scale-95', 'opacity-0');
-                setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
-            }
-        }
-    </script>
+    card.querySelector('.btn-edit').addEventListener('click',   () => openTemplateModal(t));
+    card.querySelector('.btn-toggle').addEventListener('click', () => doToggle(t.template_id));
+    card.querySelector('.btn-delete').addEventListener('click', () => confirmDelete(t.template_id, t.name));
+    return card;
+}
+
+function escHtml(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── template modal ──────────────────────────────────────────────────── */
+function openTemplateModal(tpl) {
+    editingId = tpl ? tpl.template_id : null;
+    document.getElementById('modalTitle').textContent  = tpl ? 'Edit Template' : 'New Liquid Template';
+    document.getElementById('modalSub').textContent    = tpl ? `Editing: ${tpl.name}` : 'Define how an entity type is rendered in the experience layer';
+    document.getElementById('tplName').value           = tpl ? tpl.name : '';
+    document.getElementById('tplHtml').value           = tpl ? tpl.html_content : '';
+    document.getElementById('tplCondition').value      = tpl ? tpl.condition_sql : '';
+    document.getElementById('tplSaveBtn').textContent  = tpl ? 'Save Changes' : 'Commit Template';
+    document.getElementById('modalFeedback').classList.add('hidden');
+
+    populateEntityTypes(tpl ? tpl.entity_type : null);
+    openModal('templateModal');
+}
+
+function closeTemplateModal() { closeModal('templateModal'); }
+
+function populateEntityTypes(selected) {
+    const sel = document.getElementById('tplEntityType');
+    const types = graphData ? graphData.blueprints.map(b => b.type).filter(t => t !== 'system') : [];
+    sel.innerHTML = types.length
+        ? types.map(t => `<option value="${t}" ${t === selected ? 'selected' : ''}>${cap(t)}</option>`).join('')
+        : '<option value="">No entity types defined</option>';
+    refreshContextVars();
+}
+
+function refreshContextVars() {
+    const type    = document.getElementById('tplEntityType').value;
+    const panel   = document.getElementById('contextVars');
+    if (!type || !graphData) { panel.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-4">Select an entity type to see its variables</p>'; return; }
+
+    const bp    = graphData.blueprints.find(b => b.type === type);
+    const attrs = bp ? (bp.attributes || []) : [];
+    const fixed = ['entity.name', 'entity.external_id', 'entity.type', 'entity.version_count'];
+
+    const vars = [...fixed, ...attrs.map(a => `entity.current_state.${a}`)];
+    panel.innerHTML = vars.map(v => `
+      <div class="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">
+        <code class="text-[10px] font-bold text-slate-700">{{ ${v} }}</code>
+        <button class="text-[9px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-widest copy-var-btn shrink-0 ml-2">Copy</button>
+      </div>`).join('');
+
+    panel.querySelectorAll('.copy-var-btn').forEach((btn, i) => {
+        btn.addEventListener('click', () => {
+            navigator.clipboard.writeText(`{{ ${vars[i]} }}`);
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 1200);
+        });
+    });
+}
+
+/* ── save ────────────────────────────────────────────────────────────── */
+async function saveTemplate() {
+    const name      = document.getElementById('tplName').value.trim();
+    const type      = document.getElementById('tplEntityType').value;
+    const html      = document.getElementById('tplHtml').value;
+    const condition = document.getElementById('tplCondition').value.trim();
+    const btn       = document.getElementById('tplSaveBtn');
+
+    if (!name) { showFeedback('Name is required', true); return; }
+    if (!type) { showFeedback('Select an entity type', true); return; }
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+        const body = { action: 'upsert', name, entity_type: type, html_content: html, condition_sql: condition };
+        if (editingId) body.template_id = editingId;
+
+        const res  = await fetch('/api/templates', { method: 'POST', headers, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.reason || 'Save failed');
+
+        showFeedback(editingId ? 'Template updated' : 'Template created', false);
+        await reload();
+        setTimeout(() => closeTemplateModal(), 1000);
+    } catch (err) {
+        showFeedback(err.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = editingId ? 'Save Changes' : 'Commit Template';
+    }
+}
+
+/* ── toggle ──────────────────────────────────────────────────────────── */
+async function doToggle(templateId) {
+    try {
+        const res  = await fetch('/api/templates', { method: 'POST', headers, body: JSON.stringify({ action: 'toggle', template_id: templateId }) });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.reason || 'Toggle failed');
+        await reload();
+    } catch (err) { alert(err.message); }
+}
+
+/* ── delete ──────────────────────────────────────────────────────────── */
+function confirmDelete(templateId, name) {
+    pendingDelete = templateId;
+    document.getElementById('deleteModal').querySelector('p').textContent =
+        `Delete "${name}"? This cannot be undone.`;
+    document.getElementById('deleteConfirmBtn').onclick = doDelete;
+    openModal('deleteModal');
+}
+
+async function doDelete() {
+    closeModal('deleteModal');
+    try {
+        const res  = await fetch('/api/templates', { method: 'POST', headers, body: JSON.stringify({ action: 'delete', template_id: pendingDelete }) });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.reason || 'Delete failed');
+        await reload();
+    } catch (err) { alert(err.message); }
+    pendingDelete = null;
+}
+
+/* ── helpers ─────────────────────────────────────────────────────────── */
+async function reload() {
+    const res  = await fetch('/api/templates', { headers });
+    const data = await res.json();
+    if (data.success) {
+        document.getElementById('mainContent').classList.add('hidden');
+        document.getElementById('emptyState').classList.add('hidden');
+        render(data);
+    }
+}
+
+function showFeedback(msg, isError) {
+    const el = document.getElementById('modalFeedback');
+    el.textContent = msg;
+    el.className = 'text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center ' +
+        (isError ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100');
+    el.classList.remove('hidden');
+}
+
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('opacity-0', 'pointer-events-none');
+    setTimeout(() => m.querySelector('.modal-box').classList.remove('scale-95', 'opacity-0'), 10);
+}
+
+function closeModal(id) {
+    const m = document.getElementById(id);
+    m.querySelector('.modal-box').classList.add('scale-95', 'opacity-0');
+    setTimeout(() => m.classList.add('opacity-0', 'pointer-events-none'), 200);
+}
+
+['templateModal', 'deleteModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
+});
+
+/* ── sidebar user ────────────────────────────────────────────────────── */
+try {
+    const u = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+    if (u.name) {
+        document.getElementById('sidebarName').textContent = u.name;
+        document.getElementById('sidebarAvatar').textContent = u.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    }
+} catch(_) {}
+
+boot();
+</script>
 </body>
 </html>

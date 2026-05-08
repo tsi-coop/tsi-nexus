@@ -10,6 +10,7 @@
 /api/apikeys=org.tsicoop.nexus.api.ApiKeys
 /api/users=org.tsicoop.nexus.api.Users
 /api/policy=org.tsicoop.nexus.api.Policy
+/api/templates=org.tsicoop.nexus.api.Templates
 /api/tuning=org.tsicoop.nexus.api.Tuning
 /api/setup=org.tsicoop.nexus.api.User
 /api/auth=org.tsicoop.nexus.api.User
