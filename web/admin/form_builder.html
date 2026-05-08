@@ -11,12 +11,26 @@
         .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
         .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
         .modal-overlay { transition: opacity 0.3s ease; }
-        .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
-        .form-preview-area { background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 20px 20px; }
+        .modal-open { opacity: 1 !important; pointer-events: auto !important; }
+        .modal-open .modal-container { transform: scale(1) !important; opacity: 1 !important; }
+        .field-row { border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #fff; }
+        .field-row:hover { border-color: #c7d2fe; }
+        .field-row.dragging { opacity: 0.4; }
+        .drag-over { border-top: 2px solid #6366f1; }
+        .preview-field input, .preview-field select, .preview-field textarea {
+            border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.5rem 0.75rem;
+            font-size: 0.8125rem; width: 100%; outline: none; background: #fff;
+        }
+        .preview-field input:focus, .preview-field select:focus, .preview-field textarea:focus {
+            border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+        }
+        .tab-btn.active { background: #6366f1; color: #fff; }
+        .tab-btn { transition: background 0.15s, color 0.15s; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
+    <!-- Sidebar -->
     <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
         <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
             <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
@@ -26,7 +40,6 @@
             </div>
             <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
         </div>
-
         <nav class="flex-1 overflow-y-auto py-6 space-y-1">
             <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
@@ -53,7 +66,6 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 Users & Roles
             </a>
-
             <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
             <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
@@ -63,7 +75,6 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 Form Builder
             </a>
-
             <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
             <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
@@ -86,13 +97,12 @@
                 Reports
             </a>
         </nav>
-
         <div class="p-6 border-t border-slate-800">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
                     <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
+                        <p class="text-xs font-bold text-white" id="sidebarUserName">Admin</p>
                         <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
                     </div>
                 </div>
@@ -103,258 +113,568 @@
         </div>
     </aside>
 
+    <!-- Main -->
     <main class="flex-1 flex flex-col overflow-hidden">
         <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Interaction Form Builder</h2>
-            <div class="flex space-x-3">
-                <button onclick="toggleModal('previewFormModal')" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Test Rendering</button>
-                <button onclick="toggleModal('createFormModal')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">+ New Form</button>
+            <div class="flex items-center gap-6">
+                <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Interaction Form Builder</h2>
+                <div class="flex gap-4 text-[11px] font-bold text-slate-500">
+                    <span>Total: <span id="statTotal" class="text-slate-800">—</span></span>
+                    <span>Active: <span id="statActive" class="text-emerald-600">—</span></span>
+                    <span>Inactive: <span id="statInactive" class="text-slate-400">—</span></span>
+                </div>
             </div>
+            <button id="btnNewSchema" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-indigo-700 transition-colors">+ New Schema</button>
         </header>
 
+        <!-- Cards -->
         <section class="flex-1 overflow-y-auto p-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:border-indigo-300 transition-all cursor-pointer group">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        </div>
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">v1.2</span>
-                    </div>
-                    <h4 class="text-sm font-bold text-slate-800 mb-1">Standard KYC Intake</h4>
-                    <p class="text-[11px] text-slate-500 leading-relaxed mb-4">Captures primary identity docs and photo for new Member twins.</p>
-                    <div class="flex items-center text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">
-                        <span>8 Fields</span>
-                        <span class="mx-2 text-slate-200">|</span>
-                        <span>Auto-Ingest Enabled</span>
-                    </div>
-                </div>
+            <div id="schemaGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="col-span-3 text-center py-16 text-slate-400 text-sm">Loading schemas…</div>
             </div>
         </section>
     </main>
 
-    <div id="createFormModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-5xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
-            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">New Interaction Form</h3>
-                <button onclick="toggleModal('createFormModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+    <!-- ─── Schema Editor Modal ─────────────────────────────────────────── -->
+    <div id="schemaModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+        <div class="modal-container bg-white w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col transform scale-95 opacity-0 transition-all duration-300">
+            <!-- Modal header -->
+            <header class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h3 id="modalTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">New Interaction Schema</h3>
+                <button id="btnCloseModal" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </header>
+            <!-- Two-panel body -->
             <div class="flex-1 flex overflow-hidden">
-                <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
-        <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
-            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-            </div>
-            <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
-        </div>
-
-        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
-            <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                Dashboard
-            </a>
-            <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
-            <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Context Graph
-            </a>
-            <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
-                Intelligence Setup
-            </a>
-            <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                Policy Manifest
-            </a>
-            <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                API Keys
-            </a>
-            <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                Users & Roles
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
-            <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
-                Liquid Templates
-            </a>
-            <a href="form_builder.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                Form Builder
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
-            <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                Seeding & Simulation
-            </a>
-            <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                Interaction Stream
-            </a>
-            <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
-                Service Registry
-            </a>
-            <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Audit Trail
-            </a>
-            <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Reports
-            </a>
-        </nav>
-
-        <div class="p-6 border-t border-slate-800">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
-                    <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
-                        <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
-                    </div>
-                </div>
-                <button onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                </button>
-            </div>
-        </div>
-    </aside>
-                
-                <div class="flex-1 p-8 form-preview-area flex flex-col">
-                    <div class="mb-6">
-                        <input type="text" class="bg-transparent border-b-2 border-slate-200 text-xl font-bold text-slate-800 outline-none focus:border-indigo-500 pb-2 w-full" placeholder="Untitled Form Name">
-                    </div>
-                    <div class="flex-1 bg-white/80 rounded-3xl border-2 border-dashed border-slate-200 p-8 flex flex-col items-center justify-center space-y-4">
-                        <div class="p-4 bg-slate-100 rounded-full text-slate-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                <!-- LEFT: schema metadata + field builder -->
+                <div class="w-[52%] border-r border-slate-100 flex flex-col overflow-hidden">
+                    <!-- Schema metadata -->
+                    <div class="p-5 border-b border-slate-100 bg-white shrink-0">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Schema ID <span class="text-red-400">*</span></label>
+                                <input id="fSchemaId" type="text" placeholder="KYC_UPDATE"
+                                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 uppercase">
+                                <p class="text-[10px] text-slate-400 mt-1">Auto-uppercased, only A–Z 0–9 _</p>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Label <span class="text-red-400">*</span></label>
+                                <input id="fLabel" type="text" placeholder="KYC Verification Update"
+                                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Applies To <span class="text-red-400">*</span></label>
+                                <select id="fAppliesTo" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
+                                    <option value="">— select entity type —</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Action Type <span class="text-red-400">*</span></label>
+                                <input id="fActionType" type="text" placeholder="KYC_UPDATE"
+                                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 uppercase"
+                                    title="Maps to policy_manifest action_type">
+                            </div>
                         </div>
-                        <p class="text-sm font-bold text-slate-400">Drag elements here to build your capture stream</p>
+                    </div>
+                    <!-- Field list header -->
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                        <span class="text-[11px] font-black uppercase text-slate-500">Fields (<span id="fieldCount">0</span>)</span>
+                        <button id="btnAddField" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                            Add Field
+                        </button>
+                    </div>
+                    <!-- Field list (scrollable) -->
+                    <div id="fieldList" class="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div id="fieldEmptyHint" class="text-center py-10 text-slate-400 text-xs">No fields yet. Click "Add Field" to start.</div>
                     </div>
                 </div>
 
-                <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
-        <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
-            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-            </div>
-            <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
-        </div>
-
-        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
-            <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                Dashboard
-            </a>
-            <div class="px-6 mt-4 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Core Engine</div>
-            <a href="dtwin_graph.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Context Graph
-            </a>
-            <a href="intelligence_tuning.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
-                Intelligence Setup
-            </a>
-            <a href="policy_manifest.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                Policy Manifest
-            </a>
-            <a href="apikeys.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4-2a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                API Keys
-            </a>
-            <a href="users.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                Users & Roles
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
-            <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
-                Liquid Templates
-            </a>
-            <a href="form_builder.html" class="nav-item nav-active flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                Form Builder
-            </a>
-
-            <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
-            <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                Seeding & Simulation
-            </a>
-            <a href="interaction_stream.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                Interaction Stream
-            </a>
-            <a href="service_registry.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
-                Service Registry
-            </a>
-            <a href="audit.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Audit Trail
-            </a>
-            <a href="reports.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Reports
-            </a>
-        </nav>
-
-        <div class="p-6 border-t border-slate-800">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
-                    <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
-                        <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
+                <!-- RIGHT: live preview + tabs -->
+                <div class="flex-1 flex flex-col overflow-hidden bg-slate-50">
+                    <!-- Tabs -->
+                    <div class="px-5 py-3 border-b border-slate-100 bg-white shrink-0 flex gap-2">
+                        <button class="tab-btn active text-[10px] font-black uppercase px-3 py-1.5 rounded-lg" data-tab="preview">Live Preview</button>
+                        <button class="tab-btn text-[10px] font-black uppercase px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100" data-tab="stream">Stream Template</button>
+                        <button class="tab-btn text-[10px] font-black uppercase px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100" data-tab="patch">State Patch</button>
+                    </div>
+                    <!-- Tab: Live Preview -->
+                    <div id="tabPreview" class="flex-1 overflow-y-auto p-6">
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                            <div id="fLabelPreview" class="text-base font-bold text-slate-800 mb-1">Form Preview</div>
+                            <div id="fAppliesToPreview" class="text-[10px] text-slate-400 uppercase tracking-wide mb-5">Entity type</div>
+                            <div id="previewFields" class="space-y-4"></div>
+                            <div id="previewEmpty" class="text-xs text-slate-400 text-center py-6">Add fields to see the live preview here.</div>
+                        </div>
+                    </div>
+                    <!-- Tab: Stream Template -->
+                    <div id="tabStream" class="hidden flex-1 overflow-y-auto p-6">
+                        <p class="text-[11px] text-slate-500 mb-3">Liquid template written to <code class="text-indigo-600 bg-indigo-50 px-1 rounded">interaction_stream</code> on submit. Use <code class="text-indigo-600 bg-indigo-50 px-1 rounded">&#123;&#123; field_key &#125;&#125;</code> tokens.</p>
+                        <div id="streamFieldChips" class="flex flex-wrap gap-2 mb-3"></div>
+                        <textarea id="fStreamTmpl" rows="10" placeholder="&#123;&#123; actor &#125;&#125; completed KYC for &#123;&#123; entity_id &#125;&#125;: &#123;&#123; photo_id_type &#125;&#125;"
+                            class="w-full border border-slate-200 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 resize-none"></textarea>
+                    </div>
+                    <!-- Tab: State Patch -->
+                    <div id="tabPatch" class="hidden flex-1 overflow-y-auto p-6">
+                        <p class="text-[11px] text-slate-500 mb-3">JSON object merged into the entity's <code class="text-indigo-600 bg-indigo-50 px-1 rounded">current_state</code> on submit. Keys can reference field values.</p>
+                        <div id="patchFieldChips" class="flex flex-wrap gap-2 mb-3"></div>
+                        <textarea id="fStatePatch" rows="12" placeholder='{"kyc_status":"verified","kyc_id_last4":"{{ id_number }}"}'
+                            class="w-full border border-slate-200 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 resize-none"></textarea>
+                        <p id="patchError" class="text-[10px] text-red-500 mt-2 hidden">Invalid JSON</p>
+                    </div>
+                    <!-- Save button -->
+                    <div class="p-4 border-t border-slate-100 bg-white shrink-0 flex justify-end gap-3">
+                        <button id="btnCancelModal" class="px-5 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
+                        <button id="btnSaveSchema" class="px-6 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow">Save Schema</button>
                     </div>
                 </div>
-                <button onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                </button>
-            </div>
-        </div>
-    </aside>
             </div>
         </div>
     </div>
 
-    <div id="previewFormModal" class="modal-overlay fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col p-10">
-            <h3 class="text-center text-xl font-bold text-slate-900 mb-8 tracking-tight">Form Rendering Preview</h3>
-            <div class="space-y-6">
-                <div class="space-y-2">
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">National ID Number</label>
-                    <input type="text" class="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none" placeholder="123-456-789">
-                </div>
-                <div class="p-8 border-2 border-dashed border-slate-200 rounded-3xl text-center">
-                    <p class="text-xs font-bold text-slate-400">Capture ID Document</p>
-                </div>
-                <button onclick="toggleModal('previewFormModal')" class="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-xl shadow-indigo-100">Submit to Stream</button>
+    <!-- ─── Delete Confirm Modal ────────────────────────────────────────── -->
+    <div id="deleteModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center opacity-0 pointer-events-none">
+        <div class="modal-container bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center transform scale-95 opacity-0 transition-all duration-300">
+            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </div>
+            <h4 class="text-sm font-bold text-slate-800 mb-2">Delete Schema?</h4>
+            <p class="text-xs text-slate-500 mb-6">Schema <strong id="deleteSchemaLabel" class="text-slate-700"></strong> will be permanently removed.</p>
+            <div class="flex gap-3 justify-center">
+                <button id="btnCancelDelete" class="px-5 py-2 text-xs font-bold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
+                <button id="btnConfirmDelete" class="px-5 py-2 text-xs font-bold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">Delete</button>
             </div>
         </div>
     </div>
 
-    <script>
-        function toggleModal(modalId) {
-            const modal = document.getElementById(modalId);
-            const container = modal.querySelector('.modal-container');
-            if (modal.classList.contains('opacity-0')) {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => container.classList.remove('scale-95', 'opacity-0'), 10);
-            } else {
-                container.classList.add('scale-95', 'opacity-0');
-                setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
-            }
-        }
-    </script>
+    <!-- ─── Toast ───────────────────────────────────────────────────────── -->
+    <div id="toast" class="fixed bottom-6 right-6 z-[100] transition-all duration-300 opacity-0 translate-y-2 pointer-events-none">
+        <div class="bg-slate-900 text-white text-xs font-semibold px-5 py-3 rounded-xl shadow-xl" id="toastMsg"></div>
+    </div>
+
+<script>
+/* ─── state ───────────────────────────────────────────────────────── */
+let _schemas   = [];
+let _entityTypes = [];
+let _fields    = [];          // working copy for the open modal
+let _editSchemaId = null;     // null = create mode
+let _deleteTarget = null;
+
+const AUTH = () => ({ 'Content-Type': 'application/json', 'Authorization': localStorage.getItem('nexus_token') || '' });
+const FIELD_TYPES = ['text','number','select','date','textarea','checkbox'];
+const TYPE_COLORS = {
+    member:  'bg-blue-50 text-blue-700 border-blue-200',
+    officer: 'bg-violet-50 text-violet-700 border-violet-200',
+    branch:  'bg-amber-50 text-amber-700 border-amber-200',
+};
+const typeColor = t => TYPE_COLORS[t] || 'bg-slate-50 text-slate-600 border-slate-200';
+
+/* ─── boot ────────────────────────────────────────────────────────── */
+async function boot() {
+    const tok = localStorage.getItem('nexus_token');
+    if (!tok) { window.location.href = 'index.html'; return; }
+    try {
+        const [sr, gr] = await Promise.all([
+            fetch('/api/schemas', { headers: AUTH() }),
+            fetch('/api/graph',   { headers: AUTH() })
+        ]);
+        const sd = await sr.json();
+        const gd = await gr.json();
+        if (!sd.success) throw new Error(sd.error || 'Schemas load failed');
+        _schemas = sd.schemas || [];
+        updateStats(sd.stats || {});
+        _entityTypes = (gd.blueprints || []).map(bp => bp.type).filter(Boolean);
+        populateAppliesTo(_entityTypes);
+        renderGrid();
+    } catch (e) { showToast('Load error: ' + e.message, true); }
+}
+
+function updateStats(s) {
+    document.getElementById('statTotal').textContent    = s.total    ?? 0;
+    document.getElementById('statActive').textContent   = s.active   ?? 0;
+    document.getElementById('statInactive').textContent = s.inactive ?? 0;
+}
+
+function populateAppliesTo(types) {
+    const sel = document.getElementById('fAppliesTo');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— select entity type —</option>' +
+        types.map(t => `<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
+}
+
+/* ─── card grid ───────────────────────────────────────────────────── */
+function renderGrid() {
+    const grid = document.getElementById('schemaGrid');
+    if (!_schemas.length) {
+        grid.innerHTML = '<div class="col-span-3 text-center py-16 text-slate-400 text-sm">No interaction schemas yet. Click "+ New Schema" to create one.</div>';
+        return;
+    }
+    grid.innerHTML = '';
+    _schemas.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3 hover:border-indigo-300 transition-all';
+        card.innerHTML = `
+            <div class="flex justify-between items-start">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${typeColor(s.applies_to)}">${s.applies_to}</span>
+                <div class="flex items-center gap-1">
+                    <button class="btn-toggle p-1.5 rounded-lg transition-colors ${s.is_active ? 'text-emerald-500 hover:bg-emerald-50' : 'text-slate-300 hover:bg-slate-100'}" title="${s.is_active ? 'Deactivate' : 'Activate'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9"/></svg>
+                    </button>
+                    <button class="btn-edit p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <button class="btn-delete p-1.5 rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-slate-800">${esc(s.label)}</h4>
+                <code class="text-[10px] text-slate-400 font-mono">${esc(s.schema_id)}</code>
+            </div>
+            <div class="flex items-center gap-3 text-[10px] text-slate-500">
+                <span class="font-mono bg-slate-100 px-2 py-0.5 rounded">${esc(s.action_type)}</span>
+                <span>${(s.fields||[]).length} field${(s.fields||[]).length!==1?'s':''}</span>
+                <span class="ml-auto ${s.is_active ? 'text-emerald-600' : 'text-slate-400'} font-bold">${s.is_active ? 'Active' : 'Inactive'}</span>
+            </div>`;
+        card.querySelector('.btn-toggle').addEventListener('click', () => toggleSchema(s.schema_id));
+        card.querySelector('.btn-edit').addEventListener('click', () => openModal(s));
+        card.querySelector('.btn-delete').addEventListener('click', () => openDeleteConfirm(s));
+        grid.appendChild(card);
+    });
+}
+
+/* ─── modal open/close ────────────────────────────────────────────── */
+function openModal(schema) {
+    _editSchemaId = schema ? schema.schema_id : null;
+    _fields = schema ? JSON.parse(JSON.stringify(schema.fields || [])) : [];
+
+    document.getElementById('modalTitle').textContent = schema ? 'Edit Schema: ' + schema.schema_id : 'New Interaction Schema';
+    document.getElementById('fSchemaId').value    = schema ? schema.schema_id    : '';
+    document.getElementById('fSchemaId').readOnly = !!schema;
+    document.getElementById('fSchemaId').classList.toggle('bg-slate-50', !!schema);
+    document.getElementById('fLabel').value       = schema ? schema.label        : '';
+    document.getElementById('fAppliesTo').value   = schema ? schema.applies_to   : '';
+    document.getElementById('fActionType').value  = schema ? schema.action_type  : '';
+    document.getElementById('fStreamTmpl').value  = schema ? (schema.stream_tmpl || '') : '';
+    try { document.getElementById('fStatePatch').value = schema ? JSON.stringify(schema.state_patch || {}, null, 2) : '{}'; } catch(e) {}
+    document.getElementById('patchError').classList.add('hidden');
+
+    switchTab('preview');
+    renderFields();
+    refreshPreview();
+    document.getElementById('schemaModal').classList.add('modal-open');
+}
+
+function closeModal() {
+    document.getElementById('schemaModal').classList.remove('modal-open');
+}
+
+function openDeleteConfirm(s) {
+    _deleteTarget = s.schema_id;
+    document.getElementById('deleteSchemaLabel').textContent = s.label + ' (' + s.schema_id + ')';
+    document.getElementById('deleteModal').classList.add('modal-open');
+}
+
+function closeDeleteModal() {
+    _deleteTarget = null;
+    document.getElementById('deleteModal').classList.remove('modal-open');
+}
+
+/* ─── tabs ────────────────────────────────────────────────────────── */
+function switchTab(name) {
+    ['preview','stream','patch'].forEach(t => {
+        document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('hidden', t !== name);
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === name);
+        btn.classList.toggle('text-slate-500', btn.dataset.tab !== name);
+    });
+    if (name === 'stream' || name === 'patch') refreshChips(name);
+}
+
+function refreshChips(tab) {
+    const chips = _fields.map(f =>
+        `<button class="chip-btn text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md hover:bg-indigo-100 transition-colors" data-key="${esc(f.key)}" data-tab="${tab}">&#123;&#123; ${esc(f.key || '…')} &#125;&#125;</button>`
+    ).join('');
+    document.getElementById(tab === 'stream' ? 'streamFieldChips' : 'patchFieldChips').innerHTML = chips || '<span class="text-slate-400 text-[10px]">No fields defined</span>';
+}
+
+/* ─── field list ──────────────────────────────────────────────────── */
+function renderFields() {
+    const list = document.getElementById('fieldList');
+    document.getElementById('fieldCount').textContent = _fields.length;
+    document.getElementById('fieldEmptyHint').style.display = _fields.length ? 'none' : 'block';
+
+    // Remove all existing field rows (keep empty hint)
+    list.querySelectorAll('.field-row').forEach(el => el.remove());
+
+    _fields.forEach((f, i) => {
+        const row = document.createElement('div');
+        row.className = 'field-row p-3';
+        row.dataset.idx = i;
+        row.draggable = true;
+        row.innerHTML = buildFieldRowHTML(f, i);
+        list.appendChild(row);
+    });
+}
+
+function buildFieldRowHTML(f, i) {
+    const typeOpts = FIELD_TYPES.map(t => `<option value="${t}"${f.type===t?' selected':''}>${t}</option>`).join('');
+    const showOpts = f.type === 'select';
+    return `
+        <div class="flex items-center gap-2 mb-2">
+            <span class="text-slate-300 cursor-grab select-none text-lg leading-none" title="Drag to reorder">⠿</span>
+            <span class="w-5 h-5 bg-indigo-100 text-indigo-600 rounded text-[10px] font-bold flex items-center justify-center shrink-0">${i+1}</span>
+            <input class="field-key flex-1 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-mono focus:outline-none focus:border-indigo-400" placeholder="field_key" value="${esc(f.key||'')}">
+            <input class="field-label flex-1 border border-slate-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-indigo-400" placeholder="Label" value="${esc(f.label||'')}">
+            <select class="field-type border border-slate-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-indigo-400">${typeOpts}</select>
+            <label class="flex items-center gap-1 text-[10px] text-slate-500 shrink-0">
+                <input type="checkbox" class="field-required rounded" ${f.required?' checked':''}>req
+            </label>
+            <button class="btn-remove-field text-slate-300 hover:text-red-500 transition-colors shrink-0" title="Remove">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="flex gap-2 pl-7">
+            <input class="field-hint flex-1 border border-slate-200 rounded-lg px-2 py-1 text-[11px] text-slate-500 focus:outline-none focus:border-indigo-400" placeholder="Hint (optional)" value="${esc(f.hint||'')}">
+            <input class="field-state-key border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-mono text-slate-500 focus:outline-none focus:border-indigo-400 w-28" placeholder="state_key" value="${esc(f.state_key||'')}">
+            <div class="field-options-wrap ${showOpts ? '' : 'hidden'} flex-1">
+                <input class="field-options w-full border border-slate-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-indigo-400" placeholder="Options (comma-separated)" value="${esc((f.options||[]).join(', '))}">
+            </div>
+        </div>`;
+}
+
+/* delegated listeners for field list */
+document.getElementById('fieldList').addEventListener('input', e => {
+    const row = e.target.closest('.field-row');
+    if (!row) return;
+    const i = parseInt(row.dataset.idx, 10);
+    const f = _fields[i];
+    if (!f) return;
+    if (e.target.classList.contains('field-key'))      { f.key      = e.target.value.trim(); }
+    if (e.target.classList.contains('field-label'))    { f.label    = e.target.value; }
+    if (e.target.classList.contains('field-hint'))     { f.hint     = e.target.value; }
+    if (e.target.classList.contains('field-state-key')){ f.state_key= e.target.value.trim(); }
+    if (e.target.classList.contains('field-options'))  { f.options  = e.target.value.split(',').map(s=>s.trim()).filter(Boolean); }
+    if (e.target.classList.contains('field-required')) { f.required = e.target.checked; }
+    refreshPreview();
+});
+
+document.getElementById('fieldList').addEventListener('change', e => {
+    const row = e.target.closest('.field-row');
+    if (!row) return;
+    const i = parseInt(row.dataset.idx, 10);
+    const f = _fields[i];
+    if (!f) return;
+    if (e.target.classList.contains('field-type')) {
+        f.type = e.target.value;
+        row.querySelector('.field-options-wrap').classList.toggle('hidden', f.type !== 'select');
+        refreshPreview();
+    }
+});
+
+document.getElementById('fieldList').addEventListener('click', e => {
+    const btn = e.target.closest('.btn-remove-field');
+    if (!btn) return;
+    const row = btn.closest('.field-row');
+    const i = parseInt(row.dataset.idx, 10);
+    _fields.splice(i, 1);
+    renderFields();
+    refreshPreview();
+});
+
+/* drag-reorder */
+let _dragIdx = null;
+document.getElementById('fieldList').addEventListener('dragstart', e => {
+    const row = e.target.closest('.field-row');
+    if (!row) return;
+    _dragIdx = parseInt(row.dataset.idx, 10);
+    row.classList.add('dragging');
+});
+document.getElementById('fieldList').addEventListener('dragend', e => {
+    document.querySelectorAll('.field-row').forEach(r => r.classList.remove('dragging','drag-over'));
+});
+document.getElementById('fieldList').addEventListener('dragover', e => {
+    e.preventDefault();
+    const row = e.target.closest('.field-row');
+    document.querySelectorAll('.field-row').forEach(r => r.classList.remove('drag-over'));
+    if (row) row.classList.add('drag-over');
+});
+document.getElementById('fieldList').addEventListener('drop', e => {
+    e.preventDefault();
+    const row = e.target.closest('.field-row');
+    if (!row || _dragIdx === null) return;
+    const dropIdx = parseInt(row.dataset.idx, 10);
+    if (dropIdx !== _dragIdx) {
+        const moved = _fields.splice(_dragIdx, 1)[0];
+        _fields.splice(dropIdx, 0, moved);
+        renderFields();
+        refreshPreview();
+    }
+    _dragIdx = null;
+});
+
+/* ─── preview ─────────────────────────────────────────────────────── */
+function refreshPreview() {
+    document.getElementById('fLabelPreview').textContent    = document.getElementById('fLabel').value || 'Form Preview';
+    document.getElementById('fAppliesToPreview').textContent = document.getElementById('fAppliesTo').value || 'entity type';
+    const container = document.getElementById('previewFields');
+    const empty     = document.getElementById('previewEmpty');
+    if (!_fields.length) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    container.innerHTML = _fields.map(f => buildPreviewField(f)).join('');
+}
+
+function buildPreviewField(f) {
+    const req = f.required ? '<span class="text-red-400">*</span>' : '';
+    let input = '';
+    if (f.type === 'textarea') {
+        input = `<textarea rows="2" class="preview-field" placeholder="${esc(f.hint||'')}"></textarea>`;
+    } else if (f.type === 'select') {
+        const opts = (f.options||[]).map(o => `<option>${esc(o)}</option>`).join('');
+        input = `<select class="preview-field"><option value="">— select —</option>${opts}</select>`;
+    } else if (f.type === 'checkbox') {
+        return `<div class="preview-field flex items-center gap-2"><input type="checkbox" class="rounded"><label class="text-xs text-slate-700">${esc(f.label||f.key||'Field')} ${req}</label>${f.hint?`<span class="text-[10px] text-slate-400">${esc(f.hint)}</span>`:''}</div>`;
+    } else {
+        input = `<input type="${f.type||'text'}" class="preview-field" placeholder="${esc(f.hint||'')}">`;
+    }
+    return `<div class="preview-field space-y-1">
+        <label class="block text-xs font-semibold text-slate-700">${esc(f.label||f.key||'Field')} ${req}</label>
+        ${f.hint && f.type!=='textarea' ? `<p class="text-[10px] text-slate-400">${esc(f.hint)}</p>` : ''}
+        ${input}
+    </div>`;
+}
+
+/* ─── save ────────────────────────────────────────────────────────── */
+async function saveSchema() {
+    const btn = document.getElementById('btnSaveSchema');
+    const schemaId   = document.getElementById('fSchemaId').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');
+    const label      = document.getElementById('fLabel').value.trim();
+    const appliesTo  = document.getElementById('fAppliesTo').value;
+    const actionType = document.getElementById('fActionType').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');
+    const streamTmpl = document.getElementById('fStreamTmpl').value;
+    const patchRaw   = document.getElementById('fStatePatch').value.trim();
+
+    if (!schemaId || !label || !appliesTo || !actionType) {
+        showToast('Schema ID, Label, Applies To, and Action Type are required.', true); return;
+    }
+    let statePatch = {};
+    try { statePatch = JSON.parse(patchRaw || '{}'); } catch(e) {
+        document.getElementById('patchError').classList.remove('hidden');
+        switchTab('patch'); return;
+    }
+    document.getElementById('patchError').classList.add('hidden');
+
+    const cleanFields = _fields.map(f => {
+        const out = { key: f.key, label: f.label, type: f.type };
+        if (f.required) out.required = true;
+        if (f.hint)     out.hint     = f.hint;
+        if (f.state_key) out.state_key = f.state_key;
+        if (f.type === 'select' && f.options?.length) out.options = f.options;
+        return out;
+    });
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+        const r = await fetch('/api/schemas', {
+            method: 'POST',
+            headers: AUTH(),
+            body: JSON.stringify({ action: 'upsert', schema_id: schemaId, label, applies_to: appliesTo,
+                action_type: actionType, fields: cleanFields, state_patch: statePatch, stream_tmpl: streamTmpl })
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Save failed');
+        showToast(_editSchemaId ? 'Schema updated.' : 'Schema created.');
+        closeModal();
+        await boot();
+    } catch(e) { showToast('Error: ' + e.message, true); }
+    finally { btn.disabled = false; btn.textContent = 'Save Schema'; }
+}
+
+/* ─── toggle ──────────────────────────────────────────────────────── */
+async function toggleSchema(schemaId) {
+    try {
+        const r = await fetch('/api/schemas', { method: 'POST', headers: AUTH(), body: JSON.stringify({ action: 'toggle', schema_id: schemaId }) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Toggle failed');
+        showToast('Status updated.');
+        await boot();
+    } catch(e) { showToast('Error: ' + e.message, true); }
+}
+
+/* ─── delete ──────────────────────────────────────────────────────── */
+async function deleteSchema() {
+    if (!_deleteTarget) return;
+    const btn = document.getElementById('btnConfirmDelete');
+    btn.disabled = true; btn.textContent = 'Deleting…';
+    try {
+        const r = await fetch('/api/schemas', { method: 'POST', headers: AUTH(), body: JSON.stringify({ action: 'delete', schema_id: _deleteTarget }) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Delete failed');
+        showToast('Schema deleted.');
+        closeDeleteModal();
+        await boot();
+    } catch(e) { showToast('Error: ' + e.message, true); }
+    finally { btn.disabled = false; btn.textContent = 'Delete'; }
+}
+
+/* ─── toast ───────────────────────────────────────────────────────── */
+function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.querySelector('div').className = `${isError ? 'bg-red-600' : 'bg-slate-900'} text-white text-xs font-semibold px-5 py-3 rounded-xl shadow-xl`;
+    t.classList.remove('opacity-0','translate-y-2','pointer-events-none');
+    setTimeout(() => t.classList.add('opacity-0','translate-y-2','pointer-events-none'), 3000);
+}
+
+function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── wiring ──────────────────────────────────────────────────────── */
+document.getElementById('btnNewSchema').addEventListener('click', () => openModal(null));
+document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+document.getElementById('btnCancelModal').addEventListener('click', closeModal);
+document.getElementById('btnSaveSchema').addEventListener('click', saveSchema);
+document.getElementById('btnCancelDelete').addEventListener('click', closeDeleteModal);
+document.getElementById('btnConfirmDelete').addEventListener('click', deleteSchema);
+
+document.getElementById('btnAddField').addEventListener('click', () => {
+    _fields.push({ key: '', label: '', type: 'text', required: false });
+    renderFields();
+    // scroll to bottom of field list
+    const list = document.getElementById('fieldList');
+    list.scrollTop = list.scrollHeight;
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// chips insert token into textarea
+document.addEventListener('click', e => {
+    const chip = e.target.closest('.chip-btn');
+    if (!chip) return;
+    const tab     = chip.dataset.tab;
+    const token   = `{{ ${chip.dataset.key} }}`;
+    const ta      = document.getElementById(tab === 'stream' ? 'fStreamTmpl' : 'fStatePatch');
+    const start   = ta.selectionStart;
+    const end     = ta.selectionEnd;
+    ta.value = ta.value.slice(0, start) + token + ta.value.slice(end);
+    ta.focus();
+    ta.setSelectionRange(start + token.length, start + token.length);
+});
+
+// live preview refresh on label/appliesTo change
+['fLabel','fAppliesTo'].forEach(id => document.getElementById(id).addEventListener('input', refreshPreview));
+
+// close modals on overlay click
+document.getElementById('schemaModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('deleteModal').addEventListener('click',  e => { if (e.target === e.currentTarget) closeDeleteModal(); });
+
+boot();
+</script>
 </body>
 </html>
