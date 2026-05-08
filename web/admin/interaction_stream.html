@@ -10,14 +10,25 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .nav-item:hover { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
         .nav-active { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; border-right: 4px solid #6366f1; }
-        .modal-overlay { transition: opacity 0.3s ease; }
-        .modal-container { transition: transform 0.3s ease, opacity 0.3s ease; }
-        .stream-line { position: absolute; left: 31px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; z-index: 0; }
+        .modal-open { opacity: 1 !important; pointer-events: auto !important; }
+        .modal-open .modal-body { transform: scale(1) !important; opacity: 1 !important; }
+        .stream-line { position: absolute; left: 127px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, transparent, #e2e8f0 40px, #e2e8f0 calc(100% - 40px), transparent); z-index: 0; pointer-events: none; }
+        .entry-card { transition: border-color 0.15s, box-shadow 0.15s; }
+        .entry-card:hover { border-color: #c7d2fe; box-shadow: 0 2px 12px rgba(99,102,241,0.08); }
+        .live-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .type-member  { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+        .type-officer { background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe; }
+        .type-branch  { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+        .type-system  { background:#f0fdf4; color:#15803d; border-color:#bbf7d0; }
+        .type-default { background:#f8fafc; color:#475569; border-color:#e2e8f0; }
+        input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
         <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
             <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -26,7 +37,6 @@
             </div>
             <span class="text-xl font-bold text-white tracking-tight">TSI Nexus</span>
         </div>
-
         <nav class="flex-1 overflow-y-auto py-6 space-y-1">
             <a href="dashboard.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
@@ -53,7 +63,6 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 Users & Roles
             </a>
-
             <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Experience</div>
             <a href="liquid_templates.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
@@ -63,7 +72,6 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 Form Builder
             </a>
-
             <div class="px-6 mt-8 mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Operations</div>
             <a href="seeding_simulation.html" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-semibold transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
@@ -86,13 +94,12 @@
                 Reports
             </a>
         </nav>
-
         <div class="p-6 border-t border-slate-800">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
                     <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
+                        <p class="text-xs font-bold text-white">Admin</p>
                         <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
                     </div>
                 </div>
@@ -103,141 +110,339 @@
         </div>
     </aside>
 
+    <!-- Main -->
     <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 text-slate-800">
-            <h2 class="text-lg font-bold uppercase tracking-tight">Interaction Stream Ledger</h2>
-            <div class="flex space-x-3">
-                <button onclick="toggleModal('timeTravelModal')" class="px-4 py-2 bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-100 transition-colors">Time-Travel Audit</button>
-                <div class="flex items-center px-3 py-1 bg-slate-100 rounded-lg">
-                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Live Feed</span>
+
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+            <div class="flex items-center gap-6">
+                <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Interaction Stream</h2>
+                <div class="flex gap-5 text-[11px] font-bold text-slate-500">
+                    <span>Total: <span id="statTotal" class="text-slate-800">—</span></span>
+                    <span>Today: <span id="statToday" class="text-indigo-600">—</span></span>
+                    <span>Entities: <span id="statEntities" class="text-slate-800">—</span></span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Auto-refresh</span>
+                    <button id="btnAutoRefresh" class="w-10 h-5 rounded-full bg-slate-200 relative transition-colors" title="Toggle auto-refresh">
+                        <span id="autoRefreshKnob" class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"></span>
+                    </button>
+                </label>
+                <div id="liveIndicator" class="hidden items-center px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <span class="live-dot w-2 h-2 bg-emerald-500 rounded-full mr-2 inline-block"></span>
+                    <span class="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Live</span>
                 </div>
             </div>
         </header>
 
-        <section class="flex-1 overflow-y-auto p-12 relative">
-            <div class="stream-line"></div>
-            
-            <div class="space-y-12">
-                <div class="relative z-10">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 bg-f8fafc inline-block pr-4">May 05, 2026</h3>
-                    
-                    <div class="space-y-8">
-                        <div class="flex items-start group">
-                            <div class="w-16 pt-1 text-right pr-6">
-                                <span class="text-[10px] font-bold text-slate-400">14:22</span>
-                            </div>
-                            <div class="w-8 h-8 rounded-full bg-white border-4 border-indigo-500 z-10"></div>
-                            <div class="flex-1 ml-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-300 transition-all cursor-pointer" onclick="toggleModal('eventDetailModal')">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h4 class="text-xs font-black text-slate-900 uppercase tracking-tight">/disburse Intent Resolved</h4>
-                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-black rounded uppercase">Authorized</span>
-                                </div>
-                                <p class="text-xs text-slate-500 mb-4">Actor: <strong>Officer_Rahul</strong> | Target: <strong>Member_882</strong></p>
-                                <div class="flex items-center space-x-4 text-[9px] font-bold text-slate-400 uppercase">
-                                    <span>Pillar: Governance</span>
-                                    <span>•</span>
-                                    <span>Rule: POL-KYC</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start group">
-                            <div class="w-16 pt-1 text-right pr-6">
-                                <span class="text-[10px] font-bold text-slate-400">13:05</span>
-                            </div>
-                            <div class="w-8 h-8 rounded-full bg-white border-4 border-rose-500 z-10"></div>
-                            <div class="flex-1 ml-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-rose-300 transition-all">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h4 class="text-xs font-black text-slate-900 uppercase tracking-tight">/onboard Intent Blocked</h4>
-                                    <span class="px-2 py-0.5 bg-rose-100 text-rose-700 text-[9px] font-black rounded uppercase">Denial</span>
-                                </div>
-                                <p class="text-xs text-slate-500 mb-4">Reason: Joint Liability Group default detected via <strong>POL-JLG</strong>.</p>
-                                <div class="bg-slate-50 p-3 rounded-lg font-mono text-[9px] text-slate-500 italic">
-                                    "Action Blocked: A member of your JLG is in default."
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Filters -->
+        <div class="bg-white border-b border-slate-100 px-8 py-3 flex items-center gap-3 shrink-0">
+            <div class="relative flex-1 max-w-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input id="filterOwner" type="text" placeholder="Filter by entity (@handle)"
+                    class="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
             </div>
+            <div class="relative flex-1 max-w-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input id="filterSearch" type="text" placeholder="Search content…"
+                    class="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
+            </div>
+            <input id="filterFrom" type="date" class="px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400">
+            <span class="text-slate-300 text-xs">→</span>
+            <input id="filterTo" type="date" class="px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400">
+            <button id="btnApply" class="px-4 py-2 bg-indigo-600 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors">Apply</button>
+            <button id="btnClear" class="px-3 py-2 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-lg hover:bg-slate-200 transition-colors">Clear</button>
+        </div>
+
+        <!-- Timeline -->
+        <section id="timelineSection" class="flex-1 overflow-y-auto px-8 py-6 relative">
+            <div class="stream-line" id="streamLine"></div>
+            <div id="timelineContainer" class="space-y-0 relative z-10">
+                <div class="text-center py-16 text-slate-400 text-sm">Loading stream…</div>
+            </div>
+            <!-- Load more -->
+            <div id="loadMoreWrap" class="hidden text-center pt-6 pb-8">
+                <button id="btnLoadMore" class="px-6 py-2.5 bg-white border border-slate-200 text-xs font-bold text-slate-600 rounded-xl hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">Load more</button>
+            </div>
+            <div id="endOfStream" class="hidden text-center pt-4 pb-8 text-[10px] font-bold text-slate-300 uppercase tracking-widest">End of stream</div>
         </section>
     </main>
 
-    <div id="eventDetailModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
-            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Interaction Traceability</h3>
-                <button onclick="toggleModal('eventDetailModal')" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+    <!-- ─── Entry Detail Modal ───────────────────────────────────────────── -->
+    <div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-200">
+        <div class="modal-body bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200">
+            <header class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <div>
+                    <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Stream Entry</h3>
+                    <p id="detailMeta" class="text-[10px] text-slate-400 mt-0.5"></p>
+                </div>
+                <button id="btnCloseDetail" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </header>
-            <div class="p-8 space-y-8">
-                <div class="grid grid-cols-2 gap-8">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Event Payload (Intent)</p>
-                        <div class="bg-slate-900 text-indigo-300 font-mono text-[10px] p-4 rounded-xl">
-                            {<br>
-                            &nbsp;&nbsp;"intent": "/disburse",<br>
-                            &nbsp;&nbsp;"amount": 5000,<br>
-                            &nbsp;&nbsp;"target": "@member_882"<br>
-                            }
-                        </div>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Snapshot State</p>
-                        <div class="bg-slate-50 text-slate-600 font-mono text-[10px] p-4 rounded-xl border border-slate-100">
-                            {<br>
-                            &nbsp;&nbsp;"kyc": "Verified",<br>
-                            &nbsp;&nbsp;"arrears": 0,<br>
-                            &nbsp;&nbsp;"group_status": "Active"<br>
-                            }
-                        </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Entity</p>
+                    <div class="flex items-center gap-3">
+                        <span id="detailTypeBadge" class="inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase"></span>
+                        <code id="detailExternalId" class="text-xs font-mono text-slate-700"></code>
                     </div>
                 </div>
-                <div class="pt-6 border-t border-slate-100">
-                    <p class="text-[10px] font-black text-slate-400 uppercase mb-4">Governance Pillar Decision Logic</p>
-                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                        <p class="text-[11px] font-bold text-indigo-900 mb-2">Rule: POL-KYC (Identity Verification)</p>
-                        <p class="text-[10px] text-indigo-700 leading-relaxed italic">"Verified identity found in Context Graph. Disbursement permitted under current institutional risk parameters."</p>
-                    </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Recorded Content</p>
+                    <div id="detailContent" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-700 leading-relaxed font-mono whitespace-pre-wrap"></div>
+                </div>
+                <div id="detailIntentWrap" class="hidden">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Intent Mapped</p>
+                    <span id="detailIntent" class="inline-flex items-center px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-mono rounded-lg"></span>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Stream ID</p>
+                    <code id="detailId" class="text-[10px] text-slate-400 font-mono"></code>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="timeTravelModal" class="modal-overlay fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-        <div class="modal-container w-full max-w-4xl p-12 text-center transform scale-110 opacity-0 transition-all duration-500">
-            <h3 class="text-4xl font-black text-white mb-4 tracking-tighter">Chronological Reconstruction</h3>
-            <p class="text-sm text-slate-400 font-bold uppercase tracking-[0.3em] mb-16">Enter Institutional Timestamp</p>
-            
-            <div class="space-y-12">
-                <input type="range" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                <div class="flex justify-between text-xs font-black text-slate-500 uppercase tracking-widest px-2">
-                    <span>March 01, 2026</span>
-                    <span class="text-white text-lg tracking-tighter">Current View: May 05, 2026</span>
-                    <span>Future Simulation</span>
-                </div>
-                <div class="pt-12">
-                    <button onclick="toggleModal('timeTravelModal')" class="px-12 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.4em] shadow-2xl shadow-indigo-500/20 hover:bg-indigo-500 transition-all">
-                        Initiate Time-Travel
-                    </button>
-                </div>
-            </div>
-        </div>
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 z-[100] transition-all duration-300 opacity-0 translate-y-2 pointer-events-none">
+        <div class="bg-slate-900 text-white text-xs font-semibold px-5 py-3 rounded-xl shadow-xl" id="toastMsg"></div>
     </div>
 
-    <script>
-        function toggleModal(modalId) {
-            const modal = document.getElementById(modalId);
-            const container = modal.querySelector('.modal-container');
-            if (modal.classList.contains('opacity-0')) {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => container.classList.remove('scale-95', 'scale-110', 'opacity-0'), 10);
-            } else {
-                container.classList.add('scale-95');
-                if(modalId === 'timeTravelModal') container.classList.add('scale-110');
-                setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
-            }
+<script>
+/* ─── state ──────────────────────────────────────────────────────────── */
+let _page      = 1;
+let _hasMore   = false;
+let _loading   = false;
+let _autoTimer = null;
+let _autoOn    = false;
+
+const AUTH = () => ({ 'Content-Type': 'application/json', 'Authorization': localStorage.getItem('nexus_token') || '' });
+
+/* ─── boot ───────────────────────────────────────────────────────────── */
+async function boot() {
+    if (!localStorage.getItem('nexus_token')) { window.location.href = 'index.html'; return; }
+    await loadPage(1, true);
+}
+
+/* ─── data loading ───────────────────────────────────────────────────── */
+function buildURL(page) {
+    const params = new URLSearchParams({ page, limit: 50 });
+    const owner  = document.getElementById('filterOwner').value.trim();
+    const search = document.getElementById('filterSearch').value.trim();
+    const from   = document.getElementById('filterFrom').value;
+    const to     = document.getElementById('filterTo').value;
+    if (owner)  params.set('owner',  owner);
+    if (search) params.set('search', search);
+    if (from)   params.set('from',   from);
+    if (to)     params.set('to',     to);
+    return '/api/stream?' + params.toString();
+}
+
+async function loadPage(page, replace) {
+    if (_loading) return;
+    _loading = true;
+    if (replace) {
+        document.getElementById('timelineContainer').innerHTML = '<div class="text-center py-16 text-slate-400 text-sm">Loading…</div>';
+        document.getElementById('loadMoreWrap').classList.add('hidden');
+        document.getElementById('endOfStream').classList.add('hidden');
+    }
+    try {
+        const r = await fetch(buildURL(page), { headers: AUTH() });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Fetch failed');
+
+        updateStats(d.stats || {});
+        _page    = page;
+        _hasMore = d.has_more;
+
+        if (replace) renderTimeline(d.entries || []);
+        else         appendTimeline(d.entries || []);
+
+        document.getElementById('loadMoreWrap').classList.toggle('hidden', !_hasMore);
+        document.getElementById('endOfStream').classList.toggle('hidden', _hasMore || (d.entries||[]).length === 0);
+    } catch(e) {
+        showToast('Error: ' + e.message, true);
+        if (replace) document.getElementById('timelineContainer').innerHTML = `<div class="text-center py-16 text-red-400 text-sm">${esc(e.message)}</div>`;
+    } finally {
+        _loading = false;
+    }
+}
+
+async function refresh() {
+    await loadPage(1, true);
+}
+
+/* ─── stats ──────────────────────────────────────────────────────────── */
+function updateStats(s) {
+    document.getElementById('statTotal').textContent    = fmt(s.total);
+    document.getElementById('statToday').textContent    = fmt(s.today);
+    document.getElementById('statEntities').textContent = fmt(s.entities);
+}
+function fmt(n) { return n != null ? Number(n).toLocaleString() : '—'; }
+
+/* ─── timeline rendering ─────────────────────────────────────────────── */
+function renderTimeline(entries) {
+    const container = document.getElementById('timelineContainer');
+    if (!entries.length) {
+        container.innerHTML = '<div class="text-center py-16 text-slate-400 text-sm">No stream entries match your filters.</div>';
+        return;
+    }
+    container.innerHTML = '';
+    renderGroups(container, entries);
+}
+
+function appendTimeline(entries) {
+    if (!entries.length) return;
+    const container = document.getElementById('timelineContainer');
+    renderGroups(container, entries);
+}
+
+function renderGroups(container, entries) {
+    // Group by created_fmt (date label)
+    const groups = [];
+    let cur = null;
+    entries.forEach(e => {
+        if (!cur || cur.date !== e.created_fmt) {
+            cur = { date: e.created_fmt, entries: [] };
+            groups.push(cur);
         }
-    </script>
+        cur.entries.push(e);
+    });
+
+    groups.forEach(g => {
+        // Check if we already have a group for this date
+        let groupEl = container.querySelector(`[data-date="${CSS.escape(g.date)}"]`);
+        if (!groupEl) {
+            groupEl = document.createElement('div');
+            groupEl.dataset.date = g.date;
+            groupEl.className = 'mb-8';
+            groupEl.innerHTML = `
+                <div class="flex items-center gap-4 mb-5">
+                    <div style="width:96px" class="shrink-0"></div>
+                    <div class="w-8 shrink-0"></div>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">${esc(g.date)}</h3>
+                </div>
+                <div class="entries-list space-y-3"></div>`;
+            container.appendChild(groupEl);
+        }
+        const list = groupEl.querySelector('.entries-list');
+        g.entries.forEach(e => list.appendChild(buildEntryEl(e)));
+    });
+}
+
+function buildEntryEl(e) {
+    const wrap = document.createElement('div');
+    wrap.className = 'flex items-start gap-0';
+
+    const typeClass = typeColor(e.entity_type);
+    const entityLabel = e.external_id ? '@' + e.external_id.replace(/^@/, '') : '—';
+    const preview = e.content ? (e.content.length > 120 ? e.content.slice(0, 120) + '…' : e.content) : '';
+
+    wrap.innerHTML = `
+        <div class="w-24 pt-2.5 text-right pr-4 shrink-0">
+            <span class="text-[11px] font-bold text-slate-400">${esc(e.created_time||'')}</span>
+        </div>
+        <div class="w-8 flex flex-col items-center shrink-0 pt-2">
+            <div class="w-3.5 h-3.5 rounded-full border-2 border-indigo-400 bg-white z-10"></div>
+        </div>
+        <div class="flex-1 ml-4 pb-1">
+            <div class="entry-card bg-white border border-slate-200 rounded-xl p-4 cursor-pointer">
+                <div class="flex items-center justify-between mb-2 gap-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${typeClass} shrink-0">${esc(e.entity_type||'unknown')}</span>
+                    <code class="text-[11px] font-mono text-slate-600 truncate flex-1">${esc(entityLabel)}</code>
+                    ${e.intent_mapped ? `<span class="text-[9px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-0.5 rounded shrink-0">${esc(e.intent_mapped)}</span>` : ''}
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">${esc(preview)}</p>
+            </div>
+        </div>`;
+
+    wrap.querySelector('.entry-card').addEventListener('click', () => openDetail(e));
+    return wrap;
+}
+
+function typeColor(t) {
+    const map = { member: 'type-member', officer: 'type-officer', branch: 'type-branch', system: 'type-system' };
+    return map[t] || 'type-default';
+}
+
+/* ─── detail modal ───────────────────────────────────────────────────── */
+function openDetail(e) {
+    const typeClass  = typeColor(e.entity_type);
+    const entityLabel = e.external_id ? '@' + e.external_id.replace(/^@/, '') : 'unknown';
+
+    document.getElementById('detailMeta').textContent        = (e.created_fmt || '') + '  ' + (e.created_time || '');
+    document.getElementById('detailTypeBadge').className     = `inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${typeClass}`;
+    document.getElementById('detailTypeBadge').textContent   = e.entity_type || 'unknown';
+    document.getElementById('detailExternalId').textContent  = entityLabel;
+    document.getElementById('detailContent').textContent     = e.content || '';
+    document.getElementById('detailId').textContent          = '#' + (e.id || '');
+
+    const intentWrap = document.getElementById('detailIntentWrap');
+    if (e.intent_mapped) {
+        document.getElementById('detailIntent').textContent = e.intent_mapped;
+        intentWrap.classList.remove('hidden');
+    } else {
+        intentWrap.classList.add('hidden');
+    }
+
+    document.getElementById('detailModal').classList.add('modal-open');
+}
+
+function closeDetail() {
+    document.getElementById('detailModal').classList.remove('modal-open');
+}
+
+/* ─── auto-refresh ────────────────────────────────────────────────────── */
+function toggleAutoRefresh() {
+    _autoOn = !_autoOn;
+    const btn   = document.getElementById('btnAutoRefresh');
+    const knob  = document.getElementById('autoRefreshKnob');
+    const live  = document.getElementById('liveIndicator');
+    btn.classList.toggle('bg-emerald-500', _autoOn);
+    btn.classList.toggle('bg-slate-200',  !_autoOn);
+    knob.style.transform = _autoOn ? 'translateX(20px)' : '';
+    live.classList.toggle('hidden', !_autoOn);
+    live.classList.toggle('flex',    _autoOn);
+    if (_autoOn) {
+        _autoTimer = setInterval(() => refresh(), 10000);
+    } else {
+        clearInterval(_autoTimer);
+    }
+}
+
+/* ─── toast ───────────────────────────────────────────────────────────── */
+function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.querySelector('div').className = `${isError ? 'bg-red-600' : 'bg-slate-900'} text-white text-xs font-semibold px-5 py-3 rounded-xl shadow-xl`;
+    t.classList.remove('opacity-0','translate-y-2','pointer-events-none');
+    setTimeout(() => t.classList.add('opacity-0','translate-y-2','pointer-events-none'), 3000);
+}
+
+function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── wiring ──────────────────────────────────────────────────────────── */
+document.getElementById('btnApply').addEventListener('click', () => loadPage(1, true));
+document.getElementById('btnClear').addEventListener('click', () => {
+    ['filterOwner','filterSearch','filterFrom','filterTo'].forEach(id => document.getElementById(id).value = '');
+    loadPage(1, true);
+});
+document.getElementById('btnLoadMore').addEventListener('click', () => loadPage(_page + 1, false));
+document.getElementById('btnAutoRefresh').addEventListener('click', toggleAutoRefresh);
+document.getElementById('btnCloseDetail').addEventListener('click', closeDetail);
+document.getElementById('detailModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
+
+// Search on enter
+['filterOwner','filterSearch'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') loadPage(1, true); });
+});
+
+boot();
+</script>
 </body>
 </html>
