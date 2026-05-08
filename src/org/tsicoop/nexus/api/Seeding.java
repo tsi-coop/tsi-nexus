@@ -132,8 +132,13 @@ public class Seeding implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
+            ensureSchema(conn);
 
-            JSONObject body   = (JSONObject) new JSONParser().parse(req.getReader());
+            JSONObject body   = InputProcessor.getInput(req);
+            if (body == null) {
+                OutputProcessor.errorResponse(res, 400, "Bad request", "Invalid or missing JSON body", req.getRequestURI());
+                return;
+            }
             String    action  = str(body, "action");
 
             switch (action == null ? "" : action) {
