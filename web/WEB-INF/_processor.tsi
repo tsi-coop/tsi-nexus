@@ -14,6 +14,7 @@
 /api/schemas=org.tsicoop.nexus.api.FormSchema
 /api/stream=org.tsicoop.nexus.api.Stream
 /api/services=org.tsicoop.nexus.api.ServiceRegistry
+/api/audit=org.tsicoop.nexus.api.Audit
 /api/tuning=org.tsicoop.nexus.api.Tuning
 /api/setup=org.tsicoop.nexus.api.User
 /api/auth=org.tsicoop.nexus.api.User
