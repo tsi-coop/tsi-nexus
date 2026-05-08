@@ -191,6 +191,13 @@
                                     <p class="text-[9px] text-slate-400">Data capture forms</p>
                                 </div>
                             </label>
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
+                                <input type="checkbox" id="gen-policies" checked class="w-3.5 h-3.5 accent-indigo-600">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700">Policy Manifest</p>
+                                    <p class="text-[9px] text-slate-400">Governance guardrails</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -219,23 +226,33 @@
             </div>
 
             <!-- Result counts -->
-            <div class="grid grid-cols-4 gap-3 mb-8">
-                <div class="bg-indigo-50 rounded-2xl p-5 text-center">
-                    <p class="text-3xl font-black text-indigo-600" id="res-twins">0</p>
-                    <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mt-1">Twins</p>
+            <div class="grid grid-cols-5 gap-2 mb-8">
+                <div class="bg-indigo-50 rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-black text-indigo-600" id="res-twins">0</p>
+                    <p class="text-[8px] font-black text-indigo-400 uppercase tracking-widest mt-1">Twins</p>
                 </div>
-                <div class="bg-amber-50 rounded-2xl p-5 text-center">
-                    <p class="text-3xl font-black text-amber-600" id="res-interactions">0</p>
-                    <p class="text-[9px] font-black text-amber-400 uppercase tracking-widest mt-1">Interactions</p>
+                <div class="bg-amber-50 rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-black text-amber-600" id="res-interactions">0</p>
+                    <p class="text-[8px] font-black text-amber-400 uppercase tracking-widest mt-1">Logs</p>
                 </div>
-                <div class="bg-violet-50 rounded-2xl p-5 text-center">
-                    <p class="text-3xl font-black text-violet-600" id="res-templates">0</p>
-                    <p class="text-[9px] font-black text-violet-400 uppercase tracking-widest mt-1">Templates</p>
+                <div class="bg-violet-50 rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-black text-violet-600" id="res-templates">0</p>
+                    <p class="text-[8px] font-black text-violet-400 uppercase tracking-widest mt-1">Cards</p>
                 </div>
-                <div class="bg-emerald-50 rounded-2xl p-5 text-center">
-                    <p class="text-3xl font-black text-emerald-600" id="res-forms">0</p>
-                    <p class="text-[9px] font-black text-emerald-400 uppercase tracking-widest mt-1">Forms</p>
+                <div class="bg-emerald-50 rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-black text-emerald-600" id="res-forms">0</p>
+                    <p class="text-[8px] font-black text-emerald-400 uppercase tracking-widest mt-1">Forms</p>
                 </div>
+                <div class="bg-rose-50 rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-black text-rose-600" id="res-policies">0</p>
+                    <p class="text-[8px] font-black text-rose-400 uppercase tracking-widest mt-1">Policies</p>
+                </div>
+            </div>
+
+            <!-- Test Scenarios -->
+            <div id="scenarioSection" class="hidden mb-10">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center mb-5">Try out these test scenarios</p>
+                <div id="scenarioList" class="space-y-3"></div>
             </div>
 
             <!-- Navigation links -->
@@ -445,6 +462,7 @@ function collectPayload() {
     if (document.getElementById('gen-interactions').checked) generate.push('interactions');
     if (document.getElementById('gen-templates').checked)    generate.push('templates');
     if (document.getElementById('gen-forms').checked)        generate.push('forms');
+    if (document.getElementById('gen-policies').checked)     generate.push('policies');
 
     const entity_types  = [];
     const entity_counts = {};
@@ -506,6 +524,10 @@ async function startSeeding() {
         document.getElementById('res-interactions').textContent = d.interactions_seeded ?? 0;
         document.getElementById('res-templates').textContent    = d.templates_seeded    ?? 0;
         document.getElementById('res-forms').textContent        = d.forms_seeded        ?? 0;
+        document.getElementById('res-policies').textContent     = d.policies_seeded     ?? 0;
+
+        // Load scenarios
+        await loadScenarios();
 
         // Transition: hide form, show success
         document.getElementById('formSection').classList.add('hidden');
@@ -517,6 +539,88 @@ async function startSeeding() {
         showFeedback(e.message, 'error');
         btn.disabled = false;
         btn.textContent = 'BOOTSTRAP INSTITUTION';
+    }
+}
+
+async function loadScenarios() {
+    const sSection = document.getElementById('scenarioSection');
+    const sList    = document.getElementById('scenarioList');
+    sList.innerHTML = '';
+    
+    try {
+        const [pR, tR] = await Promise.all([
+            fetch('/api/policy',  { headers: hdrs() }),
+            fetch('/api/seeding', { headers: hdrs() })
+        ]);
+        const pD = await pR.json();
+        const tD = await tR.json();
+        
+        const seededPolicies = (pD.policies || []).filter(p => p.policy_id.startsWith('SIM_'));
+        const seededTwins    = (tD.sessions[0]?.twins_seeded > 0) ? await fetchTwins() : [];
+
+        if (seededPolicies.length && seededTwins.length) {
+            sSection.classList.remove('hidden');
+            // Take 3 random pairs
+            const scenarios = seededPolicies.slice(0, 3).map(p => {
+                const twin = seededTwins[Math.floor(Math.random() * seededTwins.length)];
+                return { policy: p, twin: twin };
+            });
+            
+            sList.innerHTML = scenarios.map((s, idx) => `
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">${s.policy.action_type}</p>
+                        <p class="text-xs font-bold text-slate-800 truncate">${s.policy.description}</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Test against: <span class="font-bold text-slate-600">@${s.twin.external_id}</span> (${s.twin.type})</p>
+                    </div>
+                    <button onclick="runTest(this, '${s.policy.policy_id}', '${s.twin.external_id}')" 
+                        class="px-4 py-2 bg-slate-950 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-colors shrink-0">
+                        Run Test
+                    </button>
+                </div>
+            `).join('');
+        }
+    } catch(e) { console.error('Scenario load failed', e); }
+}
+
+async function fetchTwins() {
+    const r = await fetch('/api/graph?action=search&q=SEED_', { headers: hdrs() });
+    const d = await r.json();
+    return d.results || [];
+}
+
+async function runTest(btn, policyId, twinId) {
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'WAIT...';
+    
+    try {
+        const r = await fetch('/api/policy', {
+            method: 'POST', headers: hdrs(),
+            body: JSON.stringify({ action: 'test', policy_id: policyId, test_id: twinId })
+        });
+        const d = await r.json();
+        
+        const card = btn.closest('div');
+        const resEl = document.createElement('div');
+        resEl.className = `mt-3 p-3 rounded-xl text-[10px] font-bold ${d.verdict === 'ALLOWED' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`;
+        resEl.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-white border border-current uppercase tracking-tighter">${d.verdict}</span>
+                <span>${d.message}</span>
+            </div>
+        `;
+        
+        // Remove old result if any
+        const old = card.querySelector('.mt-3');
+        if (old) old.remove();
+        card.appendChild(resEl);
+        
+    } catch(e) {
+        toast('Test failed: ' + e.message, 'bg-red-600');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 

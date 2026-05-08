@@ -87,7 +87,7 @@ public class Seeding implements Action {
             JSONArray sessions = new JSONArray();
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT session_id::text, industry_context, status, " +
-                    "twins_seeded, interactions_seeded, templates_seeded, forms_seeded, " +
+                    "twins_seeded, interactions_seeded, templates_seeded, forms_seeded, policies_seeded, " +
                     "to_char(created_at, 'DD Mon YYYY HH24:MI') AS created, error_message " +
                     "FROM seeding_sessions ORDER BY created_at DESC LIMIT 10");
                  ResultSet rs = ps.executeQuery()) {
@@ -100,6 +100,7 @@ public class Seeding implements Action {
                     s.put("interactions_seeded",  rs.getInt("interactions_seeded"));
                     s.put("templates_seeded",     rs.getInt("templates_seeded"));
                     s.put("forms_seeded",         rs.getInt("forms_seeded"));
+                    s.put("policies_seeded",      rs.getInt("policies_seeded"));
                     s.put("created",              rs.getString("created"));
                     s.put("error_message",        rs.getString("error_message"));
                     sessions.add(s);
@@ -150,7 +151,8 @@ public class Seeding implements Action {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            OutputProcessor.errorResponse(res, 500, "Action failed", e.getMessage(), req.getRequestURI());
+            String msg = e.getMessage() != null ? e.getMessage() : e.toString();
+            OutputProcessor.errorResponse(res, 500, "Action failed", msg, req.getRequestURI());
         } finally {
             if (pool != null) pool.cleanup(null, null, conn);
         }
@@ -193,48 +195,55 @@ public class Seeding implements Action {
             }
         }
 
-        int twinsSeeded = 0, interactionsSeeded = 0, templatesSeeded = 0, formsSeeded = 0;
+        int twinsSeeded = 0, interactionsSeeded = 0, templatesSeeded = 0, forms_seeded = 0, policiesSeeded = 0;
         List<String[]> twinList = new ArrayList<>();
         StringBuilder log = new StringBuilder();
 
         try {
             if (generate.contains("twins")) {
-                log.append("[1/4] Generating digital twins...\n");
+                log.append("[1/5] Generating digital twins...\n");
                 twinList = generateTwins(conn, context, flavor, types, counts, edgePct);
                 twinsSeeded = twinList.size();
                 log.append("      → ").append(twinsSeeded).append(" twins created\n");
             }
             if (generate.contains("interactions") && !twinList.isEmpty()) {
-                log.append("[2/4] Generating interaction history...\n");
+                log.append("[2/5] Generating interaction history...\n");
                 interactionsSeeded = generateInteractions(conn, context, flavor, twinList, edgePct);
                 log.append("      → ").append(interactionsSeeded).append(" interactions created\n");
             }
             if (generate.contains("templates")) {
-                log.append("[3/4] Generating Liquid templates...\n");
+                log.append("[3/5] Generating Liquid templates...\n");
                 templatesSeeded = generateTemplates(conn, context, flavor, types);
                 log.append("      → ").append(templatesSeeded).append(" templates created\n");
             }
             if (generate.contains("forms")) {
-                log.append("[4/4] Generating form schemas...\n");
-                formsSeeded = generateForms(conn, context, flavor, types);
-                log.append("      → ").append(formsSeeded).append(" forms created\n");
+                log.append("[4/5] Generating form schemas...\n");
+                forms_seeded = generateForms(conn, context, flavor, types);
+                log.append("      → ").append(forms_seeded).append(" forms created\n");
+            }
+            if (generate.contains("policies")) {
+                log.append("[5/5] Generating policy manifests...\n");
+                policiesSeeded = generatePolicies(conn, context, flavor, types);
+                log.append("      → ").append(policiesSeeded).append(" policies created\n");
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
                     "UPDATE seeding_sessions SET status='complete', twins_seeded=?, interactions_seeded=?, " +
-                    "templates_seeded=?, forms_seeded=?, completed_at=now() WHERE session_id=?::uuid")) {
+                    "templates_seeded=?, forms_seeded=?, policies_seeded=?, completed_at=now() WHERE session_id=?::uuid")) {
                 ps.setInt(1, twinsSeeded);
                 ps.setInt(2, interactionsSeeded);
                 ps.setInt(3, templatesSeeded);
-                ps.setInt(4, formsSeeded);
-                ps.setString(5, sessionId);
+                ps.setInt(4, forms_seeded);
+                ps.setInt(5, policiesSeeded);
+                ps.setString(6, sessionId);
                 ps.executeUpdate();
             }
 
         } catch (Exception e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : e.toString();
             try (PreparedStatement ps = conn.prepareStatement(
                     "UPDATE seeding_sessions SET status='failed', error_message=? WHERE session_id=?::uuid")) {
-                ps.setString(1, e.getMessage());
+                ps.setString(1, errorMsg);
                 ps.setString(2, sessionId);
                 ps.executeUpdate();
             }
@@ -247,7 +256,8 @@ public class Seeding implements Action {
         out.put("twins_seeded",          twinsSeeded);
         out.put("interactions_seeded",   interactionsSeeded);
         out.put("templates_seeded",      templatesSeeded);
-        out.put("forms_seeded",          formsSeeded);
+        out.put("forms_seeded",          forms_seeded);
+        out.put("policies_seeded",       policiesSeeded);
         out.put("log",                   log.toString());
         OutputProcessor.send(res, 200, out);
     }
@@ -256,7 +266,7 @@ public class Seeding implements Action {
 
     @SuppressWarnings("unchecked")
     private void clearSeeded(Connection conn, HttpServletRequest req, HttpServletResponse res) throws Exception {
-        long interactions, twins, templates, forms;
+        long interactions, twins, templates, forms, policies;
 
         try (PreparedStatement ps = conn.prepareStatement(
                 "DELETE FROM interaction_stream WHERE owner_id IN " +
@@ -275,6 +285,10 @@ public class Seeding implements Action {
                 "DELETE FROM interaction_schema WHERE schema_id LIKE 'SIM_%'")) {
             forms = ps.executeUpdate();
         }
+        try (PreparedStatement ps = conn.prepareStatement(
+                "DELETE FROM policy_manifest WHERE policy_id LIKE 'SIM_%'")) {
+            policies = ps.executeUpdate();
+        }
 
         JSONObject out = new JSONObject();
         out.put("success",               true);
@@ -282,6 +296,7 @@ public class Seeding implements Action {
         out.put("cleared_interactions",  interactions);
         out.put("cleared_templates",     templates);
         out.put("cleared_forms",         forms);
+        out.put("cleared_policies",      policies);
         OutputProcessor.send(res, 200, out);
     }
 
@@ -524,14 +539,65 @@ public class Seeding implements Action {
         return count;
     }
 
+    @SuppressWarnings("unchecked")
+    private int generatePolicies(Connection conn, String context, String flavor, JSONArray types) throws Exception {
+        StringBuilder typeList = new StringBuilder();
+        for (Object t : types) typeList.append(t).append(", ");
+
+        String prompt =
+            "You are generating governance policy manifests for an institutional management system.\n\n" +
+            "INDUSTRY CONTEXT: " + context + "\n" +
+            (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
+            "ENTITY TYPES: " + typeList + "\n\n" +
+            "Generate 3-5 realistic PostgreSQL-based policies (GUARDRAIL mode).\n" +
+            "SCHEMA:\n" +
+            "  digital_twins(external_id TEXT, type TEXT, current_state JSONB)\n" +
+            "  interaction_stream(owner_id UUID, intent_mapped TEXT, created_at TIMESTAMPTZ)\n\n" +
+            "Rules:\n" +
+            "- policy_id MUST start with 'SIM_' and be uppercase (e.g. SIM_BLOCK_INACTIVE_MEMBER)\n" +
+            "- action_type should be uppercase verbs (e.g. DISBURSE, ONBOARD, COLLECT)\n" +
+            "- query_logic MUST return COUNT(*). Use ? as placeholder for external_id.\n" +
+            "- query_logic example: SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND current_state->>'status' = 'inactive'\n" +
+            "- error_message is what the user sees when blocked.\n\n" +
+            "Return ONLY valid JSON, no markdown:\n" +
+            "{\"policies\":[{\"policy_id\":\"SIM_...\",\"action_type\":\"...\",\"description\":\"...\",\n" +
+            "\"query_logic\":\"SELECT COUNT(*) FROM...\",\"error_message\":\"...\"},...]}";
+
+        JSONObject generated = extractJson(callAI(prompt));
+        JSONArray  policies  = arrOf(generated, "policies");
+
+        int count = 0;
+        for (Object obj : policies) {
+            JSONObject p      = (JSONObject) obj;
+            String policyId   = str(p, "policy_id");
+            String actionType = str(p, "action_type");
+            String desc       = str(p, "description");
+            String query      = str(p, "query_logic");
+            String error      = str(p, "error_message");
+
+            if (policyId == null || !policyId.startsWith("SIM_")) continue;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode, is_active) " +
+                    "VALUES (?, ?, ?, ?, ?, 'GUARDRAIL', true) ON CONFLICT (policy_id) DO NOTHING")) {
+                ps.setString(1, policyId);
+                ps.setString(2, actionType != null ? actionType.toUpperCase() : "GENERAL");
+                ps.setString(3, desc != null ? desc : "Simulated policy");
+                ps.setString(4, query);
+                ps.setString(5, error);
+                count += ps.executeUpdate();
+            }
+        }
+        return count;
+    }
+
     /* ── AI call ───────────────────────────────────────────────────── */
 
     @SuppressWarnings("unchecked")
     private String callAI(String prompt) throws Exception {
         JSONObject body = new JSONObject();
         body.put("model",       VLLM_MODEL);
-        body.put("temperature", 0.8);
-        body.put("max_tokens",  4096);
+        body.put("temperature", 0.7);
+        body.put("max_tokens",  8192);
 
         JSONArray  messages = new JSONArray();
 
@@ -561,19 +627,118 @@ public class Seeding implements Action {
     }
 
     private JSONObject extractJson(String content) throws Exception {
+        if (content == null || content.isBlank())
+            throw new RuntimeException("AI returned empty content");
+            
         String s = content.trim();
         // Strip markdown code fences
-        if (s.startsWith("```")) {
-            int nl = s.indexOf('\n');
-            if (nl >= 0) s = s.substring(nl + 1);
-            int end = s.lastIndexOf("```");
-            if (end >= 0) s = s.substring(0, end).trim();
+        if (s.contains("```")) {
+            int first = s.indexOf("```");
+            int second = s.indexOf("```", first + 3);
+            if (second > first) {
+                s = s.substring(first + 3, second).trim();
+                if (s.startsWith("json")) s = s.substring(4).trim();
+                else if (s.indexOf('\n') > 0 && s.indexOf('\n') < 10) s = s.substring(s.indexOf('\n')).trim();
+            }
         }
-        // Find outermost JSON object
+        
+        // Find outermost JSON structure
         int start = s.indexOf('{');
         int end   = s.lastIndexOf('}');
-        if (start >= 0 && end > start) s = s.substring(start, end + 1);
-        return (JSONObject) new JSONParser().parse(s);
+        if (start < 0) throw new RuntimeException("No JSON found in response");
+        
+        s = s.substring(start, end + 1);
+        
+        try {
+            return (JSONObject) new JSONParser().parse(s);
+        } catch (Exception e) {
+            // Case: AI returned multiple objects: {..}, {..} or {..}{..}
+            try {
+                String wrapped = s.replaceAll("}\\s*\\{", "},{");
+                Object multi = new JSONParser().parse("[" + wrapped + "]");
+                if (multi instanceof JSONArray) {
+                    JSONArray arr = (JSONArray) multi;
+                    JSONObject merged = new JSONObject();
+                    for (Object obj : arr) {
+                        if (obj instanceof JSONObject) {
+                            JSONObject o = (JSONObject) obj;
+                            for (Object key : o.keySet()) {
+                                Object val = o.get(key);
+                                if (val instanceof JSONArray) {
+                                    JSONArray existing = (JSONArray) merged.get(key);
+                                    if (existing == null) {
+                                        existing = new JSONArray();
+                                        merged.put(key, existing);
+                                    }
+                                    existing.addAll((JSONArray) val);
+                                } else {
+                                    merged.put(key, val);
+                                }
+                            }
+                        }
+                    }
+                    System.out.println("[Seeding] Successfully merged multi-object AI response.");
+                    return merged;
+                }
+            } catch (Exception ignore) {}
+            
+            // Final attempt: repair truncated JSON
+            try {
+                String repaired = repairJson(s);
+                return (JSONObject) new JSONParser().parse(repaired);
+            } catch (Exception e2) {
+                System.err.println("[Seeding] Failed to parse/repair JSON. Length: " + s.length());
+                System.err.println("[Seeding] Raw start: " + (s.length() > 100 ? s.substring(0, 100) : s));
+                System.err.println("[Seeding] Raw end: " + (s.length() > 100 ? s.substring(s.length() - 100) : s));
+                throw new RuntimeException("AI response was not valid JSON: " + e.getMessage());
+            }
+        }
+    }
+
+    private String repairJson(String s) {
+        StringBuilder stack = new StringBuilder();
+        boolean inString = false;
+        boolean escape = false;
+        
+        StringBuilder clean = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (escape) { escape = false; }
+            else if (c == '\\') { escape = true; }
+            else if (c == '\"') { inString = !inString; }
+            else if (!inString) {
+                if (c == '{') stack.append('{');
+                else if (c == '[') stack.append('[');
+                else if (c == '}') {
+                    if (stack.length() > 0 && stack.charAt(stack.length() - 1) == '{')
+                        stack.deleteCharAt(stack.length() - 1);
+                }
+                else if (c == ']') {
+                    if (stack.length() > 0 && stack.charAt(stack.length() - 1) == '[')
+                        stack.deleteCharAt(stack.length() - 1);
+                }
+            }
+            clean.append(c);
+        }
+        
+        if (inString) clean.append('\"');
+        
+        String res = clean.toString().trim();
+        while (res.endsWith(",") || res.endsWith("{") || res.endsWith("[")) {
+            if (res.endsWith("{") || res.endsWith("[")) {
+                if (stack.length() > 0) stack.deleteCharAt(stack.length() - 1);
+            }
+            res = res.substring(0, res.length() - 1).trim();
+        }
+        
+        StringBuilder repaired = new StringBuilder(res);
+        for (int i = stack.length() - 1; i >= 0; i--) {
+            char open = stack.charAt(i);
+            if (open == '{') repaired.append('}');
+            else if (open == '[') repaired.append(']');
+        }
+        
+        return repaired.toString();
     }
 
     /* ── schema bootstrap ──────────────────────────────────────────── */
@@ -591,10 +756,15 @@ public class Seeding implements Action {
                 "  interactions_seeded INTEGER DEFAULT 0, " +
                 "  templates_seeded INTEGER DEFAULT 0, " +
                 "  forms_seeded INTEGER DEFAULT 0, " +
+                "  policies_seeded INTEGER DEFAULT 0, " +
                 "  error_message TEXT, " +
                 "  created_at TIMESTAMPTZ DEFAULT now(), " +
                 "  completed_at TIMESTAMPTZ" +
                 ")")) {
+            ps.execute();
+        }
+        // Migrations
+        try (PreparedStatement ps = conn.prepareStatement("ALTER TABLE seeding_sessions ADD COLUMN IF NOT EXISTS policies_seeded INTEGER DEFAULT 0")) {
             ps.execute();
         }
     }

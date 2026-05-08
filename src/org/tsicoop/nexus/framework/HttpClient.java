@@ -12,6 +12,7 @@ public class HttpClient {
 
     private final java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
             .version(java.net.http.HttpClient.Version.HTTP_1_1)
+            .connectTimeout(java.time.Duration.ofSeconds(60))
             .build();
 
     public void sendGet(String url) throws Exception {
