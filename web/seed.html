@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSI Nexus - Seed Institution</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        :root { --accent: #6366f1; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            background-image: radial-gradient(circle at 2px 2px, #e2e8f0 1px, transparent 0);
+            background-size: 40px 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 16px;
+        }
+
+        .seed-card {
+            background: white;
+            border-top: 4px solid var(--accent);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+        }
+
+        .input-focus:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.1);
+            outline: none;
+        }
+
+        input[type=range] { accent-color: var(--accent); }
+
+        /* Terminal log */
+        #logPanel {
+            background: #0f172a; color: #94a3b8;
+            font-family: 'Courier New', monospace; font-size: 12px;
+            line-height: 1.7; white-space: pre-wrap;
+        }
+
+        /* Primary button */
+        .btn-primary {
+            background: #020617; color: white;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #0f172a;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(15,23,42,0.3);
+        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Type row hover */
+        .type-row:hover { border-color: #c7d2fe; }
+
+        /* Toast */
+        #toast { transition: opacity .3s, transform .3s; }
+    </style>
+</head>
+<body>
+
+<div id="loadingScreen" class="text-slate-400 text-xs font-bold tracking-widest uppercase py-20">
+    Checking platform status…
+</div>
+
+<div id="seedContainer" class="hidden w-full max-w-3xl">
+
+    <!-- Header -->
+    <div class="seed-card rounded-3xl border border-slate-100 overflow-hidden">
+        <div class="px-12 pt-12 pb-8 text-center border-b border-slate-100">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-950 rounded-2xl mb-6 shadow-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-black text-slate-950 tracking-tight">TSI Nexus</h1>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Institutional Intelligence Platform</p>
+            <h2 class="text-base font-bold text-slate-500 mt-2 tracking-wide">Seed Your Institution</h2>
+            <p class="text-xs text-slate-400 mt-3 max-w-lg mx-auto leading-relaxed">
+                Describe your organisation and the AI engine will materialise a fully-formed synthetic world —
+                digital twins, interaction history, Liquid templates, and data-capture forms.
+            </p>
+
+            <!-- AI status -->
+            <div class="flex items-center justify-center gap-2 mt-4">
+                <span class="w-2 h-2 rounded-full" id="aiDot"></span>
+                <span id="aiLabel" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Checking AI…</span>
+            </div>
+        </div>
+
+        <!-- Seeded-data stats (shown if data already exists) -->
+        <div id="existingStats" class="hidden px-12 py-5 bg-amber-50 border-b border-amber-100">
+            <div class="flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div>
+                    <p class="text-[10px] font-black text-amber-700 uppercase tracking-widest">Seeded data already exists</p>
+                    <p class="text-xs text-amber-600 mt-0.5" id="existingSummary"></p>
+                    <p class="text-[10px] text-amber-500 mt-1">Running again will add to existing data. Use <strong>Clear Seeded Data</strong> below to start fresh.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <div id="formSection" class="px-12 py-10 space-y-8">
+
+            <!-- Feedback -->
+            <div id="feedback" class="hidden p-4 rounded-xl text-[10px] font-black uppercase tracking-wider text-center"></div>
+
+            <!-- Step 1: DNA -->
+            <div>
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shrink-0">1</div>
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Institutional DNA</h3>
+                </div>
+                <div class="space-y-4 pl-9">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Industry Context <span class="text-red-400">*</span></label>
+                        <textarea id="industryContext" rows="3"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-700 placeholder-slate-300 transition-all input-focus resize-none"
+                            placeholder="e.g. A rural microfinance cooperative in South India focused on women's self-help groups. Branches in 12 districts, ~5,000 active members."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Data Flavor &amp; Traits</label>
+                        <textarea id="dataFlavor" rows="2"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-700 placeholder-slate-300 transition-all input-focus resize-none"
+                            placeholder="e.g. Loan sizes ₹10k–₹50k. Officers use local Tamil names. Field notes are empathetic. Repayment cycles monthly."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Entity types -->
+            <div>
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shrink-0">2</div>
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Entity Types &amp; Counts</h3>
+                    <button onclick="addCustomType()" class="ml-auto text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Add Type</button>
+                </div>
+                <div id="entityTypeList" class="space-y-2 pl-9"></div>
+                <p class="text-[10px] text-slate-400 pl-9 mt-3">Pre-loaded from your Context Graph. Add or remove types as needed.</p>
+            </div>
+
+            <!-- Step 3: Parameters -->
+            <div>
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shrink-0">3</div>
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Simulation Parameters</h3>
+                </div>
+                <div class="pl-9 space-y-5">
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Edge Cases</label>
+                            <span id="edgeLabel" class="text-[11px] font-black text-indigo-600">5%</span>
+                        </div>
+                        <input id="edgePct" type="range" min="0" max="30" value="5" step="1"
+                            class="w-full h-2 rounded-full cursor-pointer"
+                            oninput="document.getElementById('edgeLabel').textContent=this.value+'%'">
+                        <p class="text-[10px] text-slate-400 mt-1.5">% of entities with problem states — overdue, inactive, flagged, at-risk</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">What to Generate</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
+                                <input type="checkbox" id="gen-twins" checked class="w-3.5 h-3.5 accent-indigo-600">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700">Digital Twins</p>
+                                    <p class="text-[9px] text-slate-400">Entity instances + state</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
+                                <input type="checkbox" id="gen-interactions" checked class="w-3.5 h-3.5 accent-indigo-600">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700">Interactions</p>
+                                    <p class="text-[9px] text-slate-400">Stream history &amp; field notes</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
+                                <input type="checkbox" id="gen-templates" checked class="w-3.5 h-3.5 accent-indigo-600">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700">Liquid Templates</p>
+                                    <p class="text-[9px] text-slate-400">Profile UI cards per type</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
+                                <input type="checkbox" id="gen-forms" checked class="w-3.5 h-3.5 accent-indigo-600">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700">Form Schemas</p>
+                                    <p class="text-[9px] text-slate-400">Data capture forms</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bootstrap button -->
+            <div class="pl-9">
+                <button id="seedBtn" onclick="startSeeding()"
+                    class="btn-primary w-full py-5 rounded-2xl font-bold text-xs uppercase tracking-[0.3em] shadow-lg">
+                    Bootstrap Institution
+                </button>
+            </div>
+        </div>
+
+        <!-- Terminal log (shown during generation) -->
+        <div id="logPanel" class="hidden px-6 py-5 min-h-32 max-h-56 overflow-y-auto border-t border-slate-900 text-xs"></div>
+
+        <!-- Success state (shown after generation) -->
+        <div id="successPanel" class="hidden px-12 pb-12">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-100 rounded-2xl mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h3 class="text-lg font-black text-slate-900">Institution Bootstrapped</h3>
+                <p class="text-xs text-slate-400 mt-1">Your synthetic world is live and ready to explore.</p>
+            </div>
+
+            <!-- Result counts -->
+            <div class="grid grid-cols-4 gap-3 mb-8">
+                <div class="bg-indigo-50 rounded-2xl p-5 text-center">
+                    <p class="text-3xl font-black text-indigo-600" id="res-twins">0</p>
+                    <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mt-1">Twins</p>
+                </div>
+                <div class="bg-amber-50 rounded-2xl p-5 text-center">
+                    <p class="text-3xl font-black text-amber-600" id="res-interactions">0</p>
+                    <p class="text-[9px] font-black text-amber-400 uppercase tracking-widest mt-1">Interactions</p>
+                </div>
+                <div class="bg-violet-50 rounded-2xl p-5 text-center">
+                    <p class="text-3xl font-black text-violet-600" id="res-templates">0</p>
+                    <p class="text-[9px] font-black text-violet-400 uppercase tracking-widest mt-1">Templates</p>
+                </div>
+                <div class="bg-emerald-50 rounded-2xl p-5 text-center">
+                    <p class="text-3xl font-black text-emerald-600" id="res-forms">0</p>
+                    <p class="text-[9px] font-black text-emerald-400 uppercase tracking-widest mt-1">Forms</p>
+                </div>
+            </div>
+
+            <!-- Navigation links -->
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center mb-4">Explore what was generated</p>
+            <div class="grid grid-cols-2 gap-3">
+                <a href="admin/dtwin_graph.html" class="flex items-center gap-3 px-5 py-4 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+                    <div class="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-800">Context Graph</p>
+                        <p class="text-[9px] text-slate-400">View seeded digital twins</p>
+                    </div>
+                </a>
+                <a href="admin/interaction_stream.html" class="flex items-center gap-3 px-5 py-4 rounded-2xl border border-slate-200 hover:border-amber-300 hover:bg-amber-50 transition-colors">
+                    <div class="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-800">Interaction Stream</p>
+                        <p class="text-[9px] text-slate-400">Browse generated history</p>
+                    </div>
+                </a>
+                <a href="admin/liquid_templates.html" class="flex items-center gap-3 px-5 py-4 rounded-2xl border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors">
+                    <div class="w-8 h-8 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-800">Liquid Templates</p>
+                        <p class="text-[9px] text-slate-400">Review generated UI cards</p>
+                    </div>
+                </a>
+                <a href="admin/form_builder.html" class="flex items-center gap-3 px-5 py-4 rounded-2xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors">
+                    <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-800">Form Builder</p>
+                        <p class="text-[9px] text-slate-400">Edit generated form schemas</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <a href="admin/dashboard.html"
+                    class="flex-1 bg-slate-950 text-white py-4 rounded-2xl text-xs font-bold uppercase tracking-[0.25em] text-center hover:bg-slate-800 transition-colors">
+                    Go to Dashboard
+                </a>
+                <button onclick="resetForm()"
+                    class="px-6 border border-slate-200 text-slate-500 py-4 rounded-2xl text-xs font-bold uppercase tracking-[0.2em] hover:bg-slate-50 transition-colors">
+                    Seed Again
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer: clear option -->
+        <div class="px-12 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between rounded-b-3xl">
+            <p class="text-[10px] text-slate-400">All seeded data is tagged <code class="bg-slate-200 px-1 py-0.5 rounded text-[10px]">SEED_</code> and can be removed safely.</p>
+            <button onclick="confirmClear()" class="text-[10px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest transition-colors">
+                Clear Seeded Data
+            </button>
+        </div>
+    </div>
+
+    <p class="text-[10px] text-slate-400 mt-6 text-center">
+        TSI Nexus · Institutional Intelligence Platform · <a href="admin/dashboard.html" class="text-indigo-400 hover:underline">Admin Portal →</a>
+    </p>
+</div>
+
+<!-- Clear confirm modal -->
+<div id="clearModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none" style="transition: opacity .2s;">
+    <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-sm w-full mx-6">
+        <div class="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <h3 class="text-base font-black text-slate-900 mb-2">Clear All Seeded Data?</h3>
+        <p class="text-sm text-slate-500 mb-6">
+            Permanently removes all <code class="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">SEED_*</code> twins &amp; their interactions,
+            <code class="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">[SIM]</code> templates,
+            and <code class="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">SIM_</code> forms.
+            Real institutional data is untouched.
+        </p>
+        <div class="flex gap-3">
+            <button onclick="closeClearModal()" class="flex-1 border border-slate-200 text-slate-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">Cancel</button>
+            <button onclick="doClean()" class="flex-1 bg-red-600 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-colors">Delete All</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl opacity-0 translate-y-2 pointer-events-none z-50"></div>
+
+<script>
+const token = () => localStorage.getItem('nexus_token') || '';
+const hdrs  = () => ({ 'Authorization': 'Bearer ' + token(), 'Content-Type': 'application/json' });
+
+/* ── Toast ─────────────────────────────────────────────────── */
+let _tt;
+function toast(msg, color = 'bg-slate-900') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `fixed bottom-8 right-8 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl z-50 ${color}`;
+    el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+    clearTimeout(_tt);
+    _tt = setTimeout(() => { el.style.opacity='0'; el.style.transform='translateY(8px)'; }, 4000);
+}
+
+function showFeedback(msg, type) {
+    const el = document.getElementById('feedback');
+    el.textContent = msg;
+    el.className = type === 'error'
+        ? 'p-4 rounded-xl text-[10px] font-black uppercase tracking-wider text-center bg-red-50 text-red-600 border border-red-100 block'
+        : 'p-4 rounded-xl text-[10px] font-black uppercase tracking-wider text-center bg-amber-50 text-amber-600 border border-amber-100 block';
+}
+
+/* ── Boot ───────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async () => {
+    const loading   = document.getElementById('loadingScreen');
+    const container = document.getElementById('seedContainer');
+    try {
+        const r = await fetch('/api/seeding', { headers: hdrs() });
+        const d = await r.json();
+        if (!d.success) throw new Error();
+
+        renderAiStatus(d.ai_available);
+        renderEntityTypes(d.entity_types || []);
+        showExistingStats(d.stats || {});
+    } catch(e) {
+        // Silently show form even if API check fails
+    } finally {
+        loading.classList.add('hidden');
+        container.classList.remove('hidden');
+    }
+});
+
+function renderAiStatus(available) {
+    const dot   = document.getElementById('aiDot');
+    const label = document.getElementById('aiLabel');
+    if (available) {
+        dot.className   = 'w-2 h-2 rounded-full bg-emerald-500';
+        label.textContent = 'AI Engine Ready';
+        label.className = 'text-[10px] font-black uppercase tracking-widest text-emerald-600';
+    } else {
+        dot.className   = 'w-2 h-2 rounded-full bg-red-400';
+        label.textContent = 'AI Engine Offline — configure VLLM_URL';
+        label.className = 'text-[10px] font-black uppercase tracking-widest text-red-500';
+    }
+}
+
+function showExistingStats(s) {
+    const total = (s.seeded_twins || 0) + (s.seeded_interactions || 0) +
+                  (s.seeded_templates || 0) + (s.seeded_forms || 0);
+    if (!total) return;
+    document.getElementById('existingStats').classList.remove('hidden');
+    document.getElementById('existingSummary').textContent =
+        `${s.seeded_twins || 0} twins · ${s.seeded_interactions || 0} interactions · ` +
+        `${s.seeded_templates || 0} templates · ${s.seeded_forms || 0} forms`;
+}
+
+/* ── Entity type rows ───────────────────────────────────────── */
+const _defaults = ['member', 'officer', 'branch', 'group'];
+
+function renderEntityTypes(apiTypes) {
+    const el   = document.getElementById('entityTypeList');
+    const seen = new Set(apiTypes.map(t => t.type));
+    const all  = [...apiTypes.map(t => t.type)];
+    for (const d of _defaults) if (!seen.has(d)) all.push(d);
+    el.innerHTML = all.map(t => typeRow(t, 10)).join('');
+}
+
+function typeRow(type, cnt) {
+    const safe = type.replace(/[^a-z0-9_]/gi,'_');
+    return `
+        <div class="type-row flex items-center gap-3 px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 transition-colors" id="row-${safe}">
+            <input type="checkbox" class="type-cb w-3.5 h-3.5 accent-indigo-600 shrink-0" data-type="${type}" checked>
+            <span class="text-sm font-semibold text-slate-700 flex-1">${type}</span>
+            <label class="text-[9px] font-black text-slate-400 uppercase mr-1">Count</label>
+            <input type="number" class="type-count w-16 border border-slate-200 rounded-xl px-2 py-1 text-xs text-center text-slate-700 focus:outline-none focus:border-indigo-400 bg-white"
+                data-type="${type}" value="${cnt}" min="1" max="100">
+            <button onclick="removeTypeRow('${safe}')" class="text-slate-300 hover:text-red-400 transition-colors ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>`;
+}
+
+function removeTypeRow(safe) {
+    const el = document.getElementById('row-' + safe);
+    if (el) el.remove();
+}
+
+function addCustomType() {
+    const type = prompt('New entity type (e.g. committee, treasurer, region):');
+    if (!type || !type.trim()) return;
+    const safe = type.trim().toLowerCase().replace(/\s+/g,'_');
+    if (document.getElementById('row-' + safe)) { toast('Type already in list', 'bg-amber-600'); return; }
+    document.getElementById('entityTypeList').insertAdjacentHTML('beforeend', typeRow(safe, 10));
+}
+
+/* ── Collect payload ────────────────────────────────────────── */
+function collectPayload() {
+    const context = document.getElementById('industryContext').value.trim();
+    const flavor  = document.getElementById('dataFlavor').value.trim();
+    const edgePct = parseInt(document.getElementById('edgePct').value, 10);
+
+    const generate = [];
+    if (document.getElementById('gen-twins').checked)        generate.push('twins');
+    if (document.getElementById('gen-interactions').checked) generate.push('interactions');
+    if (document.getElementById('gen-templates').checked)    generate.push('templates');
+    if (document.getElementById('gen-forms').checked)        generate.push('forms');
+
+    const entity_types  = [];
+    const entity_counts = {};
+    document.querySelectorAll('.type-cb:checked').forEach(cb => {
+        const type = cb.dataset.type;
+        entity_types.push(type);
+        const cEl = document.querySelector(`.type-count[data-type="${type}"]`);
+        entity_counts[type] = cEl ? (parseInt(cEl.value,10) || 10) : 10;
+    });
+
+    return { context, flavor, edgePct, generate, entity_types, entity_counts };
+}
+
+/* ── Start seeding ──────────────────────────────────────────── */
+async function startSeeding() {
+    const { context, flavor, edgePct, generate, entity_types, entity_counts } = collectPayload();
+
+    if (!context) { showFeedback('Industry context is required', 'error'); return; }
+    if (!entity_types.length) { showFeedback('Select at least one entity type', 'error'); return; }
+    if (!generate.length)     { showFeedback('Select at least one thing to generate', 'error'); return; }
+
+    document.getElementById('feedback').classList.add('hidden');
+
+    const btn = document.getElementById('seedBtn');
+    const log = document.getElementById('logPanel');
+    const success = document.getElementById('successPanel');
+
+    btn.disabled = true;
+    btn.textContent = 'MATERIALISING INSTITUTION…';
+    log.classList.remove('hidden');
+    success.classList.add('hidden');
+    log.textContent = 'Transmitting institutional DNA to AI engine…\nThis may take 30–90 seconds.\n\n';
+
+    // Scroll log into view
+    log.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    try {
+        const r = await fetch('/api/seeding', {
+            method: 'POST',
+            headers: hdrs(),
+            body: JSON.stringify({
+                action:           'start',
+                industry_context: context,
+                data_flavor:      flavor,
+                entity_types,
+                entity_counts,
+                edge_pct:         edgePct,
+                generate
+            })
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || d.message || 'Generation failed');
+
+        log.textContent += d.log || '';
+        log.textContent += '\n✓ Bootstrap complete.';
+
+        // Populate success panel
+        document.getElementById('res-twins').textContent        = d.twins_seeded        ?? 0;
+        document.getElementById('res-interactions').textContent = d.interactions_seeded ?? 0;
+        document.getElementById('res-templates').textContent    = d.templates_seeded    ?? 0;
+        document.getElementById('res-forms').textContent        = d.forms_seeded        ?? 0;
+
+        // Transition: hide form, show success
+        document.getElementById('formSection').classList.add('hidden');
+        success.classList.remove('hidden');
+        success.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch(e) {
+        log.textContent += '\n[ERROR] ' + e.message;
+        showFeedback(e.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'BOOTSTRAP INSTITUTION';
+    }
+}
+
+/* ── Reset form ─────────────────────────────────────────────── */
+function resetForm() {
+    document.getElementById('formSection').classList.remove('hidden');
+    document.getElementById('successPanel').classList.add('hidden');
+    document.getElementById('logPanel').classList.add('hidden');
+    document.getElementById('logPanel').textContent = '';
+    document.getElementById('seedBtn').disabled = false;
+    document.getElementById('seedBtn').textContent = 'BOOTSTRAP INSTITUTION';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Refresh existing stats
+    fetch('/api/seeding', { headers: hdrs() }).then(r => r.json()).then(d => {
+        if (d.success) showExistingStats(d.stats || {});
+    });
+}
+
+/* ── Clear seeded data ──────────────────────────────────────── */
+function confirmClear() {
+    const m = document.getElementById('clearModal');
+    m.style.opacity = '1'; m.style.pointerEvents = 'auto';
+}
+function closeClearModal() {
+    const m = document.getElementById('clearModal');
+    m.style.opacity = '0'; m.style.pointerEvents = 'none';
+}
+async function doClean() {
+    closeClearModal();
+    try {
+        const r = await fetch('/api/seeding', {
+            method: 'POST', headers: hdrs(),
+            body: JSON.stringify({ action: 'clear' })
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Clear failed');
+        toast(`Cleared: ${d.cleared_twins} twins · ${d.cleared_interactions} interactions · ${d.cleared_templates} templates · ${d.cleared_forms} forms`, 'bg-emerald-700');
+        document.getElementById('existingStats').classList.add('hidden');
+        document.getElementById('successPanel').classList.add('hidden');
+        document.getElementById('logPanel').classList.add('hidden');
+        document.getElementById('formSection').classList.remove('hidden');
+        document.getElementById('seedBtn').disabled = false;
+        document.getElementById('seedBtn').textContent = 'BOOTSTRAP INSTITUTION';
+    } catch(e) {
+        toast('Clear failed: ' + e.message, 'bg-red-600');
+    }
+}
+
+document.getElementById('clearModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('clearModal')) closeClearModal();
+});
+</script>
+</body>
+</html>

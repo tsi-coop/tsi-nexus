@@ -13,6 +13,7 @@
 /api/templates=org.tsicoop.nexus.api.Templates
 /api/schemas=org.tsicoop.nexus.api.FormSchema
 /api/stream=org.tsicoop.nexus.api.Stream
+/api/seeding=org.tsicoop.nexus.api.Seeding
 /api/services=org.tsicoop.nexus.api.ServiceRegistry
 /api/audit=org.tsicoop.nexus.api.Audit
 /api/reports=org.tsicoop.nexus.api.Reports
