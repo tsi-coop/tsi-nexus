@@ -158,11 +158,32 @@ CREATE TABLE IF NOT EXISTS nexus_users (
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL DEFAULT 'admin',  -- 'admin', 'staff'
     is_active     BOOLEAN DEFAULT TRUE,
+    twin_id       UUID UNIQUE REFERENCES digital_twins(id) ON DELETE SET NULL,
     created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- SEED: Root Organisation & System Actor
-INSERT INTO root_organisation (name) VALUES ('TSI Nexus Global') ON CONFLICT DO NOTHING;
+INSERT INTO root_organisation (name, config) VALUES (
+    'TSI Nexus Global',
+    '{
+        "emergency_offline_mode": true,
+        "global_temperature": 0.2,
+        "type_registry": {
+            "officer": {
+                "attributes": ["name", "email", "role", "branch"],
+                "defined_at": "system",
+                "system": true
+            }
+        },
+        "relationship_registry": [
+            {
+                "from_type": "officer",
+                "rel_type": "HAS_SYSTEM_ACCESS",
+                "to_type": "system"
+            }
+        ]
+    }'
+) ON CONFLICT DO NOTHING;
 INSERT INTO digital_twins (id, type, external_id, current_state)
 VALUES ('00000000-0000-0000-0000-000000000000', 'system', 'governance_node', '{"role":"governance_core"}')
 ON CONFLICT DO NOTHING;

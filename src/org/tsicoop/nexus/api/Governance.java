@@ -23,9 +23,17 @@ import java.util.UUID;
 public class Governance implements Action {
 
     @Override
+    @SuppressWarnings("unchecked")
     public void post(HttpServletRequest req, HttpServletResponse res) {
         try {
             JSONObject input = InputProcessor.getInput(req);
+            // Inject actor_id from JWT when caller doesn't supply it explicitly
+            if (input.get("actor_id") == null) {
+                JSONObject caller = InputProcessor.getAdminAuthToken(req, res);
+                if (caller != null && caller.get("twin_id") != null) {
+                    input.put("actor_id", caller.get("twin_id"));
+                }
+            }
             OutputProcessor.send(res, 200, processGuardedAction(input));
         } catch (Exception e) {
             e.printStackTrace();

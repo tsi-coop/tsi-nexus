@@ -36,10 +36,11 @@ public class JWTUtil {
         return createToken(claims, email);
     }
 
-    public static String generateToken(String email, String username, String role) {
+    public static String generateToken(String email, String username, String role, String twinId) {
         Map<String, String> claims = new HashMap<String,String>();
-        claims.put("name",username);
-        claims.put("role",role);
+        claims.put("name", username);
+        claims.put("role", role);
+        if (twinId != null && !twinId.isEmpty()) claims.put("twin_id", twinId);
         return createToken(claims, email);
     }
 
@@ -100,5 +101,15 @@ public class JWTUtil {
                 .getBody();
 
         return (String) claims.get("type");
+    }
+
+    public static String getTwinIdFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return (String) claims.get("twin_id");
     }
 }

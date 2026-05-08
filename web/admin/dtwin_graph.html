@@ -126,7 +126,7 @@
         <div>
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-widest">D-Twin Blueprints</h3>
-                <button onclick="openModal('typeModal')" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+                <button onclick="openTypeModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                     Define Type
                 </button>
@@ -138,6 +138,7 @@
                             <th class="px-6 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Entity Type</th>
                             <th class="px-6 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">State Attributes</th>
                             <th class="px-6 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Instances</th>
+                            <th class="px-6 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-widest w-16"></th>
                         </tr>
                     </thead>
                     <tbody id="blueprintsBody" class="divide-y divide-slate-50"></tbody>
@@ -285,7 +286,7 @@ function renderTables(data) {
     const bBody = document.getElementById('blueprintsBody');
     bBody.innerHTML = '';
     if (!data.blueprints.length) {
-        bBody.innerHTML = emptyRow(3, 'No entity types defined yet');
+        bBody.innerHTML = emptyRow(4, 'No entity types defined yet');
     } else {
         data.blueprints.forEach(bp => {
             const c    = colorFor(bp.type);
@@ -307,7 +308,13 @@ function renderTables(data) {
                 ${isReg
                   ? '<span class="text-xs text-slate-400">No instances yet</span>'
                   : `<span class="font-bold text-sm" style="color:${c}">${Number(bp.count).toLocaleString()}</span><span class="text-xs text-slate-400 ml-1">nodes</span>`}
+              </td>
+              <td class="px-6 py-4">
+                <button class="edit-type-btn p-1.5 text-slate-500 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50" title="Edit Attributes">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
               </td>`;
+            tr.querySelector('.edit-type-btn').addEventListener('click', () => openTypeModal(bp.type, bp.attributes));
             bBody.appendChild(tr);
         });
     }
@@ -387,7 +394,31 @@ function setFeedback(id, msg, isError) {
     el.classList.remove('hidden');
 }
 
-/* ── define type ────────────────────────────────────────────────────── */
+/* ── type modal: create or edit ─────────────────────────────────────── */
+let _typeEditMode = false;
+
+function openTypeModal(type, attrs) {
+    _typeEditMode = !!type;
+    const box  = document.querySelector('#typeModal .modal-box');
+    const key  = document.getElementById('typeKey');
+    const btn  = document.getElementById('typeSubmitBtn');
+
+    box.querySelector('h3').textContent = _typeEditMode ? 'Edit Attributes' : 'Define Entity Type';
+    box.querySelector('p').textContent  = _typeEditMode
+        ? `Update state attributes for ${cap(type)}`
+        : 'Register a new D-Twin blueprint';
+
+    key.value    = _typeEditMode ? type : '';
+    key.readOnly = _typeEditMode;
+    key.style.cssText = _typeEditMode ? 'opacity:.5;cursor:not-allowed;pointer-events:none' : '';
+
+    document.getElementById('typeAttrs').value = _typeEditMode ? (attrs || []).join(', ') : '';
+    btn.textContent = _typeEditMode ? 'Save Attributes' : 'Define Type';
+    document.getElementById('typeFeedback').classList.add('hidden');
+    openModal('typeModal');
+}
+
+/* ── define / edit type ─────────────────────────────────────────────── */
 async function submitDefineType() {
     const key   = document.getElementById('typeKey').value.trim();
     const attrs = document.getElementById('typeAttrs').value
@@ -400,24 +431,25 @@ async function submitDefineType() {
     btn.textContent = 'Saving…';
 
     try {
+        const token = localStorage.getItem('nexus_token');
         const res  = await fetch('/api/graph', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
             body: JSON.stringify({ action: 'define_type', type_key: key, attributes: attrs })
         });
         const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message || 'Save failed');
+        if (!res.ok || !data.success) throw new Error(data.message || data.reason || 'Save failed');
 
-        setFeedback('typeFeedback', `Type "${data.type_key}" defined`, false);
-        document.getElementById('typeKey').value   = '';
-        document.getElementById('typeAttrs').value = '';
+        setFeedback('typeFeedback',
+            _typeEditMode ? `Attributes updated for "${data.type_key}"` : `Type "${data.type_key}" defined`,
+            false);
         await reloadAndRender();
         setTimeout(() => closeModal('typeModal'), 1200);
     } catch (err) {
         setFeedback('typeFeedback', err.message, true);
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Define Type';
+        btn.textContent = _typeEditMode ? 'Save Attributes' : 'Define Type';
     }
 }
 

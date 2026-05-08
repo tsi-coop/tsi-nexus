@@ -99,11 +99,22 @@ public class Graph implements Action {
         }
         String typeKey = raw.trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
 
+        // Check whether this is a system type — attributes can be edited, but the system flag must be preserved
+        boolean isSystemType = false;
+        String cfgStr = loadConfig(conn);
+        if (cfgStr != null) {
+            JSONObject cfg     = (JSONObject) new JSONParser().parse(cfgStr);
+            JSONObject typeReg = cfg.get("type_registry") instanceof JSONObject ? (JSONObject) cfg.get("type_registry") : new JSONObject();
+            JSONObject existing = (JSONObject) typeReg.get(typeKey);
+            if (existing != null && Boolean.TRUE.equals(existing.get("system"))) isSystemType = true;
+        }
+
         JSONArray attrs = input.get("attributes") instanceof JSONArray ? (JSONArray) input.get("attributes") : new JSONArray();
 
         JSONObject typeDef = new JSONObject();
         typeDef.put("attributes",  attrs);
         typeDef.put("defined_at",  java.time.Instant.now().toString());
+        if (isSystemType) typeDef.put("system", true);
 
         JSONObject entry = new JSONObject();
         entry.put(typeKey, typeDef);

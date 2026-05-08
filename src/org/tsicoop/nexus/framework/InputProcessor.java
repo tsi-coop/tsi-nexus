@@ -167,10 +167,10 @@ public class InputProcessor {
             //System.out.println("token:"+token);
             if (JWTUtil.isTokenValid(token)) {
                 tokenDetails = new JSONObject();
-                tokenDetails.put("email",JWTUtil.getEmailFromToken(token));
-                tokenDetails.put("name",JWTUtil.getNameFromToken(token));
-                tokenDetails.put("role",JWTUtil.getRoleFromToken(token));
-                //System.out.println("name:"+JWTUtil.getUsernameFromToken(token)+" role:"+JWTUtil.getRoleFromToken(token));
+                tokenDetails.put("email",   JWTUtil.getEmailFromToken(token));
+                tokenDetails.put("name",    JWTUtil.getNameFromToken(token));
+                tokenDetails.put("role",    JWTUtil.getRoleFromToken(token));
+                tokenDetails.put("twin_id", JWTUtil.getTwinIdFromToken(token));
             }
         }catch (Exception e){
             e.printStackTrace();
