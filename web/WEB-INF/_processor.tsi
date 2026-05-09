@@ -16,6 +16,7 @@
 /api/seeding=org.tsicoop.nexus.api.Seeding
 /api/services=org.tsicoop.nexus.api.ServiceRegistry
 /api/audit=org.tsicoop.nexus.api.Audit
+/api/dashboard=org.tsicoop.nexus.api.Dashboard
 /api/reports=org.tsicoop.nexus.api.Reports
 /api/tuning=org.tsicoop.nexus.api.Tuning
 /api/setup=org.tsicoop.nexus.api.User
