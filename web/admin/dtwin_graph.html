@@ -247,6 +247,56 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Instance Drill-down
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="drillModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
+        <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h3 id="drillTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Nodes</h3>
+                <p id="drillSub" class="text-[11px] text-slate-400 mt-0.5">Instances of this type</p>
+            </div>
+            <button onclick="closeModal('drillModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-0 max-h-[60vh] overflow-y-auto">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/50 sticky top-0 backdrop-blur-md">
+                    <tr>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">External ID</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Versions</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Updated</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="drillBody" class="divide-y divide-slate-50"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Twin Data Viewer
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="dataModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
+        <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h3 id="dataTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">D-Twin State</h3>
+                <p id="dataSub" class="text-[11px] text-slate-400 mt-0.5">@external_id</p>
+            </div>
+            <button onclick="closeModal('dataModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-8">
+            <pre id="dataContent" class="bg-slate-950 text-indigo-300 p-6 rounded-2xl text-xs font-mono overflow-auto max-h-[50vh] leading-relaxed shadow-inner"></pre>
+        </div>
+    </div>
+</div>
+
 <script>
 /* ── colour palette ─────────────────────────────────────────────────── */
 const PALETTE = ['#6366f1','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#f97316','#14b8a6'];
@@ -293,9 +343,9 @@ function renderTables(data) {
             tr.className = 'hover:bg-slate-50/60 transition-colors' + (isReg ? ' opacity-60' : '');
             tr.innerHTML = `
               <td class="px-6 py-4">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 ${isReg ? '' : 'cursor-pointer group'}" ${isReg ? '' : `onclick="openDrillDown('${bp.type}')"`}>
                   <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${c}"></span>
-                  <span class="font-bold text-sm" style="color:${c}">${cap(bp.type)}</span>
+                  <span class="font-bold text-sm ${isReg ? '' : 'group-hover:underline'}" style="color:${c}">${cap(bp.type)}</span>
                   ${isReg ? '<span class="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-amber-50 text-amber-600 border border-amber-200">Blueprint</span>' : ''}
                 </div>
               </td>
@@ -303,14 +353,16 @@ function renderTables(data) {
               <td class="px-6 py-4">
                 ${isReg
                   ? '<span class="text-xs text-slate-400">No instances yet</span>'
-                  : `<span class="font-bold text-sm" style="color:${c}">${Number(bp.count).toLocaleString()}</span><span class="text-xs text-slate-400 ml-1">nodes</span>`}
+                  : `<button onclick="openDrillDown('${bp.type}')" class="hover:underline text-left">
+                       <span class="font-bold text-sm" style="color:${c}">${Number(bp.count).toLocaleString()}</span><span class="text-xs text-slate-400 ml-1">nodes</span>
+                     </button>`}
               </td>
-              <td class="px-6 py-4">
+              <td class="px-6 py-4 text-right">
                 <button class="edit-type-btn p-1.5 text-slate-500 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50" title="Edit Attributes">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 </button>
               </td>`;
-            tr.querySelector('.edit-type-btn').addEventListener('click', () => openTypeModal(bp.type, bp.attributes));
+            tr.querySelector('.edit-type-btn').addEventListener('click', (e) => { e.stopPropagation(); openTypeModal(bp.type, bp.attributes); });
             bBody.appendChild(tr);
         });
     }
@@ -348,6 +400,63 @@ function renderTables(data) {
 
 function emptyRow(cols, msg) {
     return `<tr><td colspan="${cols}" class="px-6 py-10 text-center text-sm text-slate-400">${msg}</td></tr>`;
+}
+
+/* ── drill down ─────────────────────────────────────────────────────── */
+let currentDrillRows = [];
+async function openDrillDown(type) {
+    const title = document.getElementById('drillTitle');
+    const sub   = document.getElementById('drillSub');
+    const body  = document.getElementById('drillBody');
+
+    title.textContent = cap(type) + ' Nodes';
+    sub.textContent   = 'Loading instances…';
+    body.innerHTML    = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 text-xs italic">Fetching data…</td></tr>';
+    
+    openModal('drillModal');
+
+    try {
+        const res = await fetch(`/api/reports?type=twins&entity_type=${type}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Fetch failed');
+
+        sub.textContent = `${data.count} nodes found`;
+        currentDrillRows = data.rows;
+        
+        if (data.rows.length === 0) {
+            body.innerHTML = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 text-xs">No nodes for this type</td></tr>';
+        } else {
+            body.innerHTML = data.rows.map(row => `
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                    <td class="px-8 py-4 font-bold text-sm text-slate-700">${row.external_id}</td>
+                    <td class="px-8 py-4 text-xs text-slate-400 font-medium">${row.version_count}</td>
+                    <td class="px-8 py-4 text-xs text-slate-400">${row.updated}</td>
+                    <td class="px-8 py-4 text-right">
+                        <button onclick="viewData('${row.external_id}')" 
+                                class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">
+                            View Data
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (err) {
+        sub.textContent = 'Error loading instances';
+        body.innerHTML = `<tr><td colspan="4" class="px-8 py-12 text-center text-rose-500 text-xs font-bold">${err.message}</td></tr>`;
+    }
+}
+
+function viewData(id) {
+    const row = currentDrillRows.find(r => r.external_id === id);
+    if (!row) return;
+    document.getElementById('dataSub').textContent = '@' + id;
+    try {
+        const json = typeof row.current_state === 'string' ? JSON.parse(row.current_state) : row.current_state;
+        document.getElementById('dataContent').textContent = JSON.stringify(json, null, 4);
+    } catch (e) {
+        document.getElementById('dataContent').textContent = row.current_state;
+    }
+    openModal('dataModal');
 }
 
 /* ── modal helpers ──────────────────────────────────────────────────── */

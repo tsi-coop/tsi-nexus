@@ -85,13 +85,13 @@
         <div class="p-6 border-t border-slate-800">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
+                    <div id="sidebarAvatar" class="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-[10px] font-bold text-indigo-400">AD</div>
                     <div>
-                        <p class="text-xs font-bold text-white">Master Admin</p>
+                        <p id="sidebarName" class="text-xs font-bold text-white">Master Admin</p>
                         <p class="text-[10px] text-slate-500 uppercase">Nexus Core</p>
                     </div>
                 </div>
-                <button onclick="localStorage.removeItem('nexus_token'); window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
+                <button onclick="localStorage.removeItem('nexus_token');localStorage.removeItem('nexus_user');window.location.href='index.html'" class="p-1.5 text-slate-600 hover:text-red-400 transition-colors" title="Sign Out">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                 </button>
             </div>
@@ -174,6 +174,18 @@
         if (!localStorage.getItem('nexus_token')) {
             window.location.href = 'index.html';
         }
+
+        /* ── sidebar user ───────────────────────────────────────────────────── */
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const u = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+                if (u.name) {
+                    document.getElementById('sidebarName').textContent = u.name;
+                    document.getElementById('sidebarAvatar').textContent =
+                        u.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+                }
+            } catch(_) {}
+        });
 
         async function loadDashboard() {
             try {
