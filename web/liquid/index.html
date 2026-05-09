@@ -3,76 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liquid | TSI Nexus</title>
+    <title>Liquid | TSI Nexus - Sign In</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --primary:  #4f46e5;   /* indigo */
-            --accent:   #ea580c;   /* orange */
-            --emerald:  #059669;
-            --rose:     #e11d48;
-            --amber:    #d97706;
-            --blue:     #4f46e5;   /* kept for card border var */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        :root { 
+            --nexus-primary: #4f46e5; 
+            --nexus-accent: #ea580c; 
+            --background: #f8fafc; 
         }
-
-        * { box-sizing: border-box; }
-
-        html, body {
-            height: 100%;
-            margin: 0;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            background-image: radial-gradient(circle at 2px 2px, #e2e8f0 1px, transparent 0);
+            background-size: 40px 40px;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0;
+        }
+        .nexus-card {
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+            background-color: white; z-index: 10; position: relative;
             overflow: hidden;
-            font-family: ui-sans-serif, system-ui, sans-serif;
+            border-radius: 2rem;
         }
-
-        /* ── Layout ─────────────────────────────────── */
-        #shell {
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* ── Left pane ───────────────────────────────── */
-        #left {
-            width: 340px;
-            flex-shrink: 0;
-            background: #ffffff;
-            border-right: 1px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        /* Coloured accent bar across the very top */
-        #left::before {
-            content: '';
-            display: block;
+        .accent-bar {
             height: 4px;
-            flex-shrink: 0;
             background: linear-gradient(90deg, #4f46e5, #ea580c, #059669);
+            width: 100%;
         }
-        #left-scroll {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0 20px 24px;
+        .input-focus:focus {
+            border-color: var(--nexus-primary);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
         }
-        #left-scroll::-webkit-scrollbar { width: 3px; }
-        #left-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
-
-        /* ── Right pane ──────────────────────────────── */
-        #right {
-            flex: 1;
-            overflow-y: auto;
-            background: #f8fafc;
-            background-image: radial-gradient(#dde1e7 0.5px, transparent 0.5px);
-            background-size: 22px 22px;
-            display: flex;
-            flex-direction: column;
-        }
-        #right::-webkit-scrollbar { width: 5px; }
-        #right::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-
-        /* ── Logo blob ───────────────────────────────── */
         .logo-blob {
-            width: 32px; height: 32px; flex-shrink: 0;
+            width: 48px; height: 48px;
             background: linear-gradient(135deg, #4f46e5, #ea580c);
             border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
             animation: morph 6s ease-in-out infinite;
@@ -82,1075 +46,97 @@
             0%,100% { border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; }
             50%      { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
         }
-
-        /* ── Input ───────────────────────────────────── */
-        #cmd {
-            width: 100%;
-            background: #f8fafc;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            color: #0f172a;
-            font-size: 13px;
-            font-weight: 400;
-            padding: 10px 14px;
-            outline: none;
-            transition: border-color .15s, box-shadow .15s;
-        }
-        #cmd::placeholder { color: #94a3b8; }
-        #cmd:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79,70,229,.10);
-        }
-
-        /* ── Section label ───────────────────────────── */
-        .sec-label {
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .3em;
-            color: #4f46e5;
-            margin-bottom: 8px;
-        }
-        .sec-divider { border-color: #f1f5f9; margin: 16px 0; }
-
-        /* ── Example chips ───────────────────────────── */
-        .ex-chip {
-            display: block;
-            width: 100%;
-            text-align: left;
-            font-size: 11px;
-            font-weight: 600;
-            color: #334155;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 7px;
-            padding: 7px 10px;
-            cursor: pointer;
-            transition: all .12s;
-            margin-bottom: 5px;
-        }
-        .ex-chip:hover { color: #4f46e5; border-color: #a5b4fc; background: #eef2ff; }
-
-        /* ── Command rows ────────────────────────────── */
-        .cmd-row { margin-bottom: 10px; }
-        .cmd-badge {
-            display: inline-block;
-            font-family: monospace;
-            font-size: 10px;
-            font-weight: 900;
-            color: #ffffff;
-            background: #4f46e5;
-            border-radius: 5px;
-            padding: 2px 7px;
-            margin-right: 4px;
-        }
-        .cmd-args { font-family: monospace; font-size: 10px; color: #64748b; }
-        .cmd-hint { font-size: 10px; color: #94a3b8; margin-top: 3px; line-height: 1.4; }
-
-        /* ── Entity chips ────────────────────────────── */
-        .ent-label {
-            font-size: 8px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .25em;
-            color: #94a3b8;
-            margin-bottom: 5px;
-            margin-top: 10px;
-        }
-        .ent-row { display: flex; flex-wrap: wrap; gap: 5px; }
-        .ent-chip {
-            font-size: 10px;
-            font-weight: 900;
-            padding: 3px 8px;
-            border-radius: 5px;
-            border: 1px solid;
-            cursor: pointer;
-            transition: all .12s;
-        }
-        .ent-officer { color: #3730a3; background: #eef2ff; border-color: #c7d2fe; }
-        .ent-branch  { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
-        .ent-member  { color: #334155; background: #f8fafc; border-color: #e2e8f0; }
-        .ent-group   { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
-        .ent-chip:hover { opacity: .7; }
-
-        /* ── How-it-works steps ──────────────────────── */
-        .step { display: flex; gap: 9px; margin-bottom: 9px; }
-        .step-n {
-            width: 18px; height: 18px; flex-shrink: 0;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            border-radius: 4px;
-            font-size: 9px; font-weight: 900; color: #fff;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .step-title { font-size: 10px; font-weight: 700; color: #334155; }
-        .step-body  { font-size: 9px;  color: #94a3b8; line-height: 1.45; margin-top: 1px; }
-
-        /* ── Right pane: stage states ────────────────── */
-        #stage.is-idle {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #stage.is-loading {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #stage.is-results {
-            padding: 28px 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            max-width: 860px;
-            width: 100%;
-            align-self: flex-start;
-        }
-
-        /* ── Cards (right pane) ──────────────────────── */
-        .nexus-card {
-            background: #fff;
-            border-left: 5px solid var(--blue);
-            border-top: 1px solid #e2e8f0;
-            border-right: 1px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 24px 28px;
-            box-shadow: 0 2px 12px rgba(79,70,229,.07), 0 1px 3px rgba(0,0,0,.04);
-        }
-        /* Action card: indigo-to-violet gradient, keeps the vibrant feel */
-        .dark-card {
-            background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #7c3aed 100%);
-            border-radius: 16px;
-            padding: 24px 28px;
-            box-shadow: 0 8px 32px rgba(79,70,229,.30);
-            position: relative;
-            overflow: hidden;
-        }
-        .dark-card-bar {
-            position: absolute; top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, #ea580c, #f59e0b, #ea580c);
-        }
-
-        .fade-in { animation: fadeUp .35s cubic-bezier(.16,1,.3,1) forwards; }
-        @keyframes fadeUp {
-            from { opacity:0; transform:translateY(10px); }
-            to   { opacity:1; transform:translateY(0); }
-        }
-
-        /* ── State grid ──────────────────────────────── */
-        .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; margin: 16px 0; }
-        .state-val  { font-size: 18px; font-weight: 900; color: #0f172a; }
-        .state-key  { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .2em; color: #94a3b8; margin-bottom: 3px; }
-
-        /* ── Interaction stream ───────────────────────── */
-        .stream-row { display: flex; gap: 12px; margin-bottom: 10px; }
-        .stream-date { font-size: 9px; font-weight: 900; color: #94a3b8; white-space: nowrap; width: 48px; flex-shrink: 0; padding-top: 1px; }
-        .stream-text { font-size: 12px; color: #475569; line-height: 1.45; }
-
-        /* ── Graph topology ──────────────────────────── */
-        .topo-chip {
-            background: #f8fafc; border: 1px solid #e2e8f0;
-            font-size: 10px; font-weight: 900; color: #475569;
-            padding: 5px 10px; border-radius: 8px;
-            display: inline-block; margin: 3px;
-        }
-        button.topo-chip {
-            cursor: pointer; font-family: inherit;
-            transition: background .12s, border-color .12s, color .12s;
-        }
-        button.topo-chip:hover {
-            background: #eef2ff; border-color: #a5b4fc; color: #3730a3;
-        }
-
-        /* ── Back navigation ─────────────────────── */
-        .nav-back-btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
-            padding: 6px 14px; font-size: 11px; font-weight: 700; color: #64748b;
-            cursor: pointer; font-family: inherit;
-            transition: background .12s, border-color .12s, color .12s;
-            margin-bottom: 4px;
-        }
-        .nav-back-btn:hover { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; }
-
-        /* ── Interaction capture form ─────────────────── */
-        .cap-field { margin-bottom: 16px; }
-        .cap-label {
-            font-size: 9px; font-weight: 900; text-transform: uppercase;
-            letter-spacing: .2em; color: #475569;
-            display: flex; align-items: center; gap: 5px; margin-bottom: 6px;
-        }
-        .cap-required { color: #e11d48; }
-        .cap-input, .cap-select, .cap-textarea {
-            width: 100%;
-            background: #f8fafc;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            color: #0f172a;
-            font-size: 13px;
-            padding: 9px 12px;
-            outline: none;
-            transition: border-color .15s, box-shadow .15s;
-            font-family: inherit;
-            box-sizing: border-box;
-        }
-        .cap-textarea { resize: vertical; min-height: 72px; }
-        .cap-input:focus, .cap-select:focus, .cap-textarea:focus {
-            border-color: #059669;
-            box-shadow: 0 0 0 3px rgba(5,150,105,.10);
-        }
-        .cap-hint  { font-size: 10px; color: #94a3b8; margin-top: 4px; line-height: 1.4; }
-        .cap-error { font-size: 10px; color: #e11d48; margin-top: 4px; font-weight: 700; display: none; }
-        .cap-submit {
-            background: linear-gradient(135deg, #059669, #047857);
-            color: #fff; border: none; border-radius: 10px;
-            padding: 11px 28px; font-size: 12px; font-weight: 900;
-            cursor: pointer; transition: opacity .15s;
-            box-shadow: 0 4px 14px rgba(5,150,105,.30);
-            letter-spacing: .02em; font-family: inherit;
-        }
-        .cap-submit:hover   { opacity: .88; }
-        .cap-submit:disabled { opacity: .5; cursor: default; }
     </style>
 </head>
 <body>
-<div id="shell">
 
-    <!-- ═══════════════════════════════════════════
-         LEFT PANE
-    ═══════════════════════════════════════════ -->
-    <aside id="left">
-
-        <!-- Header -->
-        <div style="padding:20px 20px 0; flex-shrink:0;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+<div class="w-full max-w-md nexus-card border border-slate-100">
+    <div class="accent-bar"></div>
+    <div class="p-12">
+        <div class="text-center mb-12">
+            <div class="flex justify-center mb-6">
                 <div class="logo-blob"></div>
-                <div style="flex:1">
-                    <div style="font-size:18px;font-weight:900;color:#0f172a;font-style:italic;letter-spacing:-.03em;line-height:1;">Liquid</div>
-                    <div style="font-size:8px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.3em;margin-top:2px;">TSI Nexus</div>
-                </div>
-                <div style="display:flex;gap:5px;align-items:center;">
-                    <div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;"></div>
-                    <div style="width:6px;height:6px;border-radius:50%;background:#f87171;"></div>
-                    <div style="width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 5px #34d39999;"></div>
-                </div>
             </div>
-
-            <!-- Input -->
-            <input id="cmd" type="text" placeholder="Ask a question or type a name…" autocomplete="off">
-            <div style="text-align:center;font-size:8px;color:#94a3b8;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-top:6px;margin-bottom:16px;">
-                Press Enter &nbsp;·&nbsp; or tap any name below
-            </div>
+            <h2 class="text-3xl font-black text-slate-950 tracking-tight">Liquid</h2>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Institutional Experience Layer</p>
         </div>
 
-        <!-- Scrollable help content -->
-        <div id="left-scroll">
+        <div id="nexus-feedback" class="hidden p-4 mb-8 rounded-xl text-center text-[10px] font-black uppercase tracking-wider"></div>
 
-            <hr class="sec-divider">
-
-            <!-- Try asking — populated dynamically from /api/entities -->
-            <div class="sec-label">Try asking</div>
-            <div id="ex-chips-container" style="display:contents;">
-                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
-            </div>
-
-            <hr class="sec-divider">
-
-            <!-- Commands — populated dynamically from /api/entities -->
-            <div class="sec-label">What you can do</div>
-            <div id="commands-container">
-                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
-            </div>
-
-            <hr class="sec-divider">
-
-            <!-- Entity index — populated dynamically from /api/entities -->
-            <div class="sec-label">Quick Access</div>
-            <div id="entity-index-container">
-                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
-            </div>
-
-            <hr class="sec-divider">
-
-            <!-- How it works -->
-            <div class="sec-label">How it works</div>
-            <div class="step">
-                <div class="step-n">1</div>
-                <div><div class="step-title">Ask anything</div><div class="step-body">Type a name or a question in plain English. No special syntax needed.</div></div>
-            </div>
-            <div class="step">
-                <div class="step-n">2</div>
-                <div><div class="step-title">See the full picture</div><div class="step-body">Current details, connections, and recent activity are pulled up instantly.</div></div>
-            </div>
-            <div class="step">
-                <div class="step-n">3</div>
-                <div><div class="step-title">Act with confidence</div><div class="step-body">Run reports or take action. Every step follows your institution's rules automatically.</div></div>
-            </div>
-
-        </div>
-    </aside>
-
-    <!-- ═══════════════════════════════════════════
-         RIGHT PANE
-    ═══════════════════════════════════════════ -->
-    <main id="right">
-        <div id="stage" class="is-idle">
-            <div style="text-align:center;opacity:.3;">
-                <div class="logo-blob" style="width:56px;height:56px;margin:0 auto 16px;"></div>
-                <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#4f46e5;">Ready to help</div>
-                <div style="font-size:10px;color:#94a3b8;margin-top:6px;font-weight:500;">Ask about any member, officer, or branch</div>
-            </div>
-        </div>
-    </main>
-
-</div><!-- #shell -->
-
-<!-- ─────────────────────────────────────────────
-     TEMPLATES
-───────────────────────────────────────────── -->
-
-<template id="tpl-ctx-card">
-    <div class="nexus-card fade-in">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <form class="space-y-6" id="nexusLoginForm">
             <div>
-                <div class="target-handle" style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-.02em;"></div>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
-                    <span class="twin-type" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#4f46e5;"></span>
-                </div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Institutional Email</label>
+                <input type="email" id="email" required
+                    class="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none transition-all text-sm input-focus"
+                    placeholder="officer@tsicoop.org">
             </div>
-            <div style="width:36px;height:36px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;display:flex;align-items:center;justify-content:center;">
-                <div style="width:8px;height:8px;background:#4f46e5;border-radius:50%;animation:pulse 2s infinite;"></div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Password</label>
+                <input type="password" id="password" required
+                    class="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none transition-all text-sm input-focus"
+                    placeholder="••••••••••••">
             </div>
-        </div>
-        <div class="state-grid"></div>
-        <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:4px;">
-            <div class="sec-label" style="margin-bottom:8px;">Connections</div>
-            <div class="graph-links"></div>
-        </div>
-        <div class="stream-wrap" style="display:none;background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:8px;">
-            <div class="sec-label" style="margin-bottom:10px;">Activity History</div>
-            <div class="stream-body"></div>
-        </div>
-    </div>
-</template>
+            <button type="submit" id="nexusBtn"
+                class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.3em] shadow-lg mt-4 hover:bg-indigo-700 transition-all disabled:opacity-50">
+                Sign In
+            </button>
+        </form>
 
-<template id="tpl-action-card">
-    <div class="dark-card fade-in">
-        <div class="dark-card-bar"></div>
-        <div class="action-header" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#fcd34d;margin-bottom:12px;margin-top:6px;"></div>
-        <div class="action-desc" style="font-size:22px;font-weight:300;color:#fff;line-height:1.3;margin-bottom:20px;"></div>
-        <div style="display:flex;align-items:center;gap:20px;">
-            <button class="exec-btn" style="background:#ea580c;color:#fff;padding:10px 28px;border-radius:10px;font-size:12px;font-weight:900;border:none;cursor:pointer;transition:background .15s;box-shadow:0 4px 14px rgba(234,88,12,.40);"
-                onmouseover="this.style.background='#f97316'" onmouseout="this.style.background='#ea580c'"></button>
-            <button onclick="resetStage()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;">Dismiss</button>
-        </div>
+        <p class="text-center mt-8 text-[10px] text-slate-400">
+            Secure Access · TSI Nexus Global
+        </p>
     </div>
-</template>
-
-<template id="tpl-capture-card">
-    <div class="nexus-card fade-in" style="border-left-color:#059669;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <div style="width:8px;height:8px;border-radius:50%;background:#059669;box-shadow:0 0 8px rgba(5,150,105,.5);"></div>
-            <div class="cap-schema-label" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#059669;"></div>
-        </div>
-        <div class="cap-entity-name" style="font-size:20px;font-weight:900;color:#0f172a;letter-spacing:-.02em;margin-bottom:4px;"></div>
-        <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.2em;margin-bottom:20px;">Fill in the details below</div>
-        <div class="cap-fields-body"></div>
-        <div style="display:flex;align-items:center;gap:16px;margin-top:4px;padding-top:16px;border-top:1px solid #f1f5f9;">
-            <button class="cap-submit">Save &amp; Submit</button>
-            <button class="cap-dismiss" onclick="resetStage()" style="background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;cursor:pointer;">Dismiss</button>
-        </div>
-    </div>
-</template>
+</div>
 
 <script>
-    const cmd   = document.getElementById('cmd');
-    const stage = document.getElementById('stage');
-
-    /* ── Keyboard ─────────────────────────────── */
-    cmd.addEventListener('keypress', e => {
-        if (e.key === 'Enter' && cmd.value.trim()) {
-            const v = cmd.value.trim();
-            cmd.value = '';
-            userSearch(v);
+    document.addEventListener('DOMContentLoaded', () => {
+        // Redirect if already authenticated
+        const existingToken = localStorage.getItem('nexus_token');
+        if (existingToken) {
+            window.location.href = 'liquid.html';
+            return;
         }
+
+        const form     = document.getElementById('nexusLoginForm');
+        const btn      = document.getElementById('nexusBtn');
+        const feedback = document.getElementById('nexus-feedback');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email    = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            btn.disabled = true;
+            btn.innerText = 'AUTHENTICATING...';
+            feedback.classList.add('hidden');
+
+            try {
+                const res  = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    localStorage.setItem('nexus_token', data.token);
+                    localStorage.setItem('nexus_user',  JSON.stringify({ name: data.name, role: data.role, email }));
+                    btn.innerText = 'AUTHORIZED';
+                    btn.style.backgroundColor = '#059669';
+                    setTimeout(() => { window.location.href = 'liquid.html'; }, 500);
+                } else {
+                    throw new Error(data.message || 'Access denied');
+                }
+            } catch (err) {
+                feedback.textContent = err.message;
+                feedback.className = 'p-4 mb-8 rounded-xl text-center text-[10px] font-black uppercase bg-red-50 text-red-600 border border-red-100 block';
+                btn.disabled = false;
+                btn.innerText = 'Sign In';
+            }
+        });
     });
-
-    function fire(el) {
-        const t = el.innerText;
-        cmd.value = t;
-        userSearch(t);
-    }
-
-    /* ── Stage helpers ────────────────────────── */
-    function stageLoading(isNL) {
-        stage.className = 'is-loading';
-        stage.innerHTML = `
-            <div style="text-align:center;">
-                <div style="font-size:10px;font-weight:900;letter-spacing:.45em;text-transform:uppercase;color:#4f46e5;animation:pulse 1.5s infinite;">
-                    ${isNL ? 'Understanding your question…' : 'Looking up…'}
-                </div>
-            </div>`;
-    }
-
-    function stageResults() {
-        stage.className = 'is-results';
-        stage.innerHTML = '';
-    }
-
-    function resetStage() {
-        navStack  = [];
-        lastIntent = null;
-        stage.className = 'is-idle';
-        stage.innerHTML = `
-            <div style="text-align:center;opacity:.3;">
-                <div class="logo-blob" style="width:56px;height:56px;margin:0 auto 16px;"></div>
-                <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#4f46e5;">Ready to help</div>
-                <div style="font-size:10px;color:#94a3b8;margin-top:6px;font-weight:500;">Ask about any member, officer, or branch</div>
-            </div>`;
-    }
-
-    /* ── Display helpers ──────────────────────── */
-    // 'name' returns null → hidden (shown as the card heading already).
-    // Everything else: generic titlecase from snake_case.
-    const prettyKey = k => k === 'name' ? null : k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
-
-    const prettyVal = (k, v) => {
-        const s = String(v ?? '');
-        // Universal status badges — domain-agnostic labels
-        const badge = {
-            Active:'#dcfce7:#166534', Verified:'#dcfce7:#166534', Completed:'#dcfce7:#166534',
-            Inactive:'#f1f5f9:#475569', Pending:'#fef3c7:#92400e', Blocked:'#fee2e2:#991b1b'
-        }[s];
-        if (badge) {
-            const [bg, color] = badge.split(':');
-            return `<span style="background:${bg};color:${color};padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block;">${s}</span>`;
-        }
-        return `<span class="state-val">${esc(s)}</span>`;
-    };
-
-    const prettyRel  = t => t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    const prettyId   = id => id.replace(/^@/,'').replace(/_(\d+)$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    const prettyType = t => t.charAt(0).toUpperCase() + t.slice(1);
-
-    function appendToStage(el) {
-        stage.appendChild(el);
-    }
-
-    /* ── Escape HTML ──────────────────────────── */
-    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-
-    /* ── Sidebar — loaded dynamically from /api/entities ─────────────────── */
-    async function loadSidebar() {
-        try {
-            const res  = await fetch('/api/entities');
-            const data = await res.json();
-            if (!data.success || !data.entity_types) return;
-
-            const types = data.entity_types;
-
-            // Build "Try asking" examples from actual entity data
-            const exContainer = document.getElementById('ex-chips-container');
-            exContainer.innerHTML = '';
-            const allSamples = types.flatMap(t => t.sample.map(e => ({ ...e, type: t.type })));
-
-            const addEx = (text, style) => {
-                const chip = document.createElement('span');
-                chip.className = 'ex-chip';
-                if (style) chip.setAttribute('style', style);
-                chip.textContent = text;
-                chip.onclick = () => fire(chip);
-                exContainer.appendChild(chip);
-            };
-
-            if (allSamples.length >= 1) addEx(`How is ${allSamples[0].name} doing?`);
-            if (allSamples.length >= 2) addEx(`Compare ${allSamples[0].name} and ${allSamples[1].name}`);
-            if (allSamples.length >= 3) addEx(allSamples[2].name, 'border-color:#fed7aa;color:#9a3412;background:#fff7ed;');
-            if (allSamples.length >= 4) addEx(allSamples[3].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
-            if (allSamples.length >= 5) addEx(allSamples[4].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
-
-            // Build command list from manifest
-            const cmdContainer = document.getElementById('commands-container');
-            cmdContainer.innerHTML = '';
-            (data.commands || []).forEach(cmd => {
-                const isCapture = cmd.component_type === 'interaction_capture_form';
-                const row = document.createElement('div');
-                row.className = 'cmd-row';
-                row.innerHTML = `
-                    <span class="cmd-badge" style="${isCapture ? 'background:#059669;' : ''}">${esc('/' + cmd.command_verb)}</span>
-                    <span class="cmd-args">${esc(cmd.args_hint)}</span>
-                    <div class="cmd-hint">${esc(cmd.hint)}</div>`;
-                cmdContainer.appendChild(row);
-            });
-
-            // Build entity index grouped by type
-            const indexContainer = document.getElementById('entity-index-container');
-            indexContainer.innerHTML = '';
-            const typeColors = ['ent-officer','ent-branch','ent-member','ent-group','ent-member'];
-
-            types.forEach((group, gi) => {
-                const label = document.createElement('div');
-                label.className = 'ent-label';
-                label.textContent = prettyType(group.type) + 's';
-                indexContainer.appendChild(label);
-
-                const row = document.createElement('div');
-                row.className = 'ent-row';
-                const colorClass = typeColors[gi % typeColors.length];
-
-                group.sample.forEach(e => {
-                    const chip = document.createElement('span');
-                    chip.className = `ent-chip ${colorClass}`;
-                    chip.textContent = e.name;
-                    chip.onclick = () => fire(chip);
-                    row.appendChild(chip);
-                });
-
-                if (group.count > group.sample.length) {
-                    const more = document.createElement('span');
-                    more.className = 'ent-chip';
-                    more.style.cssText = 'color:#94a3b8;cursor:default;opacity:.6;';
-                    more.textContent = `+${group.count - group.sample.length} more…`;
-                    row.appendChild(more);
-                }
-
-                indexContainer.appendChild(row);
-            });
-
-        } catch (e) {
-            console.warn('[Sidebar] loadSidebar failed:', e.message);
-        }
-    }
-    loadSidebar();
-
-    /* ── Navigation history ───────────────────── */
-    let navStack  = [];   // [{intent, label}]
-    let lastIntent = null;
-
-    // Fresh user search — clears history
-    function userSearch(intent) {
-        navStack = [];
-        resolveIntent(intent);
-    }
-
-    function showBackButton() {
-        const entry = navStack[navStack.length - 1];
-        const btn = document.createElement('button');
-        btn.className = 'nav-back-btn fade-in';
-        btn.innerHTML = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back to ${esc(entry.label)}`;
-        btn.onclick = navBack;
-        stage.insertBefore(btn, stage.firstChild);
-    }
-
-    function navBack() {
-        const entry = navStack.pop();
-        if (entry) resolveIntent(entry.intent);
-    }
-
-    /* ── Resolve intent ───────────────────────── */
-    async function resolveIntent(intent) {
-        lastIntent = intent;
-        const isNL = !intent.startsWith('/') && !intent.startsWith('@');
-        stageLoading(isNL);
-        try {
-            const res  = await fetch('/api/intent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({intent}) });
-            const data = await res.json();
-            stageResults();
-            if (navStack.length) showBackButton();
-
-            if (data.llm_command) {
-                const b = document.createElement('div');
-                b.className = 'fade-in';
-                b.style.cssText = 'display:flex;align-items:center;gap:10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:9px 14px;font-size:11px;';
-                b.innerHTML = `
-                    <svg width="14" height="14" fill="none" stroke="#4f46e5" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    <span style="color:#4f46e5;font-weight:700;">AI understood:</span>
-                    <code style="color:#3730a3;background:#e0e7ff;font-weight:900;padding:2px 7px;border-radius:5px;font-size:11px;">${esc(data.llm_command)}</code>
-                    <span style="color:#a5b4fc;font-size:10px;margin-left:auto;">from "${esc(data.intent_captured)}"</span>`;
-                appendToStage(b);
-            }
-
-            await renderComponents(data.components);
-        } catch(e) {
-            stageResults();
-            const err = document.createElement('div');
-            err.innerHTML = `<div style="padding:20px 24px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;">Connection failed: ${esc(e.message)}</div>`;
-            appendToStage(err.firstElementChild);
-        }
-    }
-
-    /* ── Render components ────────────────────── */
-    async function renderComponents(components) {
-        for (const comp of components) {
-            const props = JSON.parse(comp.props);
-
-            if (comp.component_type === 'universal_context_card') {
-                await renderContextCard(props);
-            } else if (comp.component_type === 'universal_action_confirm') {
-                renderActionCard(props);
-            } else if (comp.component_type === 'nexus_disambiguation_card') {
-                renderDisambiguationCard(props);
-            } else if (comp.component_type === 'interaction_capture_form') {
-                await renderCaptureCard(props);
-            }
-        }
-    }
-
-    /* ── Context card ─────────────────────────── */
-    async function renderContextCard(props) {
-        const tpl   = document.getElementById('tpl-ctx-card');
-        const clone = tpl.content.cloneNode(true);
-        const card  = clone.querySelector('.nexus-card');
-
-        if (props.auto_resolved) {
-            const banner = document.createElement('div');
-            banner.style.cssText = 'display:flex;align-items:center;gap:8px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:14px;';
-            banner.innerHTML = `<svg width="12" height="12" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><span style="color:#065f46;font-weight:700;">Showing results for &ldquo;<em>${esc(props.query||'')}</em>&rdquo;</span>`;
-            card.insertBefore(banner, card.firstChild);
-        }
-
-        card.querySelector('.target-handle').textContent = prettyId(props.target);
-
-        try {
-            const res  = await fetch('/api/context', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({external_id: props.target}) });
-            const data = await res.json();
-            const ctx  = data.context;
-
-            const state  = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
-            // Show the real name in header if available
-            if (state.name) card.querySelector('.target-handle').textContent = state.name;
-            card.querySelector('.twin-type').textContent = prettyType(ctx.type);
-
-            const grid = card.querySelector('.state-grid');
-            grid.innerHTML = Object.entries(state)
-                .filter(([k]) => prettyKey(k) !== null && k !== 'name')
-                .map(([k,v]) => `
-                <div>
-                    <div class="state-key">${esc(prettyKey(k))}</div>
-                    <div>${prettyVal(k,v)}</div>
-                </div>`).join('');
-
-            const links  = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
-            const topo   = card.querySelector('.graph-links');
-            if (links && links.length) {
-                topo.innerHTML = '';
-                links.forEach(l => {
-                    const chip = document.createElement('button');
-                    chip.className = 'topo-chip';
-                    chip.innerHTML = `${esc(prettyRel(l.type))} <span style="color:#4f46e5;margin:0 2px;">·</span> ${esc(prettyId(l.to))}`;
-                    chip.onclick = () => {
-                        navStack.push({ intent: lastIntent, label: card.querySelector('.target-handle').textContent });
-                        resolveIntent('@' + l.to.replace(/^@/, ''));
-                    };
-                    topo.appendChild(chip);
-                });
-            } else {
-                topo.innerHTML = '<span style="font-size:10px;color:#94a3b8;">No connections on record</span>';
-            }
-
-            const istream = ctx.recent_interactions;
-            if (istream && istream.length) {
-                const wrap = card.querySelector('.stream-wrap');
-                wrap.style.display = 'block';
-                wrap.querySelector('.stream-body').innerHTML = istream.map(i => `
-                    <div class="stream-row">
-                        <div class="stream-date">${new Date(i.timestamp).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div>
-                        <div class="stream-text">${esc(i.content)}</div>
-                    </div>`).join('');
-            }
-        } catch(e) { console.error('Context error', e); }
-
-        appendToStage(card);
-    }
-
-    /* ── Disambiguation card ─────────────────── */
-    function renderDisambiguationCard(props) {
-        const card = document.createElement('div');
-        card.className = 'nexus-card fade-in';
-        card.style.borderLeftColor = '#ea580c';
-
-        const header = document.createElement('div');
-        header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:14px;';
-        header.innerHTML = `
-            <div style="width:8px;height:8px;border-radius:50%;background:#ea580c;box-shadow:0 0 6px #ea580c99;"></div>
-            <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#ea580c;">Multiple matches found</div>`;
-        card.appendChild(header);
-
-        const title = document.createElement('div');
-        title.style.cssText = 'font-size:16px;font-weight:700;color:#0f172a;margin-bottom:16px;';
-        title.innerHTML = `Found ${props.matches.length} people named &ldquo;<span style="color:#4f46e5;">${esc(props.query)}</span>&rdquo; — which one did you mean?`;
-        card.appendChild(title);
-
-        const list = document.createElement('div');
-        list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
-
-        props.matches.forEach(m => {
-            const btn = document.createElement('button');
-            btn.style.cssText = 'display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;cursor:pointer;text-align:left;width:100%;transition:all .12s;font-family:inherit;';
-            btn.onmouseover = () => { btn.style.background='#eef2ff'; btn.style.borderColor='#a5b4fc'; };
-            btn.onmouseout  = () => { btn.style.background='#f8fafc'; btn.style.borderColor='#e2e8f0'; };
-            btn.onclick = () => resolveIntent(m.handle);
-
-            const icon = document.createElement('div');
-            icon.style.cssText = 'width:32px;height:32px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
-            icon.innerHTML = '<div style="width:8px;height:8px;background:#4f46e5;border-radius:50%;"></div>';
-
-            const info = document.createElement('div');
-            info.style.flex = '1';
-            const nameEl = document.createElement('div');
-            nameEl.style.cssText = 'font-size:13px;font-weight:900;color:#0f172a;';
-            nameEl.textContent = m.name;
-            const metaEl = document.createElement('div');
-            metaEl.style.cssText = 'font-size:10px;color:#94a3b8;margin-top:2px;font-family:monospace;';
-            metaEl.textContent = `${prettyType(m.type)}  ·  ${m.handle}`;
-            info.appendChild(nameEl);
-            info.appendChild(metaEl);
-
-            const arrow = document.createElement('div');
-            arrow.innerHTML = '<svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>';
-
-            btn.appendChild(icon);
-            btn.appendChild(info);
-            btn.appendChild(arrow);
-            list.appendChild(btn);
-        });
-
-        card.appendChild(list);
-        appendToStage(card);
-    }
-
-    /* ── Action card ──────────────────────────── */
-    function renderActionCard(props) {
-        const tpl   = document.getElementById('tpl-action-card');
-        const clone = tpl.content.cloneNode(true);
-        const card  = clone.querySelector('.dark-card');
-
-        const isAnalytics = ['ANALYZE','COMPARE'].includes(props.action_type);
-        card.querySelector('.action-header').textContent = isAnalytics ? 'Portfolio Report' : 'Confirmation Required';
-
-        const btn = card.querySelector('.exec-btn');
-        if (props.action_type === 'COMPARE') {
-            card.querySelector('.action-desc').textContent = `Compare ${prettyId(props.target_1)} with ${prettyId(props.target_2)}`;
-            btn.textContent = 'Run Comparison';
-        } else if (props.action_type === 'ANALYZE') {
-            card.querySelector('.action-desc').textContent = `Show full performance report for ${prettyId(props.target_external_id)}`;
-            btn.textContent = 'Run Report';
-        } else if (props.action_type === 'DISBURSE') {
-            card.querySelector('.action-desc').textContent = `Disburse${props.value ? ' ' + props.value : ''} to ${prettyId(props.target_external_id)}`;
-            btn.textContent = 'Confirm & Proceed';
-        } else {
-            card.querySelector('.action-desc').textContent = `${props.action_type} · ${prettyId(props.target_external_id)}`;
-            btn.textContent = 'Confirm & Proceed';
-        }
-
-        btn.onclick = () => finalizeAction(props);
-        appendToStage(card);
-    }
-
-    /* ── Finalize action ──────────────────────── */
-    async function finalizeAction(props) {
-        stageLoading(false);
-        const body = {
-            action_type: props.action_type,
-            intent_raw:  props.intent_raw,
-            params: {
-                target_external_id: props.target_external_id,
-                target_1:           props.target_1,
-                target_2:           props.target_2,
-                new_data: props.value ? {[props.action_type.toLowerCase()+'_amount']: props.value} : null
-            }
-        };
-        try {
-            const res    = await fetch('/api/governance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-            const result = await res.json();
-            stageResults();
-
-            if (result.success) {
-                const wrap = document.createElement('div');
-                wrap.className = 'fade-in';
-                wrap.style.cssText = 'background:#fff;border:1px solid #e0e7ff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(79,70,229,.08);';
-                wrap.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-                        <div style="width:36px;height:36px;background:#eef2ff;border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                            <svg width="18" height="18" fill="none" stroke="#4f46e5" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                        </div>
-                        <div style="font-size:16px;font-weight:900;color:#3730a3;letter-spacing:-.01em;">
-                            ${['ANALYZE','COMPARE'].includes(props.action_type) ? 'Report Ready' : 'Done'}
-                        </div>
-                        <button onclick="resetStage()" style="margin-left:auto;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← Start over</button>
-                    </div>
-                    <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:16px;">
-                        ${result.data ? renderTable(result.data, props.action_type) : `<span style="font-size:13px;color:#475569;">${esc(result.reason||result.message||'')}</span>`}
-                    </div>
-                    ${result.narrative ? `
-                    <div style="margin-top:12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:16px;">
-                        <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3em;color:#4f46e5;margin-bottom:8px;">What this means</div>
-                        <div style="font-size:12px;color:#334155;line-height:1.65;white-space:pre-line;">${esc(result.narrative)}</div>
-                    </div>` : ''}`;
-                appendToStage(wrap);
-
-                if (props.action_type === 'DISBURSE') {
-                    setTimeout(() => resolveIntent(`@${(props.target_external_id||'').replace(/^@/,'')}`), 3000);
-                }
-            } else {
-                const deny = document.createElement('div');
-                deny.className = 'fade-in';
-                deny.style.cssText = 'background:#fff;border-left:6px solid #e11d48;border-radius:14px;padding:24px 28px;box-shadow:0 4px 20px rgba(225,29,72,.08);';
-                deny.innerHTML = `
-                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#e11d48;margin-bottom:10px;">Action Blocked</div>
-                    <div style="font-size:16px;font-weight:700;color:#0f172a;">${esc(result.reason||'')}</div>
-                    <button onclick="resetStage()" style="margin-top:16px;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← Start over</button>`;
-                appendToStage(deny);
-            }
-        } catch(e) {
-            stageResults();
-            const err = document.createElement('div');
-            err.style.cssText = 'padding:20px 24px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;';
-            err.textContent = 'Nexus Error: ' + e.message;
-            appendToStage(err);
-        }
-    }
-
-    /* ── Capture form ────────────────────────── */
-    async function renderCaptureCard(props) {
-        const placeholder = document.createElement('div');
-        placeholder.className = 'nexus-card fade-in';
-        placeholder.style.borderLeftColor = '#059669';
-        placeholder.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:.4em;text-transform:uppercase;color:#059669;animation:pulse 1.5s infinite;">Loading form…</div>`;
-        appendToStage(placeholder);
-
-        try {
-            const res  = await fetch('/api/capture?external_id=' + encodeURIComponent(props.target || ''));
-            const data = await res.json();
-            placeholder.remove();
-
-            if (!data.success || !data.schemas || !data.schemas.length) {
-                const msg = document.createElement('div');
-                msg.className = 'nexus-card fade-in';
-                msg.style.borderLeftColor = '#e11d48';
-                msg.innerHTML = `<div style="color:#9f1239;font-weight:700;font-size:13px;">No forms are set up for this account type (${esc(data.entity_type||'unknown')}).</div>`;
-                appendToStage(msg);
-                return;
-            }
-
-            if (data.schemas.length === 1) {
-                renderSchemaForm(data.schemas[0], props.target);
-            } else {
-                renderSchemaPicker(data.schemas, props.target);
-            }
-        } catch(e) {
-            placeholder.remove();
-            const err = document.createElement('div');
-            err.style.cssText = 'padding:20px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;';
-            err.textContent = 'Capture load failed: ' + e.message;
-            appendToStage(err);
-        }
-    }
-
-    function renderSchemaPicker(schemas, target) {
-        const card = document.createElement('div');
-        card.className = 'nexus-card fade-in';
-        card.style.borderLeftColor = '#059669';
-        card.innerHTML = `
-            <div style="font-size:10px;font-weight:900;letter-spacing:.4em;text-transform:uppercase;color:#059669;margin-bottom:4px;">Record Interaction</div>
-            <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px;">${esc(prettyId(target))}</div>
-            <div style="font-size:12px;color:#64748b;margin-bottom:18px;">Choose the type of interaction to record</div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-                ${schemas.map(s => `
-                    <button class="schema-pick-btn" data-schema-id="${esc(s.schema_id)}"
-                        style="display:flex;align-items:center;gap:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 18px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;">
-                        <div style="width:36px;height:36px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#6d28d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 5H7a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <div style="font-size:14px;font-weight:700;color:#1e293b;">${esc(s.label)}</div>
-                            <div style="font-size:12px;color:#64748b;margin-top:2px;">${esc(s.fields.length)} field${s.fields.length !== 1 ? 's' : ''} to fill in</div>
-                        </div>
-                        <svg style="margin-left:auto;flex-shrink:0;" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                    </button>
-                `).join('')}
-            </div>`;
-
-        card.querySelectorAll('.schema-pick-btn').forEach(btn => {
-            btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#6d28d9'; btn.style.background = '#f5f3ff'; });
-            btn.addEventListener('mouseleave', () => { btn.style.borderColor = '#e2e8f0'; btn.style.background = '#f8fafc'; });
-            btn.addEventListener('click', () => {
-                const schema = schemas.find(s => s.schema_id === btn.dataset.schemaId);
-                if (schema) { card.remove(); renderSchemaForm(schema, target); }
-            });
-        });
-
-        appendToStage(card);
-    }
-
-    function renderSchemaForm(schema, target) {
-        const tpl   = document.getElementById('tpl-capture-card');
-        const clone = tpl.content.cloneNode(true);
-        const card  = clone.querySelector('.nexus-card');
-
-        card.querySelector('.cap-schema-label').textContent = schema.label;
-        card.querySelector('.cap-entity-name').textContent  = prettyId(target);
-
-        const body     = card.querySelector('.cap-fields-body');
-        const fieldMap = {};
-
-        for (const field of schema.fields) {
-            const wrap = document.createElement('div');
-            wrap.className = 'cap-field';
-
-            const labelEl = document.createElement('label');
-            labelEl.className = 'cap-label';
-            labelEl.innerHTML = esc(field.label) + (field.required ? ' <span class="cap-required">*</span>' : '');
-
-            let inputEl;
-            if (field.type === 'select') {
-                inputEl = document.createElement('select');
-                inputEl.className = 'cap-select';
-                inputEl.innerHTML = `<option value="">Select…</option>` +
-                    (field.options || []).map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
-            } else if (field.type === 'textarea') {
-                inputEl = document.createElement('textarea');
-                inputEl.className = 'cap-textarea';
-                inputEl.placeholder = field.hint || '';
-            } else {
-                inputEl = document.createElement('input');
-                inputEl.type = field.type || 'text';
-                inputEl.className = 'cap-input';
-                inputEl.placeholder = field.hint || '';
-            }
-            inputEl.dataset.key = field.key;
-
-            const hintEl = document.createElement('div');
-            hintEl.className = 'cap-hint';
-            hintEl.textContent = field.hint || '';
-
-            const errEl = document.createElement('div');
-            errEl.className = 'cap-error';
-
-            wrap.appendChild(labelEl);
-            wrap.appendChild(inputEl);
-            wrap.appendChild(hintEl);
-            wrap.appendChild(errEl);
-            body.appendChild(wrap);
-            fieldMap[field.key] = { inputEl, errEl, field };
-        }
-
-        card.querySelector('.cap-submit').addEventListener('click', () => {
-            submitCapture(schema, target, fieldMap, card);
-        });
-
-        appendToStage(card);
-    }
-
-    async function submitCapture(schema, target, fieldMap, card) {
-        let valid = true;
-        const formData = {};
-
-        for (const [key, { inputEl, errEl, field }] of Object.entries(fieldMap)) {
-            const val = inputEl.value.trim();
-            errEl.style.display = 'none';
-
-            if (field.required && !val) {
-                errEl.textContent = field.label + ' is required.';
-                errEl.style.display = 'block';
-                valid = false;
-            } else if (field.pattern && val && !new RegExp(field.pattern).test(val)) {
-                errEl.textContent = field.hint || 'Invalid format.';
-                errEl.style.display = 'block';
-                valid = false;
-            } else {
-                formData[key] = val;
-            }
-        }
-        if (!valid) return;
-
-        const btn = card.querySelector('.cap-submit');
-        btn.disabled    = true;
-        btn.textContent = 'Submitting…';
-
-        try {
-            const res = await fetch('/api/capture', {
-                method:  'POST',
-                headers: {'Content-Type': 'application/json'},
-                body:    JSON.stringify({ schema_id: schema.schema_id, external_id: target, form_data: formData })
-            });
-            const result = await res.json();
-
-            if (result.success) {
-                card.style.opacity        = '.4';
-                card.style.pointerEvents  = 'none';
-
-                const wrap = document.createElement('div');
-                wrap.className = 'fade-in';
-                wrap.style.cssText = 'background:#fff;border:1px solid #a7f3d0;border-left:6px solid #059669;border-radius:14px;padding:24px 28px;box-shadow:0 4px 20px rgba(5,150,105,.08);';
-                wrap.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                        <div style="width:34px;height:34px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="16" height="16" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                        </div>
-                        <div style="font-size:15px;font-weight:900;color:#065f46;letter-spacing:-.01em;">Saved successfully</div>
-                        <button onclick="resetStage()" style="margin-left:auto;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← Start over</button>
-                    </div>
-                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:12px 16px;font-size:12px;color:#166534;line-height:1.6;">
-                        ${esc(result.stream_entry || '')}
-                    </div>
-                    <div style="font-size:10px;color:#94a3b8;margin-top:10px;">Activity logged · Record updated · Refreshing…</div>`;
-                appendToStage(wrap);
-                setTimeout(() => resolveIntent(target), 2200);
-            } else {
-                btn.disabled    = false;
-                btn.textContent = 'Save & Submit';
-                const deny = document.createElement('div');
-                deny.className = 'fade-in';
-                deny.style.cssText = 'background:#fff;border-left:6px solid #e11d48;border-radius:12px;padding:18px 22px;margin-top:0;';
-                deny.innerHTML = `
-                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.35em;color:#e11d48;margin-bottom:6px;">Action Blocked</div>
-                    <div style="font-size:14px;font-weight:700;color:#0f172a;">${esc(result.reason || 'Unknown error')}</div>`;
-                appendToStage(deny);
-            }
-        } catch(e) {
-            btn.disabled    = false;
-            btn.textContent = 'Save & Submit';
-            const errDiv = document.createElement('div');
-            errDiv.style.cssText = 'padding:12px 14px;background:#fff1f2;border-radius:8px;color:#9f1239;font-weight:700;font-size:12px;margin-top:12px;';
-            errDiv.textContent = 'Request failed: ' + e.message;
-            card.appendChild(errDiv);
-        }
-    }
-
-    /* ── Render table (analysis results) ─────── */
-    function renderTable(data, actionType) {
-        if (!data || !data.length) return '<span style="color:#94a3b8;font-style:italic;font-size:12px;">No data returned.</span>';
-
-        if (actionType === 'ANALYZE') {
-            const row = data[0];
-            return Object.entries(row).filter(([k]) => k !== 'external_id').map(([k,v]) => `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;">
-                    <span style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;">${esc(k.replace(/_/g,' '))}</span>
-                    <span style="font-size:20px;font-weight:900;color:#0f172a;">${esc(String(v??'—'))}${k.includes('rate')?'%':''}</span>
-                </div>`).join('');
-        }
-
-        if (actionType === 'COMPARE') {
-            const cols = Object.keys(data[0]).filter(k => k !== 'external_id');
-            return `<table style="width:100%;border-collapse:collapse;font-size:12px;">
-                <thead><tr>
-                    <th style="text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">Entity</th>
-                    ${cols.map(c=>`<th style="text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">${esc(c.replace(/_/g,' '))}</th>`).join('')}
-                </tr></thead>
-                <tbody>${data.map(row=>`
-                    <tr style="border-top:1px solid #f1f5f9;">
-                        <td style="padding:10px 0;font-weight:700;color:#334155;">${esc(String(row.external_id))}</td>
-                        ${cols.map(c=>`<td style="padding:10px 0;text-align:right;font-weight:900;color:#0f172a;font-size:16px;">${esc(String(row[c]??'—'))}${c.includes('rate')?'%':''}</td>`).join('')}
-                    </tr>`).join('')}
-                </tbody></table>`;
-        }
-        return '';
-    }
 </script>
+
 </body>
 </html>

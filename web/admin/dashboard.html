@@ -170,6 +170,11 @@
     </main>
 
     <script>
+        // Auth check
+        if (!localStorage.getItem('nexus_token')) {
+            window.location.href = 'index.html';
+        }
+
         async function loadDashboard() {
             try {
                 const res = await fetch('/api/dashboard');
