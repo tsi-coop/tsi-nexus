@@ -46,6 +46,7 @@ public class Reports implements Action {
                 case "stream":         stream(conn, req, res);         break;
                 case "audit":          audit(conn, req, res);          break;
                 case "policy_summary": policySummary(conn, req, res);  break;
+                case "relationships":  relationships(conn, req, res);  break;
                 default:
                     OutputProcessor.errorResponse(res, 400, "Bad request",
                         "Unknown type: " + type, req.getRequestURI());
@@ -332,6 +333,50 @@ public class Reports implements Action {
                 row.put("authorised", rs.getLong("authorised"));
                 row.put("denied",     rs.getLong("denied"));
                 rows.add(row);
+            }
+        }
+
+        JSONObject out = new JSONObject();
+        out.put("success", true);
+        out.put("count",   rows.size());
+        out.put("rows",    rows);
+        OutputProcessor.send(res, 200, out);
+    }
+
+    /* ── relationships ───────────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void relationships(Connection conn, HttpServletRequest req, HttpServletResponse res) throws Exception {
+        String fromType = req.getParameter("from_type");
+        String relType  = req.getParameter("rel_type");
+        String toType   = req.getParameter("to_type");
+
+        String sql = "SELECT t1.external_id AS from_ext, t2.external_id AS to_ext, tr.metadata::text AS meta " +
+                     "FROM twin_relationships tr " +
+                     "JOIN digital_twins t1 ON tr.from_twin_id = t1.id " +
+                     "JOIN digital_twins t2 ON tr.to_twin_id = t2.id " +
+                     "WHERE t1.type = ? AND tr.relationship_type = ? AND t2.type = ? " +
+                     "ORDER BY t1.external_id, t2.external_id LIMIT " + MAX_ROWS;
+
+        JSONArray rows = new JSONArray();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fromType != null ? fromType.trim() : "");
+            ps.setString(2, relType != null ? relType.trim() : "");
+            ps.setString(3, toType != null ? toType.trim() : "");
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject row = new JSONObject();
+                    row.put("from_external_id", rs.getString("from_ext"));
+                    row.put("to_external_id",   rs.getString("to_ext"));
+                    String metaStr = rs.getString("meta");
+                    if (metaStr != null && !metaStr.isBlank()) {
+                        row.put("metadata", org.json.simple.JSONValue.parse(metaStr));
+                    } else {
+                        row.put("metadata", new JSONObject());
+                    }
+                    rows.add(row);
+                }
             }
         }
 
