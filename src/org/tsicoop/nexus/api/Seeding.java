@@ -67,6 +67,11 @@ public class Seeding implements Action {
                 stats.put("seeded_twins", rs.next() ? rs.getLong(1) : 0L);
             }
             try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM twin_relationships WHERE from_twin_id IN (SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')");
+                 ResultSet rs = ps.executeQuery()) {
+                stats.put("seeded_relationships", rs.next() ? rs.getLong(1) : 0L);
+            }
+            try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT COUNT(*) FROM interaction_stream ist " +
                     "WHERE ist.owner_id IN (SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')");
                  ResultSet rs = ps.executeQuery()) {
@@ -87,7 +92,7 @@ public class Seeding implements Action {
             JSONArray sessions = new JSONArray();
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT session_id::text, industry_context, status, " +
-                    "twins_seeded, interactions_seeded, templates_seeded, forms_seeded, policies_seeded, " +
+                    "twins_seeded, relationships_seeded, interactions_seeded, templates_seeded, forms_seeded, policies_seeded, " +
                     "to_char(created_at, 'DD Mon YYYY HH24:MI') AS created, error_message " +
                     "FROM seeding_sessions ORDER BY created_at DESC LIMIT 10");
                  ResultSet rs = ps.executeQuery()) {
@@ -97,6 +102,7 @@ public class Seeding implements Action {
                     s.put("industry_context",     rs.getString("industry_context"));
                     s.put("status",               rs.getString("status"));
                     s.put("twins_seeded",         rs.getInt("twins_seeded"));
+                    s.put("relationships_seeded", rs.getInt("relationships_seeded"));
                     s.put("interactions_seeded",  rs.getInt("interactions_seeded"));
                     s.put("templates_seeded",     rs.getInt("templates_seeded"));
                     s.put("forms_seeded",         rs.getInt("forms_seeded"));
@@ -195,47 +201,53 @@ public class Seeding implements Action {
             }
         }
 
-        int twinsSeeded = 0, interactionsSeeded = 0, templatesSeeded = 0, forms_seeded = 0, policiesSeeded = 0;
+        int twinsSeeded = 0, relationshipsSeeded = 0, interactionsSeeded = 0, templatesSeeded = 0, forms_seeded = 0, policiesSeeded = 0;
         List<String[]> twinList = new ArrayList<>();
         StringBuilder log = new StringBuilder();
 
         try {
             if (generate.contains("twins")) {
-                log.append("[1/5] Generating digital twins...\n");
+                log.append("[1/6] Generating digital twins...\n");
                 twinList = generateTwins(conn, context, flavor, types, counts, edgePct);
                 twinsSeeded = twinList.size();
                 log.append("      → ").append(twinsSeeded).append(" twins created\n");
             }
+            if (generate.contains("relationships") && !twinList.isEmpty()) {
+                log.append("[2/6] Generating context relationships...\n");
+                relationshipsSeeded = generateRelationships(conn, context, flavor, twinList);
+                log.append("      → ").append(relationshipsSeeded).append(" relationships created\n");
+            }
             if (generate.contains("interactions") && !twinList.isEmpty()) {
-                log.append("[2/5] Generating interaction history...\n");
+                log.append("[3/6] Generating interaction history...\n");
                 interactionsSeeded = generateInteractions(conn, context, flavor, twinList, edgePct);
                 log.append("      → ").append(interactionsSeeded).append(" interactions created\n");
             }
             if (generate.contains("templates")) {
-                log.append("[3/5] Generating Liquid templates...\n");
+                log.append("[4/6] Generating Liquid templates...\n");
                 templatesSeeded = generateTemplates(conn, context, flavor, types);
                 log.append("      → ").append(templatesSeeded).append(" templates created\n");
             }
             if (generate.contains("forms")) {
-                log.append("[4/5] Generating form schemas...\n");
+                log.append("[5/6] Generating form schemas...\n");
                 forms_seeded = generateForms(conn, context, flavor, types);
                 log.append("      → ").append(forms_seeded).append(" forms created\n");
             }
             if (generate.contains("policies")) {
-                log.append("[5/5] Generating policy manifests...\n");
+                log.append("[6/6] Generating policy manifests...\n");
                 policiesSeeded = generatePolicies(conn, context, flavor, types);
                 log.append("      → ").append(policiesSeeded).append(" policies created\n");
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE seeding_sessions SET status='complete', twins_seeded=?, interactions_seeded=?, " +
+                    "UPDATE seeding_sessions SET status='complete', twins_seeded=?, relationships_seeded=?, interactions_seeded=?, " +
                     "templates_seeded=?, forms_seeded=?, policies_seeded=?, completed_at=now() WHERE session_id=?::uuid")) {
                 ps.setInt(1, twinsSeeded);
-                ps.setInt(2, interactionsSeeded);
-                ps.setInt(3, templatesSeeded);
-                ps.setInt(4, forms_seeded);
-                ps.setInt(5, policiesSeeded);
-                ps.setString(6, sessionId);
+                ps.setInt(2, relationshipsSeeded);
+                ps.setInt(3, interactionsSeeded);
+                ps.setInt(4, templatesSeeded);
+                ps.setInt(5, forms_seeded);
+                ps.setInt(6, policiesSeeded);
+                ps.setString(7, sessionId);
                 ps.executeUpdate();
             }
 
@@ -254,6 +266,7 @@ public class Seeding implements Action {
         out.put("success",               true);
         out.put("session_id",            sessionId);
         out.put("twins_seeded",          twinsSeeded);
+        out.put("relationships_seeded",  relationshipsSeeded);
         out.put("interactions_seeded",   interactionsSeeded);
         out.put("templates_seeded",      templatesSeeded);
         out.put("forms_seeded",          forms_seeded);
@@ -266,12 +279,17 @@ public class Seeding implements Action {
 
     @SuppressWarnings("unchecked")
     private void clearSeeded(Connection conn, HttpServletRequest req, HttpServletResponse res) throws Exception {
-        long interactions, twins, templates, forms, policies;
+        long interactions, twins, templates, forms, policies, relationships;
 
         try (PreparedStatement ps = conn.prepareStatement(
                 "DELETE FROM interaction_stream WHERE owner_id IN " +
                 "(SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')")) {
             interactions = ps.executeUpdate();
+        }
+        try (PreparedStatement ps = conn.prepareStatement(
+                "DELETE FROM twin_relationships WHERE from_twin_id IN " +
+                "(SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')")) {
+            relationships = ps.executeUpdate();
         }
         try (PreparedStatement ps = conn.prepareStatement(
                 "DELETE FROM digital_twins WHERE external_id LIKE 'SEED_%'")) {
@@ -293,6 +311,7 @@ public class Seeding implements Action {
         JSONObject out = new JSONObject();
         out.put("success",               true);
         out.put("cleared_twins",         twins);
+        out.put("cleared_relationships", relationships);
         out.put("cleared_interactions",  interactions);
         out.put("cleared_templates",     templates);
         out.put("cleared_forms",         forms);
@@ -407,6 +426,52 @@ public class Seeding implements Action {
             }
         }
         return inserted;
+    }
+
+    private int generateRelationships(Connection conn, String context, String flavor,
+                                       List<String[]> twins) throws Exception {
+        // Cap to 30 entities for prompt safety
+        List<String[]> sample = twins.size() > 30 ? twins.subList(0, 30) : twins;
+        StringBuilder  twinList = new StringBuilder();
+        for (String[] t : sample) twinList.append(t[0]).append(" (").append(t[1]).append("), ");
+
+        String prompt =
+            "You are generating realistic digital twin relationships for an institutional context graph.\n\n" +
+            "INDUSTRY CONTEXT: " + context + "\n" +
+            (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
+            "ENTITY IDs: " + twinList + "\n\n" +
+            "Generate 15-25 relationship links (edges) between the entities above.\n" +
+            "relationship_type: uppercase, e.g. MEMBER_OF, GUARANTEES, WORKS_AT, SPOUSE_OF, CHILD_OF, MANAGES, REFERRED_BY\n" +
+            "metadata: small JSON object with 1-2 relevant fields (e.g. joined_date, relationship_strength, or shared_resource)\n\n" +
+            "Return ONLY valid JSON, no markdown:\n" +
+            "{\"relationships\":[{\"from_id\":\"SEED_member_001\",\"to_id\":\"SEED_group_001\"," +
+            "\"type\":\"MEMBER_OF\",\"metadata\":{\"role\":\"chairperson\"}},...]}";
+
+        JSONObject generated = extractJson(callAI(prompt));
+        JSONArray  items     = arrOf(generated, "relationships");
+
+        int count = 0;
+        for (Object obj : items) {
+            JSONObject item   = (JSONObject) obj;
+            String     from   = str(item, "from_id");
+            String     to     = str(item, "to_id");
+            String     type   = str(item, "type");
+            JSONObject meta   = objOf(item, "metadata");
+            if (from == null || to == null || type == null) continue;
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type, metadata) " +
+                    "SELECT f.id, t.id, ?, ?::jsonb " +
+                    "FROM digital_twins f, digital_twins t " +
+                    "WHERE f.external_id = ? AND t.external_id = ?")) {
+                ps.setString(1, type.toUpperCase());
+                ps.setString(2, meta.toJSONString());
+                ps.setString(3, from);
+                ps.setString(4, to);
+                count += ps.executeUpdate();
+            }
+        }
+        return count;
     }
 
     private int generateInteractions(Connection conn, String context, String flavor,
@@ -753,6 +818,7 @@ public class Seeding implements Action {
                 "  edge_cases_pct INTEGER DEFAULT 5, " +
                 "  status TEXT DEFAULT 'running', " +
                 "  twins_seeded INTEGER DEFAULT 0, " +
+                "  relationships_seeded INTEGER DEFAULT 0, " +
                 "  interactions_seeded INTEGER DEFAULT 0, " +
                 "  templates_seeded INTEGER DEFAULT 0, " +
                 "  forms_seeded INTEGER DEFAULT 0, " +
@@ -765,6 +831,9 @@ public class Seeding implements Action {
         }
         // Migrations
         try (PreparedStatement ps = conn.prepareStatement("ALTER TABLE seeding_sessions ADD COLUMN IF NOT EXISTS policies_seeded INTEGER DEFAULT 0")) {
+            ps.execute();
+        }
+        try (PreparedStatement ps = conn.prepareStatement("ALTER TABLE seeding_sessions ADD COLUMN IF NOT EXISTS relationships_seeded INTEGER DEFAULT 0")) {
             ps.execute();
         }
     }
@@ -796,7 +865,7 @@ public class Seeding implements Action {
     @SuppressWarnings("unchecked")
     private JSONArray defaultGenerate() {
         JSONArray a = new JSONArray();
-        a.add("twins"); a.add("interactions"); a.add("templates"); a.add("forms");
+        a.add("twins"); a.add("relationships"); a.add("interactions"); a.add("templates"); a.add("forms");
         return a;
     }
 
