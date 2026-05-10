@@ -49,8 +49,8 @@ services:
       POSTGRES_PASSWD: "${POSTGRES_PASSWD:-secure_dev_password}"
       TSI_NEXUS_JWT_SECRET: "${TSI_NEXUS_JWT_SECRET:-tsi-nexus-default-dev-secret-key-256-bits-minimum!!}"
       TSI_EXPORT_PATH: "${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}"
-      VLLM_URL: "${VLLM_URL:-http://192.168.1.77:8000}"
-      VLLM_MODEL: "${VLLM_MODEL:-google/gemma-4-E4B-it}"
+      VLLM_URL: "${VLLM_URL:-http://192.168.1.77:8001}"
+      VLLM_MODEL: "${VLLM_MODEL:-gemma-4-26B-A4B-it}"
     
     volumes:
       - "tsi_reports_data:${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}:rw"

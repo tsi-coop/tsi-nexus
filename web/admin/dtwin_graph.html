@@ -297,6 +297,36 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Relationship Drill-down
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="relDrillModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
+        <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h3 id="relDrillTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Edges</h3>
+                <p id="relDrillSub" class="text-[11px] text-slate-400 mt-0.5">Context graph relationship instances</p>
+            </div>
+            <button onclick="closeModal('relDrillModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-0 max-h-[65vh] overflow-y-auto">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/50 sticky top-0 backdrop-blur-md">
+                    <tr>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">From Entity</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Relationship</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">To Entity</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Metadata</th>
+                    </tr>
+                </thead>
+                <tbody id="relDrillBody" class="divide-y divide-slate-50"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <script>
 /* ── colour palette ─────────────────────────────────────────────────── */
 const PALETTE = ['#6366f1','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#f97316','#14b8a6'];
@@ -391,7 +421,9 @@ function renderTables(data) {
               <td class="px-6 py-4">
                 ${isReg
                   ? '<span class="text-xs text-slate-400">—</span>'
-                  : `<span class="font-bold text-sm text-slate-700">${Number(rel.count).toLocaleString()}</span>`}
+                  : `<button onclick="openRelDrillDown('${rel.from_type}', '${rel.rel_type}', '${rel.to_type}')" class="hover:underline text-left">
+                       <span class="font-bold text-sm text-slate-700">${Number(rel.count).toLocaleString()}</span><span class="text-xs text-slate-400 ml-1">links</span>
+                     </button>`}
               </td>`;
             rBody.appendChild(tr);
         });
@@ -457,6 +489,52 @@ function viewData(id) {
         document.getElementById('dataContent').textContent = row.current_state;
     }
     openModal('dataModal');
+}
+
+async function openRelDrillDown(from, rel, to) {
+    const title = document.getElementById('relDrillTitle');
+    const sub   = document.getElementById('relDrillSub');
+    const body  = document.getElementById('relDrillBody');
+
+    title.textContent = `${rel} Relationships`;
+    sub.textContent   = 'Loading link instances…';
+    body.innerHTML    = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 text-xs italic">Fetching graph data…</td></tr>';
+    
+    openModal('relDrillModal');
+
+    try {
+        const res = await fetch(`/api/reports?type=relationships&from_type=${from}&rel_type=${rel}&to_type=${to}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Fetch failed');
+
+        sub.textContent = `${data.count} links found between ${cap(from)} and ${cap(to)}`;
+        
+        if (data.rows.length === 0) {
+            body.innerHTML = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 text-xs">No link instances found</td></tr>';
+        } else {
+            body.innerHTML = data.rows.map(row => `
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                    <td class="px-8 py-4">
+                        <p class="font-bold text-sm text-slate-700">@${row.from_external_id}</p>
+                        <p class="text-[10px] text-slate-400 uppercase">${cap(from)}</p>
+                    </td>
+                    <td class="px-8 py-4 text-center">
+                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-black rounded uppercase tracking-tighter">${rel}</span>
+                    </td>
+                    <td class="px-8 py-4">
+                        <p class="font-bold text-sm text-slate-700">@${row.to_external_id}</p>
+                        <p class="text-[10px] text-slate-400 uppercase">${cap(to)}</p>
+                    </td>
+                    <td class="px-8 py-4">
+                        <pre class="text-[10px] text-slate-500 font-mono truncate max-w-xs" title='${JSON.stringify(row.metadata)}'>${JSON.stringify(row.metadata)}</pre>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (err) {
+        sub.textContent = 'Error loading links';
+        body.innerHTML = `<tr><td colspan="4" class="px-8 py-12 text-center text-rose-500 text-xs font-bold">${err.message}</td></tr>`;
+    }
 }
 
 /* ── modal helpers ──────────────────────────────────────────────────── */
@@ -599,10 +677,13 @@ async function reloadAndRender() {
 }
 
 /* ── close modal on backdrop click ─────────────────────────────────── */
-['typeModal','relModal'].forEach(id => {
-    document.getElementById(id).addEventListener('click', e => {
-        if (e.target === e.currentTarget) closeModal(id);
-    });
+['typeModal','relModal','drillModal','dataModal','relDrillModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeModal(id);
+        });
+    }
 });
 
 /* ── sidebar user ───────────────────────────────────────────────────── */
