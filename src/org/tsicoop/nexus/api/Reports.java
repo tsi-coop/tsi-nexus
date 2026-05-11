@@ -159,6 +159,9 @@ public class Reports implements Action {
         String entityType = req.getParameter("entity_type");
 
         String sql = "SELECT external_id, type, version_count, current_state::text AS state, " +
+                     "COALESCE(NULLIF(current_state->>'name',''), NULLIF(current_state->>'system_name',''), " +
+                     "NULLIF(current_state->>'label',''), NULLIF(current_state->>'title',''), " +
+                     "NULLIF(current_state->>'role',''), '') AS display_name, " +
                      "to_char(created_at, 'YYYY-MM-DD HH24:MI:SS') AS created, " +
                      "to_char(updated_at, 'YYYY-MM-DD HH24:MI:SS') AS updated " +
                      "FROM digital_twins" +
@@ -172,6 +175,7 @@ public class Reports implements Action {
                 while (rs.next()) {
                     JSONObject row = new JSONObject();
                     row.put("external_id",   rs.getString("external_id"));
+                    row.put("name",          rs.getString("display_name"));
                     row.put("type",          rs.getString("type"));
                     row.put("version_count", rs.getInt("version_count"));
                     row.put("current_state", rs.getString("state"));
@@ -351,7 +355,16 @@ public class Reports implements Action {
         String relType  = req.getParameter("rel_type");
         String toType   = req.getParameter("to_type");
 
-        String sql = "SELECT t1.external_id AS from_ext, t2.external_id AS to_ext, tr.metadata::text AS meta " +
+        String sql = "SELECT t1.external_id AS from_ext, " +
+                     "COALESCE(NULLIF(t1.current_state->>'name',''), NULLIF(t1.current_state->>'system_name',''), " +
+                     "NULLIF(t1.current_state->>'label',''), NULLIF(t1.current_state->>'title',''), " +
+                     "NULLIF(t1.current_state->>'role',''), '') AS from_name, " +
+                     "t2.external_id AS to_ext, " +
+                     "COALESCE(NULLIF(t2.current_state->>'name',''), NULLIF(t2.current_state->>'system_name',''), " +
+                     "NULLIF(t2.current_state->>'label',''), NULLIF(t2.current_state->>'title',''), " +
+                     "NULLIF(t2.current_state->>'role',''), '') AS to_name, " +
+                     "t1.type AS from_type, t2.type AS to_type, " +
+                     "tr.metadata::text AS meta " +
                      "FROM twin_relationships tr " +
                      "JOIN digital_twins t1 ON tr.from_twin_id = t1.id " +
                      "JOIN digital_twins t2 ON tr.to_twin_id = t2.id " +
@@ -368,7 +381,11 @@ public class Reports implements Action {
                 while (rs.next()) {
                     JSONObject row = new JSONObject();
                     row.put("from_external_id", rs.getString("from_ext"));
+                    row.put("from_name",        rs.getString("from_name"));
+                    row.put("from_type",        rs.getString("from_type"));
                     row.put("to_external_id",   rs.getString("to_ext"));
+                    row.put("to_name",          rs.getString("to_name"));
+                    row.put("to_type",          rs.getString("to_type"));
                     String metaStr = rs.getString("meta");
                     if (metaStr != null && !metaStr.isBlank()) {
                         row.put("metadata", org.json.simple.JSONValue.parse(metaStr));

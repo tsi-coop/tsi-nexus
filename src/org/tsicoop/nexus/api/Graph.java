@@ -250,6 +250,7 @@ public class Graph implements Action {
                 r.put("to_type",   to);
                 r.put("count",     rs.getLong("cnt"));
                 r.put("source",    "data");
+                r.put("examples",  fetchRelationshipExamples(conn, from, rel, to));
                 result.add(r);
             }
         }
@@ -267,10 +268,43 @@ public class Graph implements Action {
             r.put("to_type",   to);
             r.put("count",     0L);
             r.put("source",    "registry");
+            r.put("examples",  new JSONArray());
             result.add(r);
         }
 
         return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONArray fetchRelationshipExamples(Connection conn, String fromType, String relType, String toType) throws Exception {
+        JSONArray examples = new JSONArray();
+        String sql =
+            "SELECT tt.external_id, " +
+            "COALESCE(NULLIF(tt.current_state->>'name',''), NULLIF(tt.current_state->>'system_name',''), " +
+            "NULLIF(tt.current_state->>'label',''), NULLIF(tt.current_state->>'title',''), " +
+            "NULLIF(tt.current_state->>'role',''), tt.external_id) AS display_name, " +
+            "COUNT(*) AS cnt " +
+            "FROM twin_relationships tr " +
+            "JOIN digital_twins ft ON ft.id = tr.from_twin_id " +
+            "JOIN digital_twins tt ON tt.id = tr.to_twin_id " +
+            "WHERE ft.type = ? AND tr.relationship_type = ? AND tt.type = ? " +
+            "GROUP BY tt.external_id, display_name " +
+            "ORDER BY cnt DESC, display_name LIMIT 3";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fromType);
+            ps.setString(2, relType);
+            ps.setString(3, toType);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject item = new JSONObject();
+                    item.put("external_id", rs.getString("external_id"));
+                    item.put("name",        rs.getString("display_name"));
+                    item.put("count",       rs.getLong("cnt"));
+                    examples.add(item);
+                }
+            }
+        }
+        return examples;
     }
 
     private String loadConfig(Connection conn) throws Exception {

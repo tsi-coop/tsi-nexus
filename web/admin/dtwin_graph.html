@@ -332,7 +332,32 @@
 const PALETTE = ['#6366f1','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#f97316','#14b8a6'];
 const _cmap = {}; let _ci = 0;
 function colorFor(t) { if (!_cmap[t]) _cmap[t] = PALETTE[_ci++ % PALETTE.length]; return _cmap[t]; }
-function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function jsStr(s) {
+    return String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+}
+function cap(s) {
+    return String(s || '').split('_').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+function relationLabel(s) {
+    return cap(String(s || '').toLowerCase());
+}
+function entityLabel(row, side, fallbackType) {
+    const name = row[side + '_name'];
+    const id = row[side + '_external_id'];
+    return name && name !== id ? name : id;
+}
+function exampleSummary(rel) {
+    const examples = rel.examples || [];
+    if (!examples.length) return '';
+    const names = examples.map(e => e.name || e.external_id).filter(Boolean);
+    const suffix = Number(rel.count) > examples.reduce((s, e) => s + Number(e.count || 0), 0)
+        ? ` and ${Number(rel.count) - examples.reduce((s, e) => s + Number(e.count || 0), 0)} more`
+        : '';
+    return names.join(', ') + suffix;
+}
 
 /* ── data ───────────────────────────────────────────────────────────── */
 let graphData = null;
@@ -406,22 +431,29 @@ function renderTables(data) {
             const fc   = colorFor(rel.from_type);
             const tc   = colorFor(rel.to_type);
             const isReg = rel.source === 'registry';
+            const examples = exampleSummary(rel);
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-slate-50/60 transition-colors' + (isReg ? ' opacity-60' : '');
             tr.innerHTML = `
               <td class="px-6 py-4">
-                <span class="font-bold text-sm" style="color:${fc}">${cap(rel.from_type)}</span>
+                <span class="font-bold text-sm" style="color:${fc}">${esc(cap(rel.from_type))}</span>
               </td>
               <td class="px-6 py-4">
-                <span class="px-2.5 py-1 bg-slate-100 text-slate-700 text-[10px] font-black rounded-lg uppercase tracking-wider">${rel.rel_type}</span>
+                <div class="flex flex-col gap-1">
+                  <span class="text-sm font-bold text-slate-700">${esc(relationLabel(rel.rel_type))}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${esc(rel.rel_type)}</span>
+                </div>
               </td>
               <td class="px-6 py-4">
-                <span class="font-bold text-sm" style="color:${tc}">${cap(rel.to_type)}</span>
+                <div class="flex flex-col gap-1">
+                  <span class="font-bold text-sm" style="color:${tc}">${esc(cap(rel.to_type))}</span>
+                  ${examples ? `<span class="text-xs text-slate-500 max-w-md truncate" title="${esc(examples)}">${esc(examples)}</span>` : '<span class="text-xs text-slate-400">No linked entities yet</span>'}
+                </div>
               </td>
               <td class="px-6 py-4">
                 ${isReg
                   ? '<span class="text-xs text-slate-400">—</span>'
-                  : `<button onclick="openRelDrillDown('${rel.from_type}', '${rel.rel_type}', '${rel.to_type}')" class="hover:underline text-left">
+                  : `<button onclick="openRelDrillDown('${jsStr(rel.from_type)}', '${jsStr(rel.rel_type)}', '${jsStr(rel.to_type)}')" class="hover:underline text-left">
                        <span class="font-bold text-sm text-slate-700">${Number(rel.count).toLocaleString()}</span><span class="text-xs text-slate-400 ml-1">links</span>
                      </button>`}
               </td>`;
@@ -458,19 +490,27 @@ async function openDrillDown(type) {
         if (data.rows.length === 0) {
             body.innerHTML = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 text-xs">No nodes for this type</td></tr>';
         } else {
-            body.innerHTML = data.rows.map(row => `
+            body.innerHTML = data.rows.map(row => {
+                const primary   = row.name || row.external_id;
+                const secondary = row.name ? row.external_id : '';
+                return `
                 <tr class="hover:bg-slate-50/80 transition-colors">
-                    <td class="px-8 py-4 font-bold text-sm text-slate-700">${row.external_id}</td>
-                    <td class="px-8 py-4 text-xs text-slate-400 font-medium">${row.version_count}</td>
-                    <td class="px-8 py-4 text-xs text-slate-400">${row.updated}</td>
+                    <td class="px-8 py-4">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-sm text-slate-700">${esc(primary)}</span>
+                            ${secondary ? `<span class="text-[10px] text-slate-400 font-medium uppercase tracking-tight">@${esc(secondary)}</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="px-8 py-4 text-xs text-slate-400 font-medium">${esc(row.version_count)}</td>
+                    <td class="px-8 py-4 text-xs text-slate-400">${esc(row.updated)}</td>
                     <td class="px-8 py-4 text-right">
-                        <button onclick="viewData('${row.external_id}')" 
+                        <button onclick="viewData('${jsStr(row.external_id)}')" 
                                 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">
                             View Data
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `;}).join('');
         }
     } catch (err) {
         sub.textContent = 'Error loading instances';
@@ -481,7 +521,7 @@ async function openDrillDown(type) {
 function viewData(id) {
     const row = currentDrillRows.find(r => r.external_id === id);
     if (!row) return;
-    document.getElementById('dataSub').textContent = '@' + id;
+    document.getElementById('dataSub').textContent = row.name || '@' + id;
     try {
         const json = typeof row.current_state === 'string' ? JSON.parse(row.current_state) : row.current_state;
         document.getElementById('dataContent').textContent = JSON.stringify(json, null, 4);
@@ -496,7 +536,7 @@ async function openRelDrillDown(from, rel, to) {
     const sub   = document.getElementById('relDrillSub');
     const body  = document.getElementById('relDrillBody');
 
-    title.textContent = `${rel} Relationships`;
+    title.textContent = `${relationLabel(rel)} Relationships`;
     sub.textContent   = 'Loading link instances…';
     body.innerHTML    = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 text-xs italic">Fetching graph data…</td></tr>';
     
@@ -507,29 +547,33 @@ async function openRelDrillDown(from, rel, to) {
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Fetch failed');
 
-        sub.textContent = `${data.count} links found between ${cap(from)} and ${cap(to)}`;
+        sub.textContent = `${data.count} links found: ${cap(from)} ${relationLabel(rel).toLowerCase()} ${cap(to)}`;
         
         if (data.rows.length === 0) {
             body.innerHTML = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 text-xs">No link instances found</td></tr>';
         } else {
-            body.innerHTML = data.rows.map(row => `
+            body.innerHTML = data.rows.map(row => {
+                const fromLabel = entityLabel(row, 'from', from);
+                const toLabel = entityLabel(row, 'to', to);
+                const meta = JSON.stringify(row.metadata || {});
+                return `
                 <tr class="hover:bg-slate-50/80 transition-colors">
                     <td class="px-8 py-4">
-                        <p class="font-bold text-sm text-slate-700">@${row.from_external_id}</p>
-                        <p class="text-[10px] text-slate-400 uppercase">${cap(from)}</p>
+                        <p class="font-bold text-sm text-slate-700">${esc(fromLabel)}</p>
+                        <p class="text-[10px] text-slate-400 font-medium uppercase tracking-tight">${esc(cap(row.from_type || from))} · @${esc(row.from_external_id)}</p>
                     </td>
                     <td class="px-8 py-4 text-center">
-                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-black rounded uppercase tracking-tighter">${rel}</span>
+                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded">${esc(relationLabel(rel))}</span>
                     </td>
                     <td class="px-8 py-4">
-                        <p class="font-bold text-sm text-slate-700">@${row.to_external_id}</p>
-                        <p class="text-[10px] text-slate-400 uppercase">${cap(to)}</p>
+                        <p class="font-bold text-sm text-slate-700">${esc(toLabel)}</p>
+                        <p class="text-[10px] text-slate-400 font-medium uppercase tracking-tight">${esc(cap(row.to_type || to))} · @${esc(row.to_external_id)}</p>
                     </td>
                     <td class="px-8 py-4">
-                        <pre class="text-[10px] text-slate-500 font-mono truncate max-w-xs" title='${JSON.stringify(row.metadata)}'>${JSON.stringify(row.metadata)}</pre>
+                        <pre class="text-[10px] text-slate-500 font-mono truncate max-w-xs" title='${esc(meta)}'>${esc(meta)}</pre>
                     </td>
                 </tr>
-            `).join('');
+            `;}).join('');
         }
     } catch (err) {
         sub.textContent = 'Error loading links';

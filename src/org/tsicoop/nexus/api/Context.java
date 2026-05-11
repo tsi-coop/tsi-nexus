@@ -46,7 +46,13 @@ public class Context implements Action {
             // Universal Query: Joins the Twin with its Graph Relationships
             // Uses a Left Join to ensure we get the twin even if it has no links yet.
             String sql = "SELECT t.id, t.type, t.current_state, t.updated_at, " +
-                         "(SELECT json_agg(json_build_object('type', r.relationship_type, 'to', t2.external_id)) " +
+                         "(SELECT json_agg(json_build_object(" +
+                         "'type', r.relationship_type, " +
+                         "'to', t2.external_id, " +
+                         "'to_type', t2.type, " +
+                         "'to_name', COALESCE(NULLIF(t2.current_state->>'name',''), NULLIF(t2.current_state->>'system_name',''), " +
+                         "NULLIF(t2.current_state->>'label',''), NULLIF(t2.current_state->>'title',''), " +
+                         "NULLIF(t2.current_state->>'role',''), t2.external_id))) " +
                           "FROM twin_relationships r JOIN digital_twins t2 ON r.to_twin_id = t2.id " +
                           "WHERE r.from_twin_id = t.id) as out_links " +
                          "FROM digital_twins t WHERE t.external_id = ?";

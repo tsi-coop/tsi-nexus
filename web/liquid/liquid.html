@@ -551,9 +551,9 @@
         return `<span class="state-val">${esc(s)}</span>`;
     };
 
-    const prettyRel  = t => t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    const prettyId   = id => id.replace(/^@/,'').replace(/_(\d+)$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    const prettyType = t => t.charAt(0).toUpperCase() + t.slice(1);
+    const prettyRel  = t => String(t || '').toLowerCase().replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    const prettyId   = id => String(id || '').replace(/^@/,'').replace(/_(\d+)$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    const prettyType = t => String(t || '').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 
     function appendToStage(el) {
         stage.appendChild(el);
@@ -768,7 +768,9 @@
                 links.forEach(l => {
                     const chip = document.createElement('button');
                     chip.className = 'topo-chip';
-                    chip.innerHTML = `${esc(prettyRel(l.type))} <span style="color:#4f46e5;margin:0 2px;">·</span> ${esc(prettyId(l.to))}`;
+                    const linkedName = l.to_name || prettyId(l.to);
+                    const linkedType = l.to_type ? ` <span style="color:#94a3b8;font-weight:600;">(${esc(prettyType(l.to_type))})</span>` : '';
+                    chip.innerHTML = `${esc(prettyRel(l.type))} <span style="color:#4f46e5;margin:0 2px;">·</span> ${esc(linkedName)}${linkedType}`;
                     chip.onclick = () => {
                         navStack.push({ intent: lastIntent, label: card.querySelector('.target-handle').textContent });
                         resolveIntent('@' + l.to.replace(/^@/, ''));
