@@ -89,9 +89,12 @@ public class Templates implements Action {
             String action = str(input, "action");
 
             switch (action) {
-                case "upsert": upsertTemplate(conn, req, res, input); break;
-                case "toggle": toggleTemplate(conn, req, res, input); break;
-                case "delete": deleteTemplate(conn, req, res, input); break;
+                case "upsert":      upsertTemplate(conn, req, res, input);   break;
+                case "toggle":      toggleTemplate(conn, req, res, input);    break;
+                case "delete":      deleteTemplate(conn, req, res, input);    break;
+                case "generate":    generateTemplate(conn, req, res, input);  break;
+                case "get_samples": getSamples(conn, req, res, input);        break;
+                case "preview":     previewTemplate(conn, req, res, input);   break;
                 default: OutputProcessor.errorResponse(res, 400, "Bad request", "Unknown action: " + action, req.getRequestURI());
             }
         } catch (Exception e) {
@@ -200,6 +203,107 @@ public class Templates implements Action {
         JSONObject result = new JSONObject();
         result.put("success", true);
         OutputProcessor.send(res, 200, result);
+    }
+
+    /* ── generate ───────────────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void generateTemplate(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String prompt     = str(in, "prompt");
+        String entityType = str(in, "entity_type");
+        String attributes = str(in, "attributes"); // Optional list of attributes for context
+
+        if (prompt.isEmpty() || entityType.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "prompt and entity_type are required", req.getRequestURI());
+            return;
+        }
+
+        JSONObject generated = Intelligence.generateTemplate(prompt, entityType, attributes);
+        if (generated == null) {
+            OutputProcessor.errorResponse(res, 500, "AI Error", "Failed to generate template", req.getRequestURI());
+            return;
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("template", generated);
+        OutputProcessor.send(res, 200, result);
+    }
+
+    /* ── preview ────────────────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void getSamples(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String type = str(in, "entity_type");
+        if (type.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "entity_type is required", req.getRequestURI());
+            return;
+        }
+
+        JSONArray samples = new JSONArray();
+        String sql = "SELECT external_id, current_state->>'name' as name FROM digital_twins WHERE type = ? LIMIT 5";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, type);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject s = new JSONObject();
+                    s.put("external_id", rs.getString("external_id"));
+                    s.put("name", rs.getString("name"));
+                    samples.add(s);
+                }
+            }
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("samples", samples);
+        OutputProcessor.send(res, 200, result);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void previewTemplate(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String externalId = str(in, "external_id");
+        if (externalId.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "external_id is required", req.getRequestURI());
+            return;
+        }
+
+        // Fetch the full context for the entity
+        Context contextResolver = new Context();
+        // Context.assembleFullContext is private, but we can call the action's logic or refactor it.
+        // Actually, Context.post already sends a response.
+        // I'll just use the same logic here or call a helper if I move it.
+        // For now, I'll just fetch the context manually to be safe and simple.
+        
+        JSONObject context = fetchContext(conn, externalId);
+        if (context == null) {
+            OutputProcessor.errorResponse(res, 404, "Not found", "Entity context not found", req.getRequestURI());
+            return;
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("context", context);
+        OutputProcessor.send(res, 200, result);
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONObject fetchContext(Connection conn, String externalId) throws Exception {
+        String cleanId = externalId.startsWith("@") ? externalId.substring(1) : externalId;
+        String sql = "SELECT type, current_state FROM digital_twins WHERE external_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, cleanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    JSONObject ctx = new JSONObject();
+                    ctx.put("external_id", externalId);
+                    ctx.put("type", rs.getString("type"));
+                    ctx.put("state", org.json.simple.JSONValue.parse(rs.getString("current_state")));
+                    return ctx;
+                }
+            }
+        }
+        return null;
     }
 
     /* ── helpers ─────────────────────────────────────────────────────────── */

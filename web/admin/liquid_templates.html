@@ -15,6 +15,7 @@
         .modal-box { transition: transform 0.2s ease, opacity 0.2s ease; }
         .input-field { width:100%; padding:.75rem 1rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; font-size:.875rem; outline:none; transition: border-color .15s; }
         .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+        .preview-pane { background-color: #f1f5f9; background-image: radial-gradient(#cbd5e1 0.5px, transparent 0.5px); background-size: 10px 10px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -103,10 +104,16 @@
             <h2 class="text-lg font-bold text-slate-800 uppercase tracking-tight">Liquid Template Registry</h2>
             <span id="statsChip" class="hidden text-xs text-slate-400 font-semibold"></span>
         </div>
-        <button onclick="openTemplateModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-            New Template
-        </button>
+        <div class="flex items-center gap-2">
+            <button onclick="openAiModal()" class="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg hover:bg-slate-800 transition-colors shadow-sm shadow-slate-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                AI Generate
+            </button>
+            <button onclick="openTemplateModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                New Template
+            </button>
+        </div>
     </header>
 
     <!-- Loading -->
@@ -187,11 +194,76 @@
                     </div>
                 </div>
 
-                <button id="tplSaveBtn" onclick="saveTemplate()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
-                    Commit Template
-                </button>
+                <div class="flex gap-3">
+                    <button onclick="openPreviewFromModal()" class="flex-1 py-4 bg-slate-200 text-slate-700 text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-300 transition-colors">
+                        Preview
+                    </button>
+                    <button id="tplSaveBtn" onclick="saveTemplate()" class="flex-[2] py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+                        Commit Template
+                    </button>
+                </div>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: AI Template Generator
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="aiModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 p-8 flex flex-col gap-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">AI Template Architect</h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">Describe the UI you want, and I'll build the template</p>
+            </div>
+            <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+        </div>
+
+        <div id="aiFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center bg-red-50 text-red-600 border border-red-100"></div>
+
+        <div>
+            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target Entity Type</label>
+            <select id="aiEntityType" class="input-field">
+                <!-- Populated via JS -->
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">UI Description</label>
+            <textarea id="aiPrompt" class="input-field h-32 resize-none" placeholder="e.g. A professional member profile card with a balance summary, last 3 transactions, and a 'View Details' button. Use a clean white card with subtle shadows and indigo accents."></textarea>
+        </div>
+
+        <button id="aiGenBtn" onclick="generateWithAi()" class="w-full py-4 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
+            Generate Template
+        </button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Preview Template
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="previewModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-2xl h-[80vh] rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 flex flex-col">
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+            <div>
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Template Preview</h3>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Sample Entity:</span>
+                    <select id="previewEntitySelect" class="bg-transparent border-none text-[10px] text-indigo-600 font-bold uppercase focus:ring-0 cursor-pointer" onchange="refreshPreview()">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+            </div>
+            <button onclick="closeModal('previewModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="flex-1 overflow-auto preview-pane p-12 flex items-center justify-center">
+            <div id="previewContent" class="w-full max-w-md"></div>
         </div>
     </div>
 </div>
@@ -225,6 +297,8 @@ function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 let graphData     = null;
 let editingId     = null;
 let pendingDelete = null;
+let previewHtml   = '';
+let previewType   = '';
 
 /* ── boot ────────────────────────────────────────────────────────────── */
 async function boot() {
@@ -267,7 +341,7 @@ function render(data) {
 
 function makeCard(t) {
     const c       = colorFor(t.entity_type);
-    const preview = (t.html_content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90) || '—';
+    const previewText = (t.html_content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90) || '—';
     const card    = document.createElement('div');
     card.className = 'bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col' + (t.is_active ? '' : ' opacity-60');
     card.innerHTML = `
@@ -275,6 +349,9 @@ function makeCard(t) {
         <div class="flex justify-between items-start mb-4">
           <span class="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-widest" style="background:${c}18;color:${c}">${cap(t.entity_type)}</span>
           <div class="flex items-center gap-1">
+            <button class="btn-preview p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50" title="Preview">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            </button>
             <button class="btn-edit p-1.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50" title="Edit">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             </button>
@@ -287,13 +364,14 @@ function makeCard(t) {
           </div>
         </div>
         <h4 class="text-sm font-bold text-slate-800 mb-1">${escHtml(t.name)}</h4>
-        <p class="text-[11px] text-slate-400 leading-relaxed">${escHtml(preview)}</p>
+        <p class="text-[11px] text-slate-400 leading-relaxed">${escHtml(previewText)}</p>
       </div>
       <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
         <span class="text-[10px] font-bold uppercase tracking-wider" style="color:${t.is_active ? '#10b981' : '#94a3b8'}">${t.is_active ? 'Active' : 'Inactive'}</span>
         <span class="text-[10px] text-slate-400">Updated ${t.updated || t.created}</span>
       </div>`;
 
+    card.querySelector('.btn-preview').addEventListener('click', () => openPreviewModal(t.html_content, t.entity_type));
     card.querySelector('.btn-edit').addEventListener('click',   () => openTemplateModal(t));
     card.querySelector('.btn-toggle').addEventListener('click', () => doToggle(t.template_id));
     card.querySelector('.btn-delete').addEventListener('click', () => confirmDelete(t.template_id, t.name));
@@ -307,12 +385,12 @@ function escHtml(s) {
 /* ── template modal ──────────────────────────────────────────────────── */
 function openTemplateModal(tpl) {
     editingId = tpl ? tpl.template_id : null;
-    document.getElementById('modalTitle').textContent  = tpl ? 'Edit Template' : 'New Liquid Template';
-    document.getElementById('modalSub').textContent    = tpl ? `Editing: ${tpl.name}` : 'Define how an entity type is rendered in the experience layer';
+    document.getElementById('modalTitle').textContent  = tpl ? (editingId ? 'Edit Template' : 'Review AI Template') : 'New Liquid Template';
+    document.getElementById('modalSub').textContent    = tpl ? (editingId ? `Editing: ${tpl.name}` : 'AI generated this template. Review and commit it below.') : 'Define how an entity type is rendered in the experience layer';
     document.getElementById('tplName').value           = tpl ? tpl.name : '';
     document.getElementById('tplHtml').value           = tpl ? tpl.html_content : '';
-    document.getElementById('tplCondition').value      = tpl ? tpl.condition_sql : '';
-    document.getElementById('tplSaveBtn').textContent  = tpl ? 'Save Changes' : 'Commit Template';
+    document.getElementById('tplCondition').value      = tpl ? (tpl.condition_sql || '') : '';
+    document.getElementById('tplSaveBtn').textContent  = tpl ? (editingId ? 'Save Changes' : 'Commit Template') : 'Commit Template';
     document.getElementById('modalFeedback').classList.add('hidden');
 
     populateEntityTypes(tpl ? tpl.entity_type : null);
@@ -320,6 +398,159 @@ function openTemplateModal(tpl) {
 }
 
 function closeTemplateModal() { closeModal('templateModal'); }
+
+function openPreviewFromModal() {
+    const html = document.getElementById('tplHtml').value;
+    const type = document.getElementById('tplEntityType').value;
+    if (!html) { showFeedback('HTML content is empty', true); return; }
+    if (!type) { showFeedback('Select an entity type', true); return; }
+    openPreviewModal(html, type);
+}
+
+/* ── AI modal ────────────────────────────────────────────────────────── */
+function openAiModal() {
+    const sel = document.getElementById('aiEntityType');
+    const types = graphData ? graphData.blueprints.map(b => b.type).filter(t => t !== 'system') : [];
+    sel.innerHTML = types.length
+        ? types.map(t => `<option value="${t}">${cap(t)}</option>`).join('')
+        : '<option value="">No entity types defined</option>';
+    
+    document.getElementById('aiPrompt').value = '';
+    document.getElementById('aiFeedback').classList.add('hidden');
+    openModal('aiModal');
+}
+
+async function generateWithAi() {
+    const prompt = document.getElementById('aiPrompt').value.trim();
+    const type = document.getElementById('aiEntityType').value;
+    const btn = document.getElementById('aiGenBtn');
+    
+    if (!prompt) { showAiFeedback('Please describe the UI'); return; }
+    if (!type) { showAiFeedback('Select an entity type'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Thinking...';
+    
+    try {
+        const bp = graphData.blueprints.find(b => b.type === type);
+        const attrs = bp ? (bp.attributes || []).join(', ') : '';
+
+        const res = await fetch('/api/templates', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action: 'generate', prompt, entity_type: type, attributes: attrs })
+        });
+        const data = await res.json();
+        
+        if (!data.success) throw new Error(data.reason || 'Generation failed');
+        
+        closeModal('aiModal');
+        
+        // Open the template modal with the generated content
+        openTemplateModal({
+            name: data.template.name,
+            entity_type: type,
+            html_content: data.template.html_content,
+            condition_sql: ''
+        });
+        
+    } catch (err) {
+        showAiFeedback(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Generate Template';
+    }
+}
+
+function showAiFeedback(msg) {
+    const el = document.getElementById('aiFeedback');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+
+/* ── preview modal ───────────────────────────────────────────────────── */
+async function openPreviewModal(html, type) {
+    previewHtml = html;
+    previewType = type;
+    
+    const sel = document.getElementById('previewEntitySelect');
+    sel.innerHTML = '<option>Loading samples…</option>';
+    
+    openModal('previewModal');
+    
+    try {
+        const res = await fetch('/api/templates', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action: 'get_samples', entity_type: type })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.reason || 'Failed to load samples');
+        
+        if (!data.samples.length) {
+            sel.innerHTML = '<option value="">No samples found</option>';
+            document.getElementById('previewContent').innerHTML = '<p class="text-xs text-slate-400">No entities of type "' + type + '" found to preview with.</p>';
+            return;
+        }
+        
+        sel.innerHTML = data.samples.map(s => `<option value="${s.external_id}">${s.name || s.external_id} (@${s.external_id})</option>`).join('');
+        refreshPreview();
+        
+    } catch (err) {
+        document.getElementById('previewContent').innerHTML = '<p class="text-xs text-red-500">Error: ' + err.message + '</p>';
+    }
+}
+
+async function refreshPreview() {
+    const id = document.getElementById('previewEntitySelect').value;
+    if (!id) return;
+    
+    const content = document.getElementById('previewContent');
+    content.innerHTML = '<div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>';
+    
+    try {
+        const res = await fetch('/api/templates', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action: 'preview', external_id: id })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.reason || 'Preview failed');
+        
+        content.innerHTML = renderLiquid(previewHtml, data.context);
+        
+    } catch (err) {
+        content.innerHTML = '<p class="text-xs text-red-500">Preview Error: ' + err.message + '</p>';
+    }
+}
+
+function renderLiquid(template, context) {
+    // Simple variable replacement engine
+    // Supports: {{ entity.name }}, {{ entity.external_id }}, {{ entity.type }}, {{ entity.current_state.FIELD }}
+    let out = template;
+    
+    const data = {
+        'entity.name': context.state.name || context.external_id,
+        'entity.external_id': context.external_id,
+        'entity.type': context.type
+    };
+    
+    // Add current_state fields
+    for (let [k, v] of Object.entries(context.state || {})) {
+        data[`entity.current_state.${k}`] = v;
+    }
+    
+    // Perform replacement
+    for (let [k, v] of Object.entries(data)) {
+        const regex = new RegExp(`\\{\\{\\s*${k.replace(/\./g, '\\.')}\\s*\\}\\}`, 'g');
+        out = out.replace(regex, v);
+    }
+    
+    // Cleanup unreplaced tags
+    out = out.replace(/\{\{\s*[\w\.]+\s*\}\}/g, '<span class="text-slate-300 italic">undefined</span>');
+    
+    return out;
+}
 
 function populateEntityTypes(selected) {
     const sel = document.getElementById('tplEntityType');
@@ -447,8 +678,9 @@ function closeModal(id) {
     setTimeout(() => m.classList.add('opacity-0', 'pointer-events-none'), 200);
 }
 
-['templateModal', 'deleteModal'].forEach(id => {
-    document.getElementById(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
+['deleteModal', 'aiModal', 'previewModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(id); });
 });
 
 /* ── sidebar user ────────────────────────────────────────────────────── */
