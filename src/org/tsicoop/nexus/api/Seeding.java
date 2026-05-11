@@ -11,7 +11,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * TSI Nexus: Seeding & Scenario Engine
@@ -467,6 +469,8 @@ public class Seeding implements Action {
         List<String[]> sample = twins.size() > 30 ? twins.subList(0, 30) : twins;
         StringBuilder  twinList = new StringBuilder();
         for (String[] t : sample) twinList.append(t[0]).append(" (").append(t[1]).append("), ");
+        Map<String, String> typeById = new HashMap<>();
+        for (String[] t : twins) typeById.put(t[0], t[1] != null ? t[1].toLowerCase() : "");
 
         String prompt =
             "You are generating realistic digital twin relationships for an institutional context graph.\n\n" +
@@ -474,7 +478,16 @@ public class Seeding implements Action {
             (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
             "ENTITY IDs: " + twinList + "\n\n" +
             "Generate 15-25 relationship links (edges) between the entities above.\n" +
-            "relationship_type: uppercase, e.g. MEMBER_OF, GUARANTEES, WORKS_AT, SPOUSE_OF, CHILD_OF, MANAGES, REFERRED_BY\n" +
+            "Use relationship types that make sense for the two entity types.\n" +
+            "Valid examples:\n" +
+            "- officer WORKS_AT branch or office, never system\n" +
+            "- member MEMBER_OF group\n" +
+            "- officer MANAGES member/group/branch\n" +
+            "- member GUARANTEES member\n" +
+            "- member APPLIED_FOR product/service/system only if the target is an actual application destination\n" +
+            "Do not create Officer WORKS_AT System, Member WORKS_AT System, or any WORKS_AT edge to a system entity.\n" +
+            "Do not link human actors to systems unless the relationship verb clearly describes usage or access, such as USES_SYSTEM or HAS_SYSTEM_ACCESS.\n" +
+            "relationship_type must be uppercase, e.g. MEMBER_OF, GUARANTEES, WORKS_AT, MANAGES, REFERRED_BY, USES_SYSTEM\n" +
             "metadata: small JSON object with 1-2 relevant fields (e.g. joined_date, relationship_strength, or shared_resource)\n\n" +
             "Return ONLY valid JSON, no markdown:\n" +
             "{\"relationships\":[{\"from_id\":\"SEED_member_001\",\"to_id\":\"SEED_group_001\"," +
@@ -491,13 +504,15 @@ public class Seeding implements Action {
             String     type   = str(item, "type");
             JSONObject meta   = objOf(item, "metadata");
             if (from == null || to == null || type == null) continue;
+            type = type.toUpperCase();
+            if (!isPlausibleRelationship(typeById.get(from), type, typeById.get(to))) continue;
 
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type, metadata) " +
                     "SELECT f.id, t.id, ?, ?::jsonb " +
                     "FROM digital_twins f, digital_twins t " +
                     "WHERE f.external_id = ? AND t.external_id = ?")) {
-                ps.setString(1, type.toUpperCase());
+                ps.setString(1, type);
                 ps.setString(2, meta.toJSONString());
                 ps.setString(3, from);
                 ps.setString(4, to);
@@ -924,6 +939,49 @@ public class Seeding implements Action {
         return value.trim()
             .replaceFirst("^\\[SIM\\]\\s*", "")
             .replaceFirst("(?i)^SIM[_\\s-]+", "");
+    }
+
+    private boolean isPlausibleRelationship(String fromType, String relType, String toType) {
+        String from = fromType != null ? fromType.toLowerCase() : "";
+        String rel  = relType  != null ? relType.toUpperCase() : "";
+        String to   = toType   != null ? toType.toLowerCase() : "";
+
+        if (from.isBlank() || to.isBlank() || rel.isBlank()) return false;
+        if ("WORKS_AT".equals(rel)) return !"system".equals(to) && isActorType(from) && isPlaceType(to);
+        if ("MANAGES".equals(rel)) return isActorType(from) && !"system".equals(to);
+        if ("MEMBER_OF".equals(rel)) return !"system".equals(from) && isGroupType(to);
+        if ("GUARANTEES".equals(rel)) return isPersonType(from) && isPersonType(to);
+        if ("APPLIED_FOR".equals(rel)) return isPersonType(from) && isApplicationTargetType(to);
+        if ("USES_SYSTEM".equals(rel) || "HAS_SYSTEM_ACCESS".equals(rel)) return isActorType(from) && "system".equals(to);
+        if ("system".equals(from) || "system".equals(to)) return rel.contains("SYSTEM") || rel.contains("ACCESS") || rel.contains("INTEGRATES");
+        return true;
+    }
+
+    private boolean isActorType(String type) {
+        return isPersonType(type) || type.contains("officer") || type.contains("staff") || type.contains("agent") ||
+               type.contains("manager") || type.contains("employee") || type.contains("coordinator");
+    }
+
+    private boolean isPersonType(String type) {
+        return type.contains("member") || type.contains("customer") || type.contains("client") ||
+               type.contains("borrower") || type.contains("applicant") || type.contains("person");
+    }
+
+    private boolean isPlaceType(String type) {
+        return type.contains("branch") || type.contains("office") || type.contains("department") ||
+               type.contains("region") || type.contains("location") || type.contains("center") ||
+               type.contains("centre");
+    }
+
+    private boolean isGroupType(String type) {
+        return type.contains("group") || type.contains("team") || type.contains("cohort") ||
+               type.contains("committee") || type.contains("household");
+    }
+
+    private boolean isApplicationTargetType(String type) {
+        return type.contains("product") || type.contains("service") || type.contains("loan") ||
+               type.contains("scheme") || type.contains("program") || type.contains("programme") ||
+               type.contains("system");
     }
 
     @SuppressWarnings("unchecked")
