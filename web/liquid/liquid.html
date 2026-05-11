@@ -195,6 +195,40 @@
         }
         .cmd-args { font-family: monospace; font-size: 10px; color: #64748b; }
         .cmd-hint { font-size: 10px; color: #94a3b8; margin-top: 3px; line-height: 1.4; }
+        .cmd-use {
+            margin-top: 6px;
+            display: inline-flex;
+            max-width: 100%;
+            align-items: center;
+            gap: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 7px;
+            padding: 5px 7px;
+            color: #475569;
+            cursor: pointer;
+            font-family: inherit;
+            text-align: left;
+            transition: background .12s, border-color .12s, color .12s;
+        }
+        .cmd-use:hover { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; }
+        .cmd-use-label {
+            flex-shrink: 0;
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+        .cmd-use code {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 10px;
+            font-weight: 800;
+            color: inherit;
+        }
 
         /* ── Intent history ─────────────────────────── */
         .history-list { display: flex; flex-direction: column; gap: 6px; }
@@ -789,12 +823,20 @@
             cmdContainer.innerHTML = '';
             commands.forEach(cmd => {
                 const isCapture = cmd.component_type === 'interaction_capture_form';
+                const usage = commandUsage(cmd, allSamples);
                 const row = document.createElement('div');
                 row.className = 'cmd-row';
                 row.innerHTML = `
                     <span class="cmd-badge" style="${isCapture ? 'background:#059669;' : ''}">${esc('/' + cmd.command_verb)}</span>
                     <span class="cmd-args">${esc(cmd.args_hint)}</span>
-                    <div class="cmd-hint">${esc(cmd.hint)}</div>`;
+                    <div class="cmd-hint">${esc(cmd.hint)}</div>
+                    ${usage ? `
+                        <button class="cmd-use" type="button" data-intent="${esc(usage.intent)}" data-label="${esc(usage.label)}">
+                            <span class="cmd-use-label">Use</span>
+                            <code>${esc(usage.label)}</code>
+                        </button>` : ''}`;
+                const useBtn = row.querySelector('.cmd-use');
+                if (useBtn) useBtn.onclick = () => fire(useBtn);
                 cmdContainer.appendChild(row);
             });
 
@@ -840,6 +882,30 @@
     }
     loadSidebar();
     renderIntentHistory();
+
+    function commandUsage(command, samples) {
+        if (!samples.length) return null;
+        const verb = command.command_verb;
+        const action = String(command.action_type || '').toUpperCase();
+        const first = samples[0];
+        const second = samples[1];
+
+        if ((command.multi_target || action === 'COMPARE') && second) {
+            const intent = `/${verb} ${first.handle} ${second.handle}`;
+            return {
+                intent,
+                label: `/${verb} ${first.name} ${second.name}`
+            };
+        }
+
+        if (action === 'COMPARE') return null;
+
+        const intent = `/${verb} ${first.handle}`;
+        return {
+            intent,
+            label: `/${verb} ${first.name}`
+        };
+    }
 
     /* ── Navigation history ───────────────────── */
     let navStack  = [];   // [{intent, label}]

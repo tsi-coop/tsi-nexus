@@ -63,6 +63,11 @@ public class Governance implements Action {
                 conn.commit();
                 return result;
             }
+            if ("ANALYZE".equalsIgnoreCase(actionType)) {
+                JSONObject result = executeDefaultAnalyze(conn, params);
+                conn.commit();
+                return result;
+            }
             if ("COMPARE".equalsIgnoreCase(actionType)) {
                 JSONObject result = executeDefaultCompare(conn, params);
                 conn.commit();
@@ -217,21 +222,45 @@ public class Governance implements Action {
     }
 
     @SuppressWarnings("unchecked")
+    private JSONObject executeDefaultAnalyze(Connection conn, JSONObject params) throws SQLException {
+        String target = ((String) params.get("target_external_id")).replaceFirst("^@", "");
+        JSONArray rows = fetchTwinSummaryRows(conn, target, null);
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("reason", "Analysis ready.");
+        result.put("data", rows);
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
     private JSONObject executeDefaultCompare(Connection conn, JSONObject params) throws SQLException {
         String t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
         String t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
+        JSONArray rows = fetchTwinSummaryRows(conn, t1, t2);
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("reason", "Comparison ready.");
+        result.put("data", rows);
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONArray fetchTwinSummaryRows(Connection conn, String target1, String target2) throws SQLException {
         JSONArray rows = new JSONArray();
         String sql =
             "SELECT external_id, type, current_state::text AS state, " +
             "COALESCE(NULLIF(current_state->>'name',''), NULLIF(current_state->>'system_name',''), " +
             "NULLIF(current_state->>'label',''), NULLIF(current_state->>'title',''), external_id) AS display_name " +
-            "FROM digital_twins WHERE external_id IN (?, ?) " +
+            "FROM digital_twins WHERE external_id IN (?, COALESCE(?, ?)) " +
             "ORDER BY CASE external_id WHEN ? THEN 1 WHEN ? THEN 2 ELSE 3 END";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, t1);
-            ps.setString(2, t2);
-            ps.setString(3, t1);
-            ps.setString(4, t2);
+            ps.setString(1, target1);
+            ps.setString(2, target2);
+            ps.setString(3, target1);
+            ps.setString(4, target1);
+            ps.setString(5, target2 != null ? target2 : target1);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     JSONObject row = new JSONObject();
@@ -255,12 +284,7 @@ public class Governance implements Action {
                 }
             }
         }
-
-        JSONObject result = new JSONObject();
-        result.put("success", true);
-        result.put("reason", "Comparison ready.");
-        result.put("data", rows);
-        return result;
+        return rows;
     }
 
     @SuppressWarnings("unchecked")

@@ -45,6 +45,7 @@ public class Intent implements Action {
             JSONObject input  = InputProcessor.getInput(req);
             String rawIntent  = (String) input.get("intent");
 
+            StandardCommands.ensure(conn);
             List<JSONObject> commands = loadCommands(conn);
             String llmCommand = llmParseIntent(rawIntent, commands);
             String intentToProcess = (llmCommand != null) ? llmCommand : rawIntent;

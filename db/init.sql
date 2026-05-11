@@ -96,6 +96,27 @@ CREATE TABLE command_manifest (
     created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Standard commands that every Nexus deployment should understand.
+INSERT INTO command_manifest
+    (command_verb, label, args_hint, hint, action_type, component_type, multi_target, has_value, is_active)
+VALUES
+    ('analyze',  'Analyze',  '@entity',         'Pull up profile, context, and performance details for an entity.',        'ANALYZE',  'universal_action_confirm', FALSE, FALSE, TRUE),
+    ('compare',  'Compare',  '@entity @entity', 'Compare two entities side by side using available institutional data.',   'COMPARE',  'universal_action_confirm', TRUE,  FALSE, TRUE),
+    ('approve',  'Approve',  '@entity',         'Approve a pending request or workflow for the selected entity.',          'APPROVE',  'universal_action_confirm', FALSE, FALSE, TRUE),
+    ('reject',   'Reject',   '@entity',         'Reject a pending request or workflow for the selected entity.',           'REJECT',   'universal_action_confirm', FALSE, FALSE, TRUE),
+    ('escalate', 'Escalate', '@entity',         'Escalate an entity or case for supervisory review.',                      'ESCALATE', 'universal_action_confirm', FALSE, FALSE, TRUE),
+    ('hold',     'Hold',     '@entity',         'Place an entity or case on operational hold pending review.',             'HOLD',     'universal_action_confirm', FALSE, FALSE, TRUE),
+    ('record',   'Record',   '@entity',         'Record a structured interaction or field update for the selected entity.', 'RECORD',   'interaction_capture_form', FALSE, FALSE, TRUE)
+ON CONFLICT (command_verb) DO UPDATE SET
+    label = EXCLUDED.label,
+    args_hint = EXCLUDED.args_hint,
+    hint = EXCLUDED.hint,
+    action_type = EXCLUDED.action_type,
+    component_type = EXCLUDED.component_type,
+    multi_target = EXCLUDED.multi_target,
+    has_value = EXCLUDED.has_value,
+    is_active = TRUE;
+
 -- 7c. INTERACTION SCHEMA (Form-driven Capture)
 -- Each row is a schema-driven form; its action_type hooks into policy_manifest
 CREATE TABLE interaction_schema (
@@ -155,6 +176,14 @@ CREATE TABLE seeding_sessions (
 );
 
 -- 10. SYSTEM TRIGGERS & SEEDS
+CREATE TABLE twin_state_history (
+    history_id BIGSERIAL PRIMARY KEY,
+    twin_id UUID REFERENCES digital_twins(id) ON DELETE CASCADE,
+    snapshot JSONB NOT NULL,
+    reason TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE OR REPLACE FUNCTION fn_nexus_track_lineage()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -221,4 +250,3 @@ INSERT INTO root_organisation (name, config) VALUES (
 INSERT INTO digital_twins (id, type, external_id, current_state)
 VALUES ('00000000-0000-0000-0000-000000000000', 'system', 'governance_node', '{"role":"governance_core"}')
 ON CONFLICT DO NOTHING;
-

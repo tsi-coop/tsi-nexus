@@ -19,7 +19,7 @@ import java.util.List;
  * GET  /api/seeding                 → stats, entity types, session history
  * POST /api/seeding { action }
  *   action=start  — run full synthesis from institutional DNA
- *   action=clear  — delete all SEED_* twins, interactions, templates, forms
+ *   action=clear  — delete seeded twins and generated configuration, keeping mandatory commands
  *   action=expand — natural-language expansion of existing seeded data
  */
 public class Seeding implements Action {
@@ -44,6 +44,7 @@ public class Seeding implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
+            StandardCommands.ensure(conn);
 
             // Entity types currently in the graph
             JSONArray entityTypes = new JSONArray();
@@ -66,7 +67,9 @@ public class Seeding implements Action {
                 stats.put("seeded_twins", rs.next() ? rs.getLong(1) : 0L);
             }
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM twin_relationships WHERE from_twin_id IN (SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')");
+                    "SELECT COUNT(*) FROM twin_relationships WHERE from_twin_id IN " +
+                    "(SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%') " +
+                    "OR to_twin_id IN (SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')");
                  ResultSet rs = ps.executeQuery()) {
                 stats.put("seeded_relationships", rs.next() ? rs.getLong(1) : 0L);
             }
@@ -77,17 +80,23 @@ public class Seeding implements Action {
                 stats.put("seeded_interactions", rs.next() ? rs.getLong(1) : 0L);
             }
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM liquid_templates WHERE name LIKE '[SIM]%'");
+                    "SELECT COUNT(*) FROM liquid_templates");
                  ResultSet rs = ps.executeQuery()) {
                 stats.put("seeded_templates", rs.next() ? rs.getLong(1) : 0L);
             }
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM interaction_schema WHERE schema_id LIKE 'SIM_%'");
+                    "SELECT COUNT(*) FROM interaction_schema");
                  ResultSet rs = ps.executeQuery()) {
                 stats.put("seeded_forms", rs.next() ? rs.getLong(1) : 0L);
             }
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM command_manifest WHERE command_verb LIKE 'sim_%'")) {
+                    "SELECT COUNT(*) FROM policy_manifest");
+                 ResultSet rs = ps.executeQuery()) {
+                stats.put("seeded_policies", rs.next() ? rs.getLong(1) : 0L);
+            }
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM command_manifest WHERE command_verb NOT IN " +
+                    "('analyze','compare','approve','reject','escalate','hold','record')")) {
                 try (ResultSet rs = ps.executeQuery()) {
                     stats.put("seeded_commands", rs.next() ? rs.getLong(1) : 0L);
                 }
@@ -144,6 +153,7 @@ public class Seeding implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
+            StandardCommands.ensure(conn);
 
             JSONObject body   = InputProcessor.getInput(req);
             if (body == null) {
@@ -290,8 +300,11 @@ public class Seeding implements Action {
 
     @SuppressWarnings("unchecked")
     private void clearSeeded(Connection conn, HttpServletRequest req, HttpServletResponse res) throws Exception {
-        long interactions, twins, templates, forms, policies, relationships, commands;
+        long audits, interactions, twins, templates, forms, policies, relationships, commands;
 
+        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM action_audit_log")) {
+            audits = ps.executeUpdate();
+        }
         try (PreparedStatement ps = conn.prepareStatement(
                 "DELETE FROM interaction_stream WHERE owner_id IN " +
                 "(SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')")) {
@@ -299,7 +312,8 @@ public class Seeding implements Action {
         }
         try (PreparedStatement ps = conn.prepareStatement(
                 "DELETE FROM twin_relationships WHERE from_twin_id IN " +
-                "(SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')")) {
+                "(SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%') " +
+                "OR to_twin_id IN (SELECT id FROM digital_twins WHERE external_id LIKE 'SEED_%')")) {
             relationships = ps.executeUpdate();
         }
         try (PreparedStatement ps = conn.prepareStatement(
@@ -307,24 +321,27 @@ public class Seeding implements Action {
             twins = ps.executeUpdate();
         }
         try (PreparedStatement ps = conn.prepareStatement(
-                "DELETE FROM liquid_templates WHERE name LIKE '[SIM]%'")) {
+                "DELETE FROM liquid_templates")) {
             templates = ps.executeUpdate();
         }
         try (PreparedStatement ps = conn.prepareStatement(
-                "DELETE FROM interaction_schema WHERE schema_id LIKE 'SIM_%'")) {
+                "DELETE FROM interaction_schema")) {
             forms = ps.executeUpdate();
         }
         try (PreparedStatement ps = conn.prepareStatement(
-                "DELETE FROM policy_manifest WHERE policy_id LIKE 'SIM_%'")) {
+                "DELETE FROM policy_manifest")) {
             policies = ps.executeUpdate();
         }
         try (PreparedStatement ps = conn.prepareStatement(
-                "DELETE FROM command_manifest WHERE command_verb LIKE 'sim_%'")) {
+                "DELETE FROM command_manifest WHERE command_verb NOT IN " +
+                "('analyze','compare','approve','reject','escalate','hold','record')")) {
             commands = ps.executeUpdate();
         }
+        StandardCommands.ensure(conn);
 
         JSONObject out = new JSONObject();
         out.put("success",               true);
+        out.put("cleared_audits",        audits);
         out.put("cleared_twins",         twins);
         out.put("cleared_relationships", relationships);
         out.put("cleared_interactions",  interactions);
@@ -546,9 +563,9 @@ public class Seeding implements Action {
             "Generate one Liquid template per entity type. Each is a compact HTML card for a profile dashboard.\n" +
             "Use Liquid variables like {{ actor.state.name }}, {{ actor.state.status }}, {{ actor.external_id }}.\n" +
             "Keep HTML simple: a card div with a title, status badge, and 3-5 key data fields.\n" +
-            "name MUST start with '[SIM] ' followed by a descriptive title.\n\n" +
+            "name should be a concise descriptive title. Do not add generated-data prefixes.\n\n" +
             "Return ONLY valid JSON, no markdown:\n" +
-            "{\"templates\":[{\"name\":\"[SIM] Member Profile\",\"entity_type\":\"member\"," +
+            "{\"templates\":[{\"name\":\"Member Profile\",\"entity_type\":\"member\"," +
             "\"html_content\":\"<div>...</div>\",\"condition_sql\":\"\"},...]}";
 
         JSONObject generated  = extractJson(callAI(prompt));
@@ -561,7 +578,8 @@ public class Seeding implements Action {
             String entType   = str(t, "entity_type");
             String html      = t.containsKey("html_content") ? (String) t.get("html_content") : "<div>Template</div>";
             String condSql   = t.containsKey("condition_sql") ? (String) t.get("condition_sql") : "";
-            if (name == null || !name.startsWith("[SIM]")) continue;
+            if (name == null || name.isBlank()) continue;
+            name = stripSeedPrefix(name);
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO liquid_templates (name, entity_type, html_content, condition_sql, is_active) " +
                     "VALUES (?, ?, ?, ?, true) ON CONFLICT DO NOTHING")) {
@@ -586,11 +604,11 @@ public class Seeding implements Action {
             (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
             "ENTITY TYPES: " + typeList + "\n\n" +
             "Generate 2-3 realistic form schemas aligned to the industry context and policy needs.\n" +
-            "schema_id MUST start with 'SIM_' and be snake_case.\n" +
+            "schema_id must be snake_case and descriptive. Do not add generated-data prefixes.\n" +
             "Field types: text, email, number, date, select, textarea, checkbox.\n" +
             "For select fields, include: \"options\":[{\"value\":\"v\",\"label\":\"Label\"}]\n\n" +
             "Return ONLY valid JSON, no markdown:\n" +
-            "{\"forms\":[{\"schema_id\":\"SIM_member_kyc\",\"label\":\"Member KYC Form\"," +
+            "{\"forms\":[{\"schema_id\":\"member_kyc\",\"label\":\"Member KYC Form\"," +
             "\"applies_to\":\"member\",\"action_type\":\"KYC_SUBMIT\"," +
             "\"fields\":[{\"name\":\"full_name\",\"label\":\"Full Name\",\"type\":\"text\",\"required\":true},...]},...]}";
 
@@ -603,9 +621,10 @@ public class Seeding implements Action {
             String schemaId   = str(f, "schema_id");
             String label      = f.containsKey("label")       ? (String) f.get("label")       : "Simulated Form";
             String appliesTo  = f.containsKey("applies_to")  ? (String) f.get("applies_to")  : "general";
-            String actionType = f.containsKey("action_type") ? (String) f.get("action_type") : "SIM_ACTION";
+            String actionType = f.containsKey("action_type") ? (String) f.get("action_type") : "RECORD";
             JSONArray fields  = arrOf(f, "fields");
-            if (schemaId == null || !schemaId.startsWith("SIM_")) continue;
+            if (schemaId == null || schemaId.isBlank()) continue;
+            schemaId = stripSeedPrefix(schemaId).toLowerCase().replaceAll("[^a-z0-9_]", "_");
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO interaction_schema (schema_id, label, applies_to, action_type, fields, is_active) " +
                     "VALUES (?, ?, ?, ?, ?::jsonb, true) ON CONFLICT (schema_id) DO NOTHING")) {
@@ -632,13 +651,14 @@ public class Seeding implements Action {
             "ENTITY TYPES: " + typeList + "\n\n" +
             "Generate 3-5 realistic institutional commands.\n" +
             "Rules:\n" +
-            "- command_verb MUST start with 'sim_' and be snake_case (e.g. sim_disburse, sim_collect, sim_analyze)\n" +
+            "- command_verb must be snake_case without leading slash or generated-data prefixes (e.g. disburse, collect, schedule_visit)\n" +
+            "- do not generate these reserved standard commands: analyze, compare, approve, reject, escalate, hold, record\n" +
             "- label is human-readable title (e.g. Disburse Loan)\n" +
             "- args_hint shows usage (e.g. @target [amount])\n" +
             "- component_type is 'universal_action_confirm' or 'interaction_capture_form'\n" +
             "- action_type is the uppercase verb used in policy_manifest (e.g. DISBURSE)\n\n" +
             "Return ONLY valid JSON, no markdown:\n" +
-            "{\"commands\":[{\"command_verb\":\"sim_...\",\"label\":\"...\",\"args_hint\":\"...\",\n" +
+            "{\"commands\":[{\"command_verb\":\"disburse\",\"label\":\"...\",\"args_hint\":\"...\",\n" +
             "\"hint\":\"...\",\"component_type\":\"...\",\"action_type\":\"...\"},...]}";
 
         JSONObject generated = extractJson(callAI(prompt));
@@ -654,7 +674,9 @@ public class Seeding implements Action {
             String compType   = str(c, "component_type");
             String actionType = str(c, "action_type");
 
-            if (verb == null || !verb.startsWith("sim_")) continue;
+            if (verb == null || verb.isBlank()) continue;
+            verb = stripSeedPrefix(verb).toLowerCase().replaceAll("[^a-z0-9_]", "_");
+            if (verb.isBlank() || StandardCommands.isMandatory(verb)) continue;
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO command_manifest (command_verb, label, args_hint, hint, component_type, action_type, is_active) " +
                     "VALUES (?, ?, ?, ?, ?, ?, true) ON CONFLICT (command_verb) DO NOTHING")) {
@@ -663,7 +685,7 @@ public class Seeding implements Action {
                 ps.setString(3, args  != null ? args  : "");
                 ps.setString(4, hint  != null ? hint  : "");
                 ps.setString(5, compType != null ? compType : "universal_action_confirm");
-                ps.setString(6, actionType != null ? actionType.toUpperCase() : verb.toUpperCase().replace("SIM_", ""));
+                ps.setString(6, actionType != null ? stripSeedPrefix(actionType).toUpperCase() : verb.toUpperCase());
                 count += ps.executeUpdate();
             }
         }
@@ -685,13 +707,13 @@ public class Seeding implements Action {
             "  digital_twins(external_id TEXT, type TEXT, current_state JSONB)\n" +
             "  interaction_stream(owner_id UUID, intent_mapped TEXT, created_at TIMESTAMPTZ)\n\n" +
             "Rules:\n" +
-            "- policy_id MUST start with 'SIM_' and be uppercase (e.g. SIM_BLOCK_INACTIVE_MEMBER)\n" +
+            "- policy_id must be uppercase and descriptive without generated-data prefixes (e.g. BLOCK_INACTIVE_MEMBER)\n" +
             "- action_type should be uppercase verbs (e.g. DISBURSE, ONBOARD, COLLECT)\n" +
             "- query_logic MUST return COUNT(*). Use ? as placeholder for external_id.\n" +
             "- query_logic example: SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND current_state->>'status' = 'inactive'\n" +
             "- error_message is what the user sees when blocked.\n\n" +
             "Return ONLY valid JSON, no markdown:\n" +
-            "{\"policies\":[{\"policy_id\":\"SIM_...\",\"action_type\":\"...\",\"description\":\"...\",\n" +
+            "{\"policies\":[{\"policy_id\":\"BLOCK_INACTIVE_MEMBER\",\"action_type\":\"...\",\"description\":\"...\",\n" +
             "\"query_logic\":\"SELECT COUNT(*) FROM...\",\"error_message\":\"...\"},...]}";
 
         JSONObject generated = extractJson(callAI(prompt));
@@ -706,7 +728,8 @@ public class Seeding implements Action {
             String query      = str(p, "query_logic");
             String error      = str(p, "error_message");
 
-            if (policyId == null || !policyId.startsWith("SIM_")) continue;
+            if (policyId == null || policyId.isBlank()) continue;
+            policyId = stripSeedPrefix(policyId).toUpperCase().replaceAll("[^A-Z0-9_]", "_");
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode, is_active) " +
                     "VALUES (?, ?, ?, ?, ?, 'GUARDRAIL', true) ON CONFLICT (policy_id) DO NOTHING")) {
@@ -894,6 +917,13 @@ public class Seeding implements Action {
     private JSONObject objOf(JSONObject o, String k) {
         Object v = o.get(k);
         return v instanceof JSONObject ? (JSONObject) v : new JSONObject();
+    }
+
+    private String stripSeedPrefix(String value) {
+        if (value == null) return null;
+        return value.trim()
+            .replaceFirst("^\\[SIM\\]\\s*", "")
+            .replaceFirst("(?i)^SIM[_\\s-]+", "");
     }
 
     @SuppressWarnings("unchecked")

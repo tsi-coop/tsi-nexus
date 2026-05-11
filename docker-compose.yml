@@ -1,4 +1,4 @@
-# TSI Privacy Vault - Universal Docker Compose (Public Release)
+# TSI Nexus - Universal Docker Compose (Public Release)
 
 x-db-credentials: &db-credentials
   POSTGRES_DB: "${POSTGRES_DB:-tsi_nexus}"

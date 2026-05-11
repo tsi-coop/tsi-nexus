@@ -34,6 +34,7 @@ public class Tuning implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
+            StandardCommands.ensure(conn);
 
             String vllmUrl   = System.getenv("VLLM_URL");
             String vllmModel = System.getenv("VLLM_MODEL");
@@ -71,6 +72,7 @@ public class Tuning implements Action {
             JSONObject input = InputProcessor.getInput(req);
             String action = str(input, "action");
             conn = pool.getConnection();
+            StandardCommands.ensure(conn);
 
             switch (action) {
                 case "add_term":         addTerm(conn, req, res, input);         break;
@@ -136,6 +138,10 @@ public class Tuning implements Action {
         String verb = str(in, "command_verb");
         if (verb.isEmpty()) {
             OutputProcessor.errorResponse(res, 400, "Bad request", "command_verb is required", req.getRequestURI()); return;
+        }
+        if (StandardCommands.isMandatory(verb)) {
+            OutputProcessor.errorResponse(res, 400, "Protected command", "/" + verb + " is a mandatory standard command and cannot be deleted.", req.getRequestURI());
+            return;
         }
         try (PreparedStatement ps = conn.prepareStatement("DELETE FROM command_manifest WHERE command_verb = ?")) {
             ps.setString(1, verb);

@@ -32,6 +32,7 @@ public class Entities implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
+            StandardCommands.ensure(conn);
 
             JSONArray entityTypes = new JSONArray();
             String typesSql =
