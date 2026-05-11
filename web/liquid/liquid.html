@@ -591,6 +591,13 @@
             if (allSamples.length >= 4) addEx(allSamples[3].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
             if (allSamples.length >= 5) addEx(allSamples[4].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
 
+            // Fallback guidance if database is empty
+            if (allSamples.length === 0) {
+                addEx("What is the status of @officer_rahul?");
+                addEx("Analyze @branch_east performance");
+                addEx("Compare @satish_01 and @anita_02");
+            }
+
             // Build command list from manifest
             const cmdContainer = document.getElementById('commands-container');
             cmdContainer.innerHTML = '';

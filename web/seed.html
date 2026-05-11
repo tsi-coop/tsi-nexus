@@ -198,17 +198,24 @@
                                     <p class="text-[9px] text-slate-400">Data capture forms</p>
                                 </div>
                             </label>
-                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-rose-300 cursor-pointer transition-colors bg-slate-50">
                                 <input type="checkbox" id="gen-policies" checked class="w-3.5 h-3.5 accent-indigo-600">
                                 <div>
                                     <p class="text-xs font-bold text-slate-700">Policy Manifest</p>
                                     <p class="text-[9px] text-slate-400">Governance guardrails</p>
                                 </div>
                             </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-cyan-300 cursor-pointer transition-colors bg-slate-50">
+                                <input type="checkbox" id="gen-commands" checked class="w-3.5 h-3.5 accent-indigo-600">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700">Command Manifest</p>
+                                    <p class="text-[9px] text-slate-400">UI Guidance & Intent</p>
+                                </div>
+                            </label>
+                            </div>
+                            </div>
+                            </div>
+                            </div>
 
             <!-- Bootstrap button -->
             <div class="pl-9">
@@ -257,6 +264,10 @@
                 <div class="bg-rose-50 rounded-2xl p-4 text-center">
                     <p class="text-2xl font-black text-rose-600" id="res-policies">0</p>
                     <p class="text-[8px] font-black text-rose-400 uppercase tracking-widest mt-1">Policies</p>
+                </div>
+                <div class="bg-cyan-50 rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-black text-cyan-600" id="res-commands">0</p>
+                    <p class="text-[8px] font-black text-cyan-400 uppercase tracking-widest mt-1">Intents</p>
                 </div>
             </div>
 
@@ -475,6 +486,7 @@ function collectPayload() {
     if (document.getElementById('gen-templates').checked)     generate.push('templates');
     if (document.getElementById('gen-forms').checked)         generate.push('forms');
     if (document.getElementById('gen-policies').checked)      generate.push('policies');
+    if (document.getElementById('gen-commands').checked)      generate.push('commands');
 
     const entity_types  = [];
     const entity_counts = {};
@@ -538,6 +550,7 @@ async function startSeeding() {
         document.getElementById('res-templates').textContent     = d.templates_seeded     ?? 0;
         document.getElementById('res-forms').textContent         = d.forms_seeded         ?? 0;
         document.getElementById('res-policies').textContent      = d.policies_seeded      ?? 0;
+        document.getElementById('res-commands').textContent      = d.commands_seeded      ?? 0;
 
         // Load scenarios
         await loadScenarios();
@@ -670,7 +683,7 @@ async function doClean() {
         });
         const d = await r.json();
         if (!d.success) throw new Error(d.error || 'Clear failed');
-        toast(`Cleared: ${d.cleared_twins} twins · ${d.cleared_relationships} relationships · ${d.cleared_interactions} interactions · ${d.cleared_templates} templates · ${d.cleared_forms} forms`, 'bg-emerald-700');
+        toast(`Cleared: ${d.cleared_twins} twins · ${d.cleared_relationships} relationships · ${d.cleared_interactions} interactions · ${d.cleared_templates} templates · ${d.cleared_forms} forms · ${d.cleared_commands} commands`, 'bg-emerald-700');
         document.getElementById('existingStats').classList.add('hidden');
         document.getElementById('successPanel').classList.add('hidden');
         document.getElementById('logPanel').classList.add('hidden');

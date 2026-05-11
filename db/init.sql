@@ -115,6 +115,7 @@ CREATE TABLE interaction_schema (
 CREATE TABLE policy_manifest (
     policy_id TEXT PRIMARY KEY,
     action_type TEXT NOT NULL,         -- Matches command verbs
+    description TEXT DEFAULT '',       -- Human-readable rule intent
     query_logic TEXT NOT NULL,         -- The SQL enforced at runtime
     error_message TEXT NOT NULL,       -- Liquid feedback on denial
     execution_mode TEXT NOT NULL DEFAULT 'GUARDRAIL',
@@ -130,6 +131,27 @@ CREATE TABLE action_audit_log (
     action_executed JSONB,             -- The resulting JSON command
     policy_id TEXT REFERENCES policy_manifest(policy_id),
     created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. SEEDING SESSIONS (Adaptive Bootstrapping)
+-- Tracks institutional DNA materialisation history
+CREATE TABLE seeding_sessions (
+    session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    industry_context TEXT NOT NULL,
+    data_flavor TEXT,
+    entity_types JSONB,
+    edge_cases_pct INTEGER DEFAULT 5,
+    status TEXT DEFAULT 'running',
+    twins_seeded INTEGER DEFAULT 0,
+    relationships_seeded INTEGER DEFAULT 0,
+    interactions_seeded INTEGER DEFAULT 0,
+    templates_seeded INTEGER DEFAULT 0,
+    forms_seeded INTEGER DEFAULT 0,
+    policies_seeded INTEGER DEFAULT 0,
+    commands_seeded INTEGER DEFAULT 0,
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    completed_at TIMESTAMPTZ
 );
 
 -- 10. SYSTEM TRIGGERS & SEEDS
