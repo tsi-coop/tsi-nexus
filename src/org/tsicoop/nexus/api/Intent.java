@@ -182,9 +182,17 @@ public class Intent implements Action {
             if (parts.length >= 2) {
                 String verb = parts[0].substring(1).toLowerCase();
                 JSONObject cmd = findCommand(commands, verb);
+                if (cmd == null) {
+                    JSONObject props = new JSONObject();
+                    props.put("query", cleanIntent);
+                    components.add(createComponent("nexus_semantic_results", props.toJSONString()));
+                    response.put("success", true);
+                    response.put("components", components);
+                    return response;
+                }
 
-                String componentType = cmd != null ? (String) cmd.get("component_type") : "universal_action_confirm";
-                boolean multiTarget  = cmd != null && Boolean.TRUE.equals(cmd.get("multi_target"));
+                String componentType = (String) cmd.get("component_type");
+                boolean multiTarget  = Boolean.TRUE.equals(cmd.get("multi_target"));
 
                 JSONObject props = new JSONObject();
                 props.put("action_type", verb.toUpperCase());

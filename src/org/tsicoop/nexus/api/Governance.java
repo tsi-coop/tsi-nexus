@@ -57,9 +57,14 @@ public class Governance implements Action {
             conn = pool.getConnection();
             conn.setAutoCommit(false);
 
-            // Branch on execution_mode from policy_manifest — no hardcoded action types
-            if ("ANALYTICS".equals(fetchExecutionMode(conn, actionType))) {
+            String executionMode = fetchExecutionMode(conn, actionType);
+            if ("ANALYTICS".equals(executionMode)) {
                 JSONObject result = executeAnalysis(conn, actionType, params);
+                conn.commit();
+                return result;
+            }
+            if ("COMPARE".equalsIgnoreCase(actionType)) {
+                JSONObject result = executeDefaultCompare(conn, params);
                 conn.commit();
                 return result;
             }
@@ -201,11 +206,66 @@ public class Governance implements Action {
                 }
             }
         }
+        if ("COMPARE".equalsIgnoreCase(action)) {
+            return executeDefaultCompare(conn, params);
+        }
         JSONObject result = new JSONObject();
         result.put("success", true);
         result.put("reason", "Analysis complete.");
         result.put("data", new JSONArray());
         return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONObject executeDefaultCompare(Connection conn, JSONObject params) throws SQLException {
+        String t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
+        String t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
+        JSONArray rows = new JSONArray();
+        String sql =
+            "SELECT external_id, type, current_state::text AS state, " +
+            "COALESCE(NULLIF(current_state->>'name',''), NULLIF(current_state->>'system_name',''), " +
+            "NULLIF(current_state->>'label',''), NULLIF(current_state->>'title',''), external_id) AS display_name " +
+            "FROM digital_twins WHERE external_id IN (?, ?) " +
+            "ORDER BY CASE external_id WHEN ? THEN 1 WHEN ? THEN 2 ELSE 3 END";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, t1);
+            ps.setString(2, t2);
+            ps.setString(3, t1);
+            ps.setString(4, t2);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject row = new JSONObject();
+                    row.put("external_id", rs.getString("external_id"));
+                    row.put("name",        rs.getString("display_name"));
+                    row.put("type",        rs.getString("type"));
+
+                    Object parsed = org.json.simple.JSONValue.parse(rs.getString("state"));
+                    if (parsed instanceof JSONObject) {
+                        JSONObject state = (JSONObject) parsed;
+                        copyIfPresent(row, state, "status");
+                        copyIfPresent(row, state, "branch");
+                        copyIfPresent(row, state, "group");
+                        copyIfPresent(row, state, "loan_amount");
+                        copyIfPresent(row, state, "disbursed");
+                        copyIfPresent(row, state, "repaid");
+                        copyIfPresent(row, state, "outstanding");
+                        copyIfPresent(row, state, "risk_score");
+                    }
+                    rows.add(row);
+                }
+            }
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("reason", "Comparison ready.");
+        result.put("data", rows);
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void copyIfPresent(JSONObject row, JSONObject state, String key) {
+        if (state.containsKey(key)) row.put(key, state.get(key));
     }
 
     @SuppressWarnings("unchecked")

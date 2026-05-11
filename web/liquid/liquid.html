@@ -33,7 +33,7 @@
 
         /* ── Left pane ───────────────────────────────── */
         #left {
-            width: 340px;
+            width: 380px;
             flex-shrink: 0;
             background: #ffffff;
             border-right: 1px solid #e2e8f0;
@@ -56,6 +56,42 @@
         }
         #left-scroll::-webkit-scrollbar { width: 3px; }
         #left-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        .left-header {
+            padding: 20px 20px 0;
+            flex-shrink: 0;
+        }
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .brand-copy { flex: 1; }
+        .brand-title {
+            font-size: 18px;
+            font-weight: 900;
+            color: #0f172a;
+            font-style: italic;
+            letter-spacing: -.03em;
+            line-height: 1;
+        }
+        .brand-subtitle {
+            font-size: 8px;
+            font-weight: 900;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: .3em;
+            margin-top: 2px;
+        }
+        .status-dots { display: flex; gap: 5px; align-items: center; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .search-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 10px;
+            box-shadow: 0 8px 22px rgba(15,23,42,.04);
+        }
 
         /* ── Right pane ──────────────────────────────── */
         #right {
@@ -86,13 +122,14 @@
         /* ── Input ───────────────────────────────────── */
         #cmd {
             width: 100%;
-            background: #f8fafc;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
+            min-height: 56px;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 12px;
             color: #0f172a;
-            font-size: 13px;
-            font-weight: 400;
-            padding: 10px 14px;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 16px 16px;
             outline: none;
             transition: border-color .15s, box-shadow .15s;
         }
@@ -100,6 +137,18 @@
         #cmd:focus {
             border-color: #4f46e5;
             box-shadow: 0 0 0 3px rgba(79,70,229,.10);
+        }
+        .search-help {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: 800;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            margin-top: 8px;
+            padding: 0 2px;
         }
 
         /* ── Section label ───────────────────────────── */
@@ -146,6 +195,48 @@
         }
         .cmd-args { font-family: monospace; font-size: 10px; color: #64748b; }
         .cmd-hint { font-size: 10px; color: #94a3b8; margin-top: 3px; line-height: 1.4; }
+
+        /* ── Intent history ─────────────────────────── */
+        .history-list { display: flex; flex-direction: column; gap: 6px; }
+        .history-item {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            text-align: left;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            padding: 9px 10px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background .12s, border-color .12s;
+        }
+        .history-item:hover { background: #eef2ff; border-color: #a5b4fc; }
+        .history-text {
+            font-size: 11px;
+            font-weight: 800;
+            color: #334155;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .history-time {
+            font-size: 9px;
+            font-weight: 900;
+            color: #94a3b8;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .history-empty {
+            font-size: 11px;
+            color: #94a3b8;
+            background: #f8fafc;
+            border: 1px dashed #e2e8f0;
+            border-radius: 9px;
+            padding: 10px;
+            line-height: 1.4;
+        }
 
         /* ── Entity chips ────────────────────────────── */
         .ent-label {
@@ -324,24 +415,27 @@
     <aside id="left">
 
         <!-- Header -->
-        <div style="padding:20px 20px 0; flex-shrink:0;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <div class="left-header">
+            <div class="brand-row">
                 <div class="logo-blob"></div>
-                <div style="flex:1">
-                    <div style="font-size:18px;font-weight:900;color:#0f172a;font-style:italic;letter-spacing:-.03em;line-height:1;">Liquid</div>
-                    <div style="font-size:8px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.3em;margin-top:2px;">TSI Nexus</div>
+                <div class="brand-copy">
+                    <div class="brand-title">Liquid</div>
+                    <div class="brand-subtitle">TSI Nexus</div>
                 </div>
-                <div style="display:flex;gap:5px;align-items:center;">
-                    <div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;"></div>
-                    <div style="width:6px;height:6px;border-radius:50%;background:#f87171;"></div>
-                    <div style="width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 5px #34d39999;"></div>
+                <div class="status-dots">
+                    <div class="status-dot" style="background:#fbbf24;"></div>
+                    <div class="status-dot" style="background:#f87171;"></div>
+                    <div class="status-dot" style="background:#34d399;box-shadow:0 0 5px #34d39999;"></div>
                 </div>
             </div>
 
             <!-- Input -->
-            <input id="cmd" type="text" placeholder="Ask a question or type a name…" autocomplete="off">
-            <div style="text-align:center;font-size:8px;color:#94a3b8;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-top:6px;margin-bottom:16px;">
-                Press Enter &nbsp;·&nbsp; or tap any name below
+            <div class="search-panel">
+                <input id="cmd" type="text" placeholder="Ask a question, command, or member name" autocomplete="off">
+                <div class="search-help">
+                    <span>Press Enter</span>
+                    <span>Tap any item below</span>
+                </div>
             </div>
         </div>
 
@@ -355,6 +449,12 @@
             <div id="ex-chips-container" style="display:contents;">
                 <span style="font-size:11px;color:#94a3b8;">Loading…</span>
             </div>
+
+            <hr class="sec-divider">
+
+            <!-- Intent history — stored locally per browser -->
+            <div class="sec-label">Intent History</div>
+            <div id="intent-history-container" class="history-list"></div>
 
             <hr class="sec-divider">
 
@@ -398,19 +498,6 @@
 
             </div>
             </aside>
-
-            <script>
-            // Auth check
-            if (!localStorage.getItem('nexus_token')) {
-            window.location.href = 'index.html';
-            }
-
-            function signOut() {
-            localStorage.removeItem('nexus_token');
-            localStorage.removeItem('nexus_user');
-            window.location.href = 'index.html';
-            }
-            </script>
 
     <!-- ═══════════════════════════════════════════
          RIGHT PANE
@@ -488,6 +575,20 @@
 <script>
     const cmd   = document.getElementById('cmd');
     const stage = document.getElementById('stage');
+    const HISTORY_KEY = 'nexus_liquid_intent_history';
+    const HISTORY_LIMIT = 12;
+    const entityLabelByHandle = {};
+
+    /* ── Auth ─────────────────────────────────── */
+    if (!localStorage.getItem('nexus_token')) {
+        window.location.href = 'index.html';
+    }
+
+    function signOut() {
+        localStorage.removeItem('nexus_token');
+        localStorage.removeItem('nexus_user');
+        window.location.href = 'index.html';
+    }
 
     /* ── Keyboard ─────────────────────────────── */
     cmd.addEventListener('keypress', e => {
@@ -499,9 +600,75 @@
     });
 
     function fire(el) {
-        const t = el.innerText;
+        const t = el.dataset.intent || el.innerText;
+        const label = el.dataset.label || el.innerText;
         cmd.value = t;
-        userSearch(t);
+        userSearch(t, { label });
+    }
+
+    /* ── Intent history ──────────────────────── */
+    function getIntentHistory() {
+        try {
+            return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveIntentHistory(items) {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
+    }
+
+    function rememberIntent(intent, label) {
+        const clean = String(intent || '').trim();
+        const display = String(label || intent || '').trim();
+        if (!clean) return;
+        const next = getIntentHistory().filter(item => item.intent !== clean);
+        next.unshift({ intent: clean, label: display || clean, at: new Date().toISOString() });
+        saveIntentHistory(next);
+        renderIntentHistory();
+    }
+
+    function renderIntentHistory() {
+        const wrap = document.getElementById('intent-history-container');
+        if (!wrap) return;
+        const history = getIntentHistory();
+        if (!history.length) {
+            wrap.innerHTML = '<div class="history-empty">Your recent searches and commands will appear here.</div>';
+            return;
+        }
+        wrap.innerHTML = '';
+        history.forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = 'history-item';
+            btn.type = 'button';
+            btn.title = item.intent;
+            btn.innerHTML = `
+                <span class="history-text">${esc(displayHistoryLabel(item))}</span>
+                <span class="history-time">${esc(formatHistoryTime(item.at))}</span>`;
+            btn.onclick = () => replayIntent(item.intent);
+            wrap.appendChild(btn);
+        });
+    }
+
+    function displayHistoryLabel(item) {
+        if (item.label && item.label !== item.intent) return item.label;
+        return String(item.intent || '').replace(/@[\w.]+/g, handle => entityLabelByHandle[handle] || handle);
+    }
+
+    function formatHistoryTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const today = new Date();
+        const sameDay = date.toDateString() === today.toDateString();
+        return sameDay
+            ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : date.toLocaleDateString([], { day: '2-digit', month: 'short' });
+    }
+
+    function replayIntent(intent) {
+        cmd.value = intent;
+        userSearch(intent, { remember: false });
     }
 
     /* ── Stage helpers ────────────────────────── */
@@ -574,34 +741,53 @@
             // Build "Try asking" examples from actual entity data
             const exContainer = document.getElementById('ex-chips-container');
             exContainer.innerHTML = '';
-            const allSamples = types.flatMap(t => t.sample.map(e => ({ ...e, type: t.type })));
+            const allSamples = types.flatMap(t => t.sample.map(e => ({ ...e, type: t.type })))
+                .filter(e => e.handle);
+            const memberSamples = allSamples.filter(e => e.type === 'member');
+            const commands = data.commands || [];
+            const compareCommand = commands.find(c =>
+                memberSamples.length >= 2 &&
+                c.multi_target &&
+                (String(c.action_type || '').toUpperCase() === 'COMPARE' || String(c.command_verb || '').toLowerCase() === 'compare')
+            );
+            allSamples.forEach(e => { entityLabelByHandle[e.handle] = e.name || e.handle; });
+            renderIntentHistory();
 
-            const addEx = (text, style) => {
+            const addEx = (text, intent, style) => {
                 const chip = document.createElement('span');
                 chip.className = 'ex-chip';
                 if (style) chip.setAttribute('style', style);
                 chip.textContent = text;
+                chip.dataset.intent = intent || text;
+                chip.dataset.label = text;
                 chip.onclick = () => fire(chip);
                 exContainer.appendChild(chip);
             };
 
-            if (allSamples.length >= 1) addEx(`How is ${allSamples[0].name} doing?`);
-            if (allSamples.length >= 2) addEx(`Compare ${allSamples[0].name} and ${allSamples[1].name}`);
-            if (allSamples.length >= 3) addEx(allSamples[2].name, 'border-color:#fed7aa;color:#9a3412;background:#fff7ed;');
-            if (allSamples.length >= 4) addEx(allSamples[3].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
-            if (allSamples.length >= 5) addEx(allSamples[4].name, 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;');
+            if (memberSamples.length >= 1) {
+                addEx(`How is ${memberSamples[0].name} doing?`, memberSamples[0].handle);
+            }
+            if (compareCommand) {
+                addEx(
+                    `Compare ${memberSamples[0].name} and ${memberSamples[1].name}`,
+                    `/${compareCommand.command_verb} ${memberSamples[0].handle} ${memberSamples[1].handle}`
+                );
+            }
+            allSamples.slice(0, 3).forEach((sample, idx) => {
+                const style = idx === 0
+                    ? 'border-color:#fed7aa;color:#9a3412;background:#fff7ed;'
+                    : 'border-color:#a7f3d0;color:#065f46;background:#ecfdf5;';
+                addEx(sample.name, sample.handle, style);
+            });
 
-            // Fallback guidance if database is empty
-            if (allSamples.length === 0) {
-                addEx("What is the status of @officer_rahul?");
-                addEx("Analyze @branch_east performance");
-                addEx("Compare @satish_01 and @anita_02");
+            if (!exContainer.children.length) {
+                exContainer.innerHTML = '<span style="font-size:11px;color:#94a3b8;">No entities available yet.</span>';
             }
 
             // Build command list from manifest
             const cmdContainer = document.getElementById('commands-container');
             cmdContainer.innerHTML = '';
-            (data.commands || []).forEach(cmd => {
+            commands.forEach(cmd => {
                 const isCapture = cmd.component_type === 'interaction_capture_form';
                 const row = document.createElement('div');
                 row.className = 'cmd-row';
@@ -631,6 +817,8 @@
                     const chip = document.createElement('span');
                     chip.className = `ent-chip ${colorClass}`;
                     chip.textContent = e.name;
+                    chip.dataset.intent = e.handle;
+                    chip.dataset.label = e.name;
                     chip.onclick = () => fire(chip);
                     row.appendChild(chip);
                 });
@@ -651,14 +839,16 @@
         }
     }
     loadSidebar();
+    renderIntentHistory();
 
     /* ── Navigation history ───────────────────── */
     let navStack  = [];   // [{intent, label}]
     let lastIntent = null;
 
-    // Fresh user search — clears history
-    function userSearch(intent) {
+    // Fresh user search clears in-card graph navigation but keeps sidebar intent history.
+    function userSearch(intent, options = {}) {
         navStack = [];
+        if (options.remember !== false) rememberIntent(intent, options.label);
         resolveIntent(intent);
     }
 
@@ -1191,7 +1381,7 @@
         }
 
         if (actionType === 'COMPARE') {
-            const cols = Object.keys(data[0]).filter(k => k !== 'external_id');
+            const cols = Object.keys(data[0]).filter(k => !['external_id','name'].includes(k));
             return `<table style="width:100%;border-collapse:collapse;font-size:12px;">
                 <thead><tr>
                     <th style="text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">Entity</th>
@@ -1199,7 +1389,10 @@
                 </tr></thead>
                 <tbody>${data.map(row=>`
                     <tr style="border-top:1px solid #f1f5f9;">
-                        <td style="padding:10px 0;font-weight:700;color:#334155;">${esc(String(row.external_id))}</td>
+                        <td style="padding:10px 0;font-weight:700;color:#334155;">
+                            ${esc(String(row.name || row.external_id))}
+                            ${row.name ? `<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px;">@${esc(String(row.external_id))}</div>` : ''}
+                        </td>
                         ${cols.map(c=>`<td style="padding:10px 0;text-align:right;font-weight:900;color:#0f172a;font-size:16px;">${esc(String(row[c]??'—'))}${c.includes('rate')?'%':''}</td>`).join('')}
                     </tr>`).join('')}
                 </tbody></table>`;

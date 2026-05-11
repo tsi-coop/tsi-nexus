@@ -54,7 +54,7 @@ public class Entities implements Action {
             }
 
             JSONArray commands = new JSONArray();
-            String cmdSql = "SELECT command_verb, label, args_hint, hint, component_type " +
+            String cmdSql = "SELECT command_verb, label, args_hint, hint, component_type, action_type, multi_target, has_value " +
                             "FROM command_manifest WHERE is_active = TRUE ORDER BY command_verb";
             try (PreparedStatement ps = conn.prepareStatement(cmdSql);
                  ResultSet rs = ps.executeQuery()) {
@@ -65,6 +65,9 @@ public class Entities implements Action {
                     cmd.put("args_hint",      rs.getString("args_hint"));
                     cmd.put("hint",           rs.getString("hint"));
                     cmd.put("component_type", rs.getString("component_type"));
+                    cmd.put("action_type",    rs.getString("action_type"));
+                    cmd.put("multi_target",   rs.getBoolean("multi_target"));
+                    cmd.put("has_value",      rs.getBoolean("has_value"));
                     commands.add(cmd);
                 }
             }
