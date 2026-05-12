@@ -203,7 +203,7 @@
      MODAL: Add / Edit Command
 ════════════════════════════════════════════════════════════════════════ -->
 <div id="commandModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
-    <div class="modal-box bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
+    <div class="modal-box bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0 max-h-[90vh] overflow-y-auto">
         <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h3 id="cmdModalTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Add Command</h3>
             <button onclick="closeModal('commandModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
@@ -227,6 +227,10 @@
                 <input id="fCmdActionType" type="text" class="input-field font-mono uppercase" placeholder="DISBURSE">
             </div>
             <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Entity Type <span class="text-[10px] font-normal normal-case text-slate-400">(optional — scopes command to this entity type)</span></label>
+                <input id="fCmdEntityType" type="text" class="input-field" placeholder="center, member, officer…">
+            </div>
+            <div>
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hint</label>
                 <input id="fCmdHint" type="text" class="input-field" placeholder="Release approved loan funds to a member">
             </div>
@@ -238,6 +242,50 @@
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Linked Template <span class="text-[10px] font-normal normal-case text-slate-400">(required if no form)</span></label>
                 <select id="fCmdTemplate" class="input-field"></select>
             </div>
+
+            <!-- Policy Guards -->
+            <div class="border-t border-slate-100 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Policy Guards</p>
+                    <button type="button" onclick="toggleAddGuard()" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors">+ Add Guard</button>
+                </div>
+                <div id="modalPolicyList" class="space-y-1.5 mb-3"></div>
+                <div id="addGuardForm" class="hidden bg-slate-50 rounded-xl p-4 space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Policy ID <span class="text-red-400">*</span></label>
+                            <input id="gPolicyId" type="text" class="input-field font-mono text-xs" placeholder="DISBURSE_ELIGIBLE">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Description</label>
+                            <input id="gDescription" type="text" class="input-field text-xs" placeholder="Member must be active">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Query Logic (SQL) <span class="text-red-400">*</span></label>
+                        <textarea id="gQueryLogic" rows="3" class="input-field font-mono text-xs resize-none" placeholder="SELECT id FROM digital_twins WHERE external_id=:target AND current_state->>'status'='inactive'"></textarea>
+                        <p class="text-[9px] text-slate-400 mt-1">Query must return 0 rows to pass the guard</p>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Error Message</label>
+                        <input id="gErrorMessage" type="text" class="input-field text-xs" placeholder="Member is not eligible for this action">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                            <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Execution Mode</label>
+                            <select id="gExecMode" class="input-field text-xs">
+                                <option value="GUARDRAIL">GUARDRAIL</option>
+                                <option value="PRE_EXEC">PRE_EXEC</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end gap-2 pb-0.5">
+                            <button type="button" onclick="saveGuard()" class="px-4 py-2.5 bg-indigo-600 text-white text-[11px] font-black uppercase rounded-xl hover:bg-indigo-700 transition-colors">Save Guard</button>
+                            <button type="button" onclick="toggleAddGuard()" class="px-3 py-2.5 text-slate-400 text-[11px] font-bold hover:text-slate-600 transition-colors">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <button id="cmdSaveBtn" onclick="saveCommand()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
                 Save Command
             </button>
@@ -395,14 +443,15 @@ function renderCommands() {
                         <span class="text-xs font-bold text-slate-800">${esc(cmd.label)}</span>
                         <span class="text-[10px] text-slate-300">·</span>
                         <span class="font-mono text-[10px] text-slate-500 uppercase">${esc(cmd.action_type)}</span>
+                        ${cmd.entity_type ? `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold rounded">${esc(cmd.entity_type)}</span>` : ''}
                     </div>
                     <p class="text-[10px] text-slate-400 mt-0.5 truncate">${esc(cmd.hint || '')}</p>
                 </div>
                 <div class="flex gap-1 shrink-0">
-                    <button onclick="openCommandModal(${JSON.stringify(cmd.command_verb)})" class="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title="Edit">
+                    <button onclick="openCommandModal('${esc(cmd.command_verb)}')" class="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title="Edit">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
-                    <button onclick="doDeleteCommand(${JSON.stringify(cmd.command_verb)})" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
+                    <button onclick="doDeleteCommand('${esc(cmd.command_verb)}')" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </div>
@@ -434,6 +483,7 @@ function openCommandModal(verb) {
     document.getElementById('fCmdLabel').value           = cmd ? cmd.label          : '';
     document.getElementById('fCmdHint').value            = cmd ? (cmd.hint  || '')  : '';
     document.getElementById('fCmdActionType').value      = cmd ? cmd.action_type    : '';
+    document.getElementById('fCmdEntityType').value      = cmd ? (cmd.entity_type || '') : '';
 
     const fForm = document.getElementById('fCmdForm');
     fForm.innerHTML = '<option value="">— None —</option>' +
@@ -444,6 +494,8 @@ function openCommandModal(verb) {
         templates.map(t => `<option value="${esc(t.template_id)}" ${cmd?.linked_template === t.template_id ? 'selected' : ''}>${esc(t.name)} (${esc(t.entity_type)})</option>`).join('');
 
     document.getElementById('cmdFeedback').classList.add('hidden');
+    document.getElementById('addGuardForm').classList.add('hidden');
+    renderModalPolicies(cmd?.policies || []);
     openModal('commandModal');
 }
 
@@ -456,13 +508,15 @@ async function saveCommand() {
     const linkedForm   = document.getElementById('fCmdForm').value;
     const linkedTmpl   = document.getElementById('fCmdTemplate').value;
 
+    const entityType   = document.getElementById('fCmdEntityType').value.trim().toLowerCase();
+
     if (!verb || !label) { showFeedback('cmdFeedback', 'Command verb and label are required', true); return; }
     if (!linkedForm && !linkedTmpl) { showFeedback('cmdFeedback', 'At least one of form or template is required', true); return; }
 
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
         const body = { action: 'add_command', command_verb: verb, label, hint, action_type: actionType,
-                       linked_form: linkedForm || '', linked_template: linkedTmpl || '' };
+                       entity_type: entityType, linked_form: linkedForm || '', linked_template: linkedTmpl || '' };
         const r = await fetch('/api/tuning', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
         const d = await r.json();
         if (!d.success) throw new Error(d.error || 'Save failed');
@@ -482,6 +536,121 @@ async function doDeleteCommand(verb) {
         if (!d.success) throw new Error(d.error || 'Delete failed');
         await reloadCommands();
     } catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+/* ── inline policy guards ───────────────────────────────────────────── */
+function renderModalPolicies(policies) {
+    const list = document.getElementById('modalPolicyList');
+    list.innerHTML = '';
+    if (!policies.length) {
+        list.innerHTML = '<p class="text-[11px] text-slate-400 italic">No guards configured</p>';
+        return;
+    }
+    policies.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 text-[11px] group';
+        row.innerHTML = `
+            <span class="font-mono font-black text-slate-700 flex-1">${esc(p.policy_id)}</span>
+            <span class="text-slate-400 truncate max-w-[140px]">${esc(p.description || '')}</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${p.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'}">${p.is_active ? 'Active' : 'Off'}</span>
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <button onclick="editGuard(${JSON.stringify(p)})" class="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button onclick="toggleGuard('${esc(p.policy_id)}', ${p.is_active})" class="p-1 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="${p.is_active ? 'Disable' : 'Enable'}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                </button>
+                <button onclick="deleteGuard('${esc(p.policy_id)}')" class="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>`;
+        list.appendChild(row);
+    });
+}
+
+function toggleAddGuard() {
+    const form = document.getElementById('addGuardForm');
+    const isHidden = form.classList.contains('hidden');
+    if (isHidden) {
+        document.getElementById('gPolicyId').value    = '';
+        document.getElementById('gPolicyId').readOnly = false;
+        document.getElementById('gDescription').value = '';
+        document.getElementById('gQueryLogic').value  = '';
+        document.getElementById('gErrorMessage').value = '';
+        document.getElementById('gExecMode').value    = 'GUARDRAIL';
+        form.classList.remove('hidden');
+    } else {
+        form.classList.add('hidden');
+    }
+}
+
+function editGuard(policy) {
+    document.getElementById('gPolicyId').value     = policy.policy_id || '';
+    document.getElementById('gPolicyId').readOnly  = true;
+    document.getElementById('gDescription').value  = policy.description || '';
+    document.getElementById('gQueryLogic').value   = policy.query_logic || '';
+    document.getElementById('gErrorMessage').value = policy.error_message || '';
+    document.getElementById('gExecMode').value     = policy.execution_mode || 'GUARDRAIL';
+    document.getElementById('addGuardForm').classList.remove('hidden');
+}
+
+function currentActionType() {
+    const at = document.getElementById('fCmdActionType').value.trim().toUpperCase();
+    return at || (editingCmdVerb ? editingCmdVerb.toUpperCase() : '');
+}
+
+async function saveGuard() {
+    const policyId    = document.getElementById('gPolicyId').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    const description = document.getElementById('gDescription').value.trim();
+    const queryLogic  = document.getElementById('gQueryLogic').value.trim();
+    const errorMsg    = document.getElementById('gErrorMessage').value.trim();
+    const execMode    = document.getElementById('gExecMode').value;
+    const actionType  = currentActionType();
+
+    if (!policyId) { alert('Policy ID is required'); return; }
+    if (!queryLogic) { alert('Query logic is required'); return; }
+    if (!actionType) { alert('Set an Action Type for the command first'); return; }
+
+    try {
+        const r = await fetch('/api/tuning', { method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ action: 'add_policy', policy_id: policyId, action_type: actionType,
+                description, query_logic: queryLogic, error_message: errorMsg, execution_mode: execMode }) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Save failed');
+        document.getElementById('addGuardForm').classList.add('hidden');
+        await loadModalPolicies();
+    } catch(e) { alert('Guard save failed: ' + e.message); }
+}
+
+async function deleteGuard(policyId) {
+    if (!confirm(`Delete guard ${policyId}?`)) return;
+    try {
+        const r = await fetch('/api/tuning', { method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ action: 'delete_policy', policy_id: policyId }) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Delete failed');
+        await loadModalPolicies();
+    } catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+async function toggleGuard(policyId, current) {
+    try {
+        const r = await fetch('/api/tuning', { method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ action: 'toggle_policy', policy_id: policyId, is_active: !current }) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Toggle failed');
+        await loadModalPolicies();
+    } catch(e) { alert('Toggle failed: ' + e.message); }
+}
+
+async function loadModalPolicies() {
+    const r = await fetch('/api/tuning');
+    const d = await r.json();
+    if (!d.success) return;
+    commands = d.commands || [];
+    const cmd = editingCmdVerb ? commands.find(c => c.command_verb === editingCmdVerb) : null;
+    renderModalPolicies(cmd?.policies || []);
+    renderCommands();
 }
 
 async function reloadCommands() {

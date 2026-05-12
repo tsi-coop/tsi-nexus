@@ -109,7 +109,7 @@
             const res  = await fetch('/api/setup', { method: 'GET' });
             const data = await res.json();
             if (data.initialized) {
-                window.location.href = 'index.html';
+                window.location.href = '/admin/index.html';
                 return;
             }
         } catch (err) {

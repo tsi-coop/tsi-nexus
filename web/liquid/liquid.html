@@ -884,9 +884,13 @@
 
     function commandUsage(command, samples) {
         if (!samples.length) return null;
-        const verb  = command.command_verb;
-        const first  = samples[0];
-        const second = samples[1];
+        const verb = command.command_verb;
+        let pool = command.entity_type
+            ? samples.filter(e => e.type === command.entity_type)
+            : samples;
+        if (!pool.length) pool = samples;
+        const first  = pool[0];
+        const second = pool[1];
 
         if (command.multi_target && second) {
             return {
@@ -1254,7 +1258,10 @@
         appendToStage(placeholder);
 
         try {
-            const res  = await fetch('/api/capture?external_id=' + encodeURIComponent(props.target || ''));
+            const captureUrl = props.linked_form
+                ? `/api/capture?external_id=${encodeURIComponent(props.target||'')}&schema_id=${encodeURIComponent(props.linked_form)}`
+                : `/api/capture?external_id=${encodeURIComponent(props.target||'')}`;
+            const res  = await fetch(captureUrl);
             const data = await res.json();
             placeholder.remove();
 

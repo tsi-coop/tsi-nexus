@@ -49,7 +49,15 @@ public class Capture implements Action {
                 OutputProcessor.errorResponse(res, 404, "Not found", "Entity not found: " + cleanId, req.getRequestURI());
                 return;
             }
-            JSONArray schemas = fetchSchemas(conn, entityType);
+            String schemaId = req.getParameter("schema_id");
+            JSONArray schemas;
+            if (schemaId != null && !schemaId.isBlank()) {
+                JSONObject s = loadSchema(conn, schemaId);
+                schemas = new JSONArray();
+                if (s != null) schemas.add(s);
+            } else {
+                schemas = fetchSchemas(conn, entityType);
+            }
             JSONObject result = new JSONObject();
             result.put("success", true);
             result.put("external_id", "@" + cleanId);

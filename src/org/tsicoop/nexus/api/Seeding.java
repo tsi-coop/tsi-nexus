@@ -99,7 +99,7 @@ public class Seeding implements Action {
             JSONArray sessions = new JSONArray();
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT session_id::text, industry_context, status, " +
-                    "twins_seeded, relationships_seeded, interactions_seeded, templates_seeded, forms_seeded, policies_seeded, " +
+                    "twins_seeded, relationships_seeded, interactions_seeded, templates_seeded, forms_seeded, policies_seeded, commands_seeded, " +
                     "to_char(created_at, 'DD Mon YYYY HH24:MI') AS created, error_message " +
                     "FROM seeding_sessions ORDER BY created_at DESC LIMIT 10");
                  ResultSet rs = ps.executeQuery()) {
@@ -600,91 +600,97 @@ public class Seeding implements Action {
 
     @SuppressWarnings("unchecked")
     private int generateTemplates(Connection conn, String context, String flavor, JSONArray types) throws Exception {
-        StringBuilder typeList = new StringBuilder();
-        for (Object t : types) typeList.append(t).append(", ");
+        int total = 0;
+        for (Object typeObj : types) {
+            String type = typeObj.toString();
+            String prompt =
+                "You are generating a Liquid HTML dashboard template for an institutional management system.\n\n" +
+                "INDUSTRY CONTEXT: " + context + "\n" +
+                (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
+                "ENTITY TYPE: " + type + "\n\n" +
+                "Generate exactly ONE template for this entity type. It is a compact HTML card for a profile dashboard.\n" +
+                "Use Liquid variables like {{ actor.state.name }}, {{ actor.state.status }}, {{ actor.external_id }}.\n" +
+                "Keep HTML simple: a card div with a title, status badge, and 3-5 key data fields. No CSS styles.\n" +
+                "name should be a concise descriptive title (e.g. 'Member Profile').\n\n" +
+                "Return ONLY valid JSON, no markdown:\n" +
+                "{\"templates\":[{\"name\":\"Member Profile\",\"entity_type\":\"" + type + "\"," +
+                "\"html_content\":\"<div><h3>{{ actor.state.name }}</h3></div>\",\"condition_sql\":\"\"}]}";
 
-        String prompt =
-            "You are generating Liquid HTML dashboard templates for an institutional management system.\n\n" +
-            "INDUSTRY CONTEXT: " + context + "\n" +
-            (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
-            "ENTITY TYPES: " + typeList + "\n\n" +
-            "Generate one Liquid template per entity type. Each is a compact HTML card for a profile dashboard.\n" +
-            "Use Liquid variables like {{ actor.state.name }}, {{ actor.state.status }}, {{ actor.external_id }}.\n" +
-            "Keep HTML simple: a card div with a title, status badge, and 3-5 key data fields.\n" +
-            "name should be a concise descriptive title. Do not add generated-data prefixes.\n\n" +
-            "Return ONLY valid JSON, no markdown:\n" +
-            "{\"templates\":[{\"name\":\"Member Profile\",\"entity_type\":\"member\"," +
-            "\"html_content\":\"<div>...</div>\",\"condition_sql\":\"\"},...]}";
-
-        JSONObject generated  = extractJson(callAI(prompt));
-        JSONArray  templates  = arrOf(generated, "templates");
-
-        int count = 0;
-        for (Object obj : templates) {
-            JSONObject t     = (JSONObject) obj;
-            String name      = str(t, "name");
-            String entType   = str(t, "entity_type");
-            String html      = t.containsKey("html_content") ? (String) t.get("html_content") : "<div>Template</div>";
-            String condSql   = t.containsKey("condition_sql") ? (String) t.get("condition_sql") : "";
-            if (name == null || name.isBlank()) continue;
-            name = stripSeedPrefix(name);
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO liquid_templates (name, entity_type, html_content, condition_sql, is_active) " +
-                    "VALUES (?, ?, ?, ?, true) ON CONFLICT DO NOTHING")) {
-                ps.setString(1, name);
-                ps.setString(2, entType != null ? entType : "general");
-                ps.setString(3, html);
-                ps.setString(4, condSql);
-                count += ps.executeUpdate();
+            try {
+                JSONObject generated = extractJson(callAI(prompt));
+                JSONArray  templates = arrOf(generated, "templates");
+                for (Object obj : templates) {
+                    JSONObject t   = (JSONObject) obj;
+                    String name    = str(t, "name");
+                    String entType = str(t, "entity_type");
+                    String html    = t.containsKey("html_content") ? (String) t.get("html_content") : "<div>Template</div>";
+                    String condSql = t.containsKey("condition_sql") ? (String) t.get("condition_sql") : "";
+                    if (name == null || name.isBlank()) continue;
+                    name = stripSeedPrefix(name);
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "INSERT INTO liquid_templates (name, entity_type, html_content, condition_sql, is_active) " +
+                            "VALUES (?, ?, ?, ?, true) ON CONFLICT DO NOTHING")) {
+                        ps.setString(1, name);
+                        ps.setString(2, entType != null ? entType : type);
+                        ps.setString(3, html);
+                        ps.setString(4, condSql);
+                        total += ps.executeUpdate();
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[Seeding] generateTemplates failed for type " + type + ": " + e.getMessage());
             }
         }
-        return count;
+        return total;
     }
 
     @SuppressWarnings("unchecked")
     private int generateForms(Connection conn, String context, String flavor, JSONArray types) throws Exception {
-        StringBuilder typeList = new StringBuilder();
-        for (Object t : types) typeList.append(t).append(", ");
+        int total = 0;
+        for (Object typeObj : types) {
+            String type = typeObj.toString();
+            String prompt =
+                "You are generating data capture form schemas for an institutional management system.\n\n" +
+                "INDUSTRY CONTEXT: " + context + "\n" +
+                (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
+                "ENTITY TYPE: " + type + "\n\n" +
+                "Generate exactly 1 realistic form schema for this entity type aligned to the industry context.\n" +
+                "schema_id must be snake_case (e.g. member_kyc). Do not add generated-data prefixes.\n" +
+                "Include 3-5 fields. Field types: text, email, number, date, select, textarea, checkbox.\n" +
+                "For select fields, include: \"options\":[{\"value\":\"v\",\"label\":\"Label\"}]\n\n" +
+                "Return ONLY valid JSON, no markdown:\n" +
+                "{\"forms\":[{\"schema_id\":\"" + type + "_update\",\"label\":\"" + type + " Update Form\"," +
+                "\"applies_to\":\"" + type + "\",\"action_type\":\"" + type.toUpperCase() + "_UPDATE\"," +
+                "\"fields\":[{\"key\":\"name\",\"label\":\"Full Name\",\"type\":\"text\",\"required\":true}]}]}";
 
-        String prompt =
-            "You are generating data capture form schemas for an institutional management system.\n\n" +
-            "INDUSTRY CONTEXT: " + context + "\n" +
-            (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
-            "ENTITY TYPES: " + typeList + "\n\n" +
-            "Generate 2-3 realistic form schemas aligned to the industry context and policy needs.\n" +
-            "schema_id must be snake_case and descriptive. Do not add generated-data prefixes.\n" +
-            "Field types: text, email, number, date, select, textarea, checkbox.\n" +
-            "For select fields, include: \"options\":[{\"value\":\"v\",\"label\":\"Label\"}]\n\n" +
-            "Return ONLY valid JSON, no markdown:\n" +
-            "{\"forms\":[{\"schema_id\":\"member_kyc\",\"label\":\"Member KYC Form\"," +
-            "\"applies_to\":\"member\",\"action_type\":\"KYC_SUBMIT\"," +
-            "\"fields\":[{\"name\":\"full_name\",\"label\":\"Full Name\",\"type\":\"text\",\"required\":true},...]},...]}";
-
-        JSONObject generated = extractJson(callAI(prompt));
-        JSONArray  forms     = arrOf(generated, "forms");
-
-        int count = 0;
-        for (Object obj : forms) {
-            JSONObject f      = (JSONObject) obj;
-            String schemaId   = str(f, "schema_id");
-            String label      = f.containsKey("label")       ? (String) f.get("label")       : "Simulated Form";
-            String appliesTo  = f.containsKey("applies_to")  ? (String) f.get("applies_to")  : "general";
-            String actionType = f.containsKey("action_type") ? (String) f.get("action_type") : "RECORD";
-            JSONArray fields  = arrOf(f, "fields");
-            if (schemaId == null || schemaId.isBlank()) continue;
-            schemaId = stripSeedPrefix(schemaId).toLowerCase().replaceAll("[^a-z0-9_]", "_");
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO interaction_schema (schema_id, label, applies_to, action_type, fields, is_active) " +
-                    "VALUES (?, ?, ?, ?, ?::jsonb, true) ON CONFLICT (schema_id) DO NOTHING")) {
-                ps.setString(1, schemaId);
-                ps.setString(2, label);
-                ps.setString(3, appliesTo);
-                ps.setString(4, actionType.toUpperCase());
-                ps.setString(5, fields.toJSONString());
-                count += ps.executeUpdate();
+            try {
+                JSONObject generated = extractJson(callAI(prompt));
+                JSONArray  forms     = arrOf(generated, "forms");
+                for (Object obj : forms) {
+                    JSONObject f      = (JSONObject) obj;
+                    String schemaId   = str(f, "schema_id");
+                    String label      = f.containsKey("label")       ? (String) f.get("label")       : type + " Form";
+                    String appliesTo  = f.containsKey("applies_to")  ? (String) f.get("applies_to")  : type;
+                    String actionType = f.containsKey("action_type") ? (String) f.get("action_type") : type.toUpperCase() + "_RECORD";
+                    JSONArray fields  = arrOf(f, "fields");
+                    if (schemaId == null || schemaId.isBlank()) continue;
+                    schemaId = stripSeedPrefix(schemaId).toLowerCase().replaceAll("[^a-z0-9_]", "_");
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "INSERT INTO interaction_schema (schema_id, label, applies_to, action_type, fields, is_active) " +
+                            "VALUES (?, ?, ?, ?, ?::jsonb, true) ON CONFLICT (schema_id) DO NOTHING")) {
+                        ps.setString(1, schemaId);
+                        ps.setString(2, label);
+                        ps.setString(3, appliesTo);
+                        ps.setString(4, actionType.toUpperCase());
+                        ps.setString(5, fields.toJSONString());
+                        total += ps.executeUpdate();
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[Seeding] generateForms failed for type " + type + ": " + e.getMessage());
             }
         }
-        return count;
+        return total;
     }
 
     @SuppressWarnings("unchecked")

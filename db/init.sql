@@ -97,6 +97,7 @@ CREATE TABLE command_manifest (
     multi_target    BOOLEAN DEFAULT FALSE,
     has_value       BOOLEAN DEFAULT FALSE,
     is_active       BOOLEAN DEFAULT TRUE,
+    entity_type     TEXT DEFAULT '',
     linked_template UUID,
     linked_form     TEXT,
     created_at      TIMESTAMPTZ DEFAULT NOW()

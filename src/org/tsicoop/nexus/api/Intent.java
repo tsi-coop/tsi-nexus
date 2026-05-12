@@ -66,7 +66,7 @@ public class Intent implements Action {
     @SuppressWarnings("unchecked")
     private List<JSONObject> loadCommands(Connection conn) throws Exception {
         List<JSONObject> commands = new ArrayList<>();
-        String sql = "SELECT command_verb, label, args_hint, hint, component_type, action_type, multi_target, has_value, " +
+        String sql = "SELECT command_verb, label, args_hint, hint, component_type, action_type, entity_type, multi_target, has_value, " +
                      "linked_template::text, linked_form " +
                      "FROM command_manifest WHERE is_active = TRUE ORDER BY command_verb";
         try (PreparedStatement ps = conn.prepareStatement(sql);
@@ -79,6 +79,7 @@ public class Intent implements Action {
                 cmd.put("hint",             rs.getString("hint"));
                 cmd.put("component_type",   rs.getString("component_type"));
                 cmd.put("action_type",      rs.getString("action_type"));
+                cmd.put("entity_type",      rs.getString("entity_type"));
                 cmd.put("multi_target",     rs.getBoolean("multi_target"));
                 cmd.put("has_value",        rs.getBoolean("has_value"));
                 String lt = rs.getString("linked_template");
@@ -200,10 +201,12 @@ public class Intent implements Action {
                 boolean multiTarget  = Boolean.TRUE.equals(cmd.get("multi_target"));
 
                 JSONObject props = new JSONObject();
-                props.put("action_type", verb.toUpperCase());
+                String actionType = cmd.get("action_type") != null ? (String) cmd.get("action_type") : verb.toUpperCase();
+                props.put("action_type", actionType);
                 props.put("intent_raw",  cleanIntent);
                 if (cmd.get("linked_template") != null) props.put("linked_template", cmd.get("linked_template"));
                 if (cmd.get("linked_form")     != null) props.put("linked_form",     cmd.get("linked_form"));
+                if (cmd.get("entity_type")     != null) props.put("entity_type",     cmd.get("entity_type"));
 
                 if ("interaction_capture_form".equals(componentType)) {
                     props.put("target", extractTarget(cleanIntent));
