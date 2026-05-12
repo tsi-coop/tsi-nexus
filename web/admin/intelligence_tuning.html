@@ -106,7 +106,7 @@
         </div>
         <button onclick="openTermModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-            Add Term
+            Add Vocabulary Term
         </button>
     </header>
 
@@ -177,113 +177,17 @@
             </div>
         </div>
 
-        <!-- Command Manifest section -->
-        <div class="flex items-start justify-between mb-2 max-w-4xl pt-8 border-t border-slate-200">
-            <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Command Manifest</p>
-                <p class="text-xs text-slate-500 max-w-xl">Define the specific "verbs" (slash-commands) that field officers can use. These drive intent resolution and policy routing.</p>
+        <!-- Standard Commands section -->
+        <div class="max-w-4xl pt-8 border-t border-slate-200">
+            <div class="mb-4">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Standard Command Verbs</p>
+                <p class="text-xs text-slate-500 max-w-xl">Built-in slash-commands available in every TSI Nexus instance. These drive intent resolution and policy routing and cannot be modified.</p>
             </div>
-            <div class="flex items-center gap-2">
-                <button onclick="generateCommandsAI()" id="genAiBtn" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase rounded-lg hover:bg-indigo-100 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Generate with AI
-                </button>
-                <button onclick="openCmdModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-slate-800 transition-colors">
-                    Add Command
-                </button>
-            </div>
-        </div>
-
-        <div id="aiLogPanel" class="hidden max-w-4xl bg-slate-950 rounded-2xl p-6 mb-6 font-mono text-[11px] text-slate-400 overflow-y-auto max-h-48 whitespace-pre-wrap leading-relaxed border border-slate-800"></div>
-
-        <p id="cmdCount" class="text-[11px] text-slate-400 font-semibold mb-4 max-w-4xl"></p>
-        <div id="cmdList" class="max-w-4xl space-y-2"></div>
-
-        <div id="emptyCmd" class="hidden max-w-4xl mt-8">
-            <div class="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
-                <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                </div>
-                <p class="text-sm font-bold text-slate-600 mb-1">No commands defined yet</p>
-                <p class="text-xs text-slate-400 mb-5">Define your institutional verbs like /disburse, /collect, or /analyze</p>
-                <button onclick="openCmdModal()" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors">
-                    Add First Command
-                </button>
-            </div>
+            <div id="cmdList" class="space-y-2"></div>
         </div>
 
     </section>
 </main>
-
-<!-- ══════════════════════════════════════════════════════════════════════
-     MODAL: Add / Edit Command
-════════════════════════════════════════════════════════════════════════ -->
-<div id="cmdModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
-    <div class="modal-box bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
-        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div>
-                <h3 id="cmdModalTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Add Command</h3>
-                <p class="text-[11px] text-slate-400 mt-0.5">Route intents to specific UI actions</p>
-            </div>
-            <button onclick="closeModal('cmdModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <div class="p-8 space-y-4">
-            <div id="cmdFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center"></div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Command Verb</label>
-                    <input id="fCmdVerb" type="text" class="input-field" placeholder="disburse">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">UI Label</label>
-                    <input id="fCmdLabel" type="text" class="input-field" placeholder="Disburse Loan">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hint / Instructions (LLM)</label>
-                <textarea id="fCmdHint" rows="2" class="input-field resize-none" placeholder="Trigger a governed loan disbursement to a member. Requires target and amount."></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Arguments Hint</label>
-                    <input id="fCmdArgs" type="text" class="input-field" placeholder="@member [amount]">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Action Type (Policy)</label>
-                    <input id="fCmdAction" type="text" class="input-field" placeholder="DISBURSE">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">UI Component Type</label>
-                <select id="fCmdComponent" class="input-field">
-                    <option value="universal_action_confirm">Action Confirmation (Generic)</option>
-                    <option value="interaction_capture_form">Capture Form (Schema Driven)</option>
-                </select>
-            </div>
-
-            <div class="flex gap-6 py-2 px-1">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="fCmdMulti" class="w-4 h-4 accent-indigo-600 rounded">
-                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Multi-Target</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="fCmdValue" class="w-4 h-4 accent-indigo-600 rounded">
-                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Has Amount/Value</span>
-                </label>
-            </div>
-
-            <button id="cmdSaveBtn" onclick="saveCommand()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors mt-2">
-                Save Command
-            </button>
-        </div>
-    </div>
-</div>
 
 <!-- ══════════════════════════════════════════════════════════════════════
      MODAL: Add / Edit Term
@@ -323,10 +227,9 @@
 
 <script>
 /* ── state ──────────────────────────────────────────────────────────── */
-let vocab = {};
+let vocab    = {};
 let commands = [];
 let editingTerm = null;
-let editingCmd = null;
 
 /* ── load ───────────────────────────────────────────────────────────── */
 async function loadTuning() {
@@ -335,8 +238,8 @@ async function loadTuning() {
         const data = await res.json();
         if (!data.success) throw new Error('Server error');
 
-        vocab = data.vocab || {};
-        commands = data.commands || [];
+        vocab    = data.vocab     || {};
+        commands = data.commands  || [];
         renderStatus(data);
         renderVocab();
         renderCommands();
@@ -404,166 +307,26 @@ function renderVocab() {
     });
 }
 
-/* ── render commands ────────────────────────────────────────────────── */
+/* ── render standard commands (read-only) ───────────────────────────── */
 function renderCommands() {
-    const list  = document.getElementById('cmdList');
-    const empty = document.getElementById('emptyCmd');
-    const count = document.getElementById('cmdCount');
+    const list = document.getElementById('cmdList');
     list.innerHTML = '';
-
-    count.textContent = commands.length ? `${commands.length} command${commands.length !== 1 ? 's' : ''} defined` : '';
-
-    if (!commands.length) { empty.classList.remove('hidden'); return; }
-    empty.classList.add('hidden');
-
     commands.forEach(cmd => {
         const row = document.createElement('div');
-        row.id = `cmd-row-${CSS.escape(cmd.command_verb)}`;
-        row.className = 'bg-white rounded-xl border border-slate-100 flex items-center gap-6 px-6 py-4 shadow-sm hover:border-slate-200 transition-colors group';
+        row.className = 'bg-white rounded-xl border border-slate-100 flex items-center gap-6 px-6 py-4 shadow-sm';
         row.innerHTML = `
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="font-mono text-xs font-black text-indigo-600">/${esc(cmd.command_verb)}</span>
-                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">•</span>
+                    <span class="text-[10px] font-black text-slate-300">•</span>
                     <span class="text-xs font-bold text-slate-800 uppercase tracking-tight">${esc(cmd.label)}</span>
-                    ${cmd.multi_target ? '<span class="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[8px] font-black uppercase tracking-tighter border border-amber-100">Multi</span>' : ''}
-                    ${cmd.has_value ? '<span class="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[8px] font-black uppercase tracking-tighter border border-blue-100">Value</span>' : ''}
+                    <span class="ml-auto px-2 py-0.5 rounded-md bg-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-wider border border-slate-200">Standard</span>
                 </div>
-                <p class="text-xs text-slate-500 leading-relaxed truncate">${esc(cmd.hint || 'No hint defined')}</p>
-                <p class="text-[10px] text-slate-400 mt-1 font-mono">Usage: /${esc(cmd.command_verb)} ${esc(cmd.args_hint)} → ${esc(cmd.action_type)}</p>
-            </div>
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                <button onclick="openCmdModal(${JSON.stringify(cmd.command_verb)})"
-                    class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                </button>
-                <button onclick="initiateDeleteCmd(${JSON.stringify(cmd.command_verb)}, this)"
-                    class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
+                <p class="text-xs text-slate-500 leading-relaxed truncate">${esc(cmd.hint || '—')}</p>
+                <p class="text-[10px] text-slate-400 mt-1 font-mono">/${esc(cmd.command_verb)} ${esc(cmd.args_hint || '')} → ${esc(cmd.action_type)}</p>
             </div>`;
         list.appendChild(row);
     });
-}
-
-/* ── cmd modal ──────────────────────────────────────────────────────── */
-function openCmdModal(verb) {
-    editingCmd = commands.find(c => c.command_verb === verb) || null;
-    const isEdit = !!editingCmd;
-    document.getElementById('cmdModalTitle').textContent = isEdit ? 'Edit Command' : 'Add Command';
-    
-    document.getElementById('fCmdVerb').value      = isEdit ? editingCmd.command_verb : '';
-    document.getElementById('fCmdVerb').readOnly   = isEdit;
-    document.getElementById('fCmdVerb').className  = `input-field${isEdit ? ' bg-slate-100 text-slate-400 cursor-not-allowed' : ''}`;
-    
-    document.getElementById('fCmdLabel').value     = isEdit ? editingCmd.label        : '';
-    document.getElementById('fCmdHint').value      = isEdit ? editingCmd.hint         : '';
-    document.getElementById('fCmdArgs').value      = isEdit ? editingCmd.args_hint     : '';
-    document.getElementById('fCmdAction').value    = isEdit ? editingCmd.action_type  : '';
-    document.getElementById('fCmdComponent').value = isEdit ? editingCmd.component_type : 'universal_action_confirm';
-    document.getElementById('fCmdMulti').checked   = isEdit ? editingCmd.multi_target : false;
-    document.getElementById('fCmdValue').checked   = isEdit ? editingCmd.has_value     : false;
-
-    document.getElementById('cmdSaveBtn').textContent = isEdit ? 'Update Command' : 'Save Command';
-    document.getElementById('cmdFeedback').classList.add('hidden');
-    openModal('cmdModal');
-}
-
-async function saveCommand() {
-    const verb = document.getElementById('fCmdVerb').value.trim().toLowerCase();
-    const btn  = document.getElementById('cmdSaveBtn');
-    
-    if (!verb) { showFeedback('cmdFeedback', 'Verb is required', true); return; }
-
-    const payload = {
-        action: 'save_command',
-        command_verb: verb,
-        label: document.getElementById('fCmdLabel').value.trim(),
-        hint: document.getElementById('fCmdHint').value.trim(),
-        args_hint: document.getElementById('fCmdArgs').value.trim(),
-        action_type: document.getElementById('fCmdAction').value.trim().toUpperCase(),
-        component_type: document.getElementById('fCmdComponent').value,
-        multi_target: document.getElementById('fCmdMulti').checked,
-        has_value: document.getElementById('fCmdValue').checked
-    };
-
-    btn.disabled = true; btn.textContent = 'Saving…';
-
-    try {
-        const res  = await fetch('/api/tuning', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message || 'Save failed');
-
-        await loadTuning(); // Refresh everything
-        showFeedback('cmdFeedback', `/${verb} saved`, false);
-        setTimeout(() => closeModal('cmdModal'), 700);
-    } catch (err) {
-        showFeedback('cmdFeedback', err.message, true);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = editingCmd ? 'Update Command' : 'Save Command';
-    }
-}
-
-function initiateDeleteCmd(verb, btn) {
-    const row = document.getElementById(`cmd-row-${CSS.escape(verb)}`);
-    if (!row) return;
-    const actionDiv = btn.closest('div');
-    actionDiv.innerHTML = `
-        <button onclick="renderCommands()"
-            class="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
-        <button onclick="executeDeleteCmd(${JSON.stringify(verb)})"
-            class="px-2.5 py-1 bg-red-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-red-700 transition-colors">Delete</button>`;
-    row.classList.add('border-red-100', 'bg-red-50/30');
-}
-
-async function executeDeleteCmd(verb) {
-    try {
-        const res  = await fetch('/api/tuning', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'delete_command', command_verb: verb })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message || 'Delete failed');
-
-        await loadTuning();
-    } catch (err) {
-        alert('Delete failed: ' + err.message);
-        renderCommands();
-    }
-}
-
-async function generateCommandsAI() {
-    const btn = document.getElementById('genAiBtn');
-    const log = document.getElementById('aiLogPanel');
-    
-    if (!confirm('This will use AI to synthesize commands based on your institutional context and entity types. Continue?')) return;
-
-    btn.disabled = true;
-    btn.textContent = 'Synthesizing…';
-    log.classList.remove('hidden');
-    log.textContent = 'Analyzing institutional context...\nConsulting domain vocabulary...\nMaterialising institutional verbs...\n';
-
-    try {
-        const res  = await fetch('/api/tuning', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'generate_commands' })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message || 'Generation failed');
-
-        log.textContent += `\n✓ ${data.count} commands synthesized successfully.\n`;
-        await loadTuning();
-        setTimeout(() => log.classList.add('hidden'), 5000);
-    } catch (err) {
-        log.textContent += `\n[ERROR] ${err.message}`;
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Generate with AI`;
-    }
 }
 
 /* ── modal ──────────────────────────────────────────────────────────── */
