@@ -5,11 +5,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -74,7 +79,14 @@ public class Context implements Action {
 
                 // Attach Interaction Stream (The 'History' that builds trust)
                 context.put("recent_interactions", fetchInteractionStream(conn, internalId));
-                
+
+                String entityType = rs.getString("type");
+                String tplHtml = fetchTemplateForType(conn, entityType);
+                if (tplHtml != null) context.put("template_html", tplHtml);
+
+                JSONObject live = callPullServices(conn, entityType, externalId);
+                if (live != null) context.put("live_data", live);
+
                 response.put("success", true);
                 response.put("context", context);
             } else {
@@ -107,6 +119,51 @@ public class Context implements Action {
             }
         }
         return logs;
+    }
+
+    private String fetchTemplateForType(Connection conn, String entityType) {
+        String sql = "SELECT html_content FROM liquid_templates WHERE entity_type=? AND is_active=TRUE LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, entityType);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("html_content");
+            }
+        } catch (Exception ignore) {}
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONObject callPullServices(Connection conn, String entityType, String externalId) {
+        JSONObject merged = new JSONObject();
+        String sql = "SELECT api_base_url, auth_config::text FROM service_registry " +
+                     "WHERE service_type='PULL' AND entity_type=? AND status='Active'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, entityType);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject cfg = (JSONObject) new JSONParser().parse(rs.getString("auth_config"));
+                    String url    = rs.getString("api_base_url") + "/" + externalId;
+                    String header = (String) cfg.get("header");
+                    String secret = (String) cfg.get("secret");
+                    try {
+                        java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(2)).build();
+                        HttpRequest request = HttpRequest.newBuilder()
+                            .GET().uri(URI.create(url))
+                            .timeout(Duration.ofSeconds(2))
+                            .setHeader(header, secret).build();
+                        HttpResponse<String> resp = http.send(request, HttpResponse.BodyHandlers.ofString());
+                        if (resp.statusCode() < 400) {
+                            Object parsed = new JSONParser().parse(resp.body());
+                            if (parsed instanceof JSONObject) merged.putAll((JSONObject) parsed);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("[PULL] " + url + ": " + e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception ignore) {}
+        return merged.isEmpty() ? null : merged;
     }
 
     @Override public void get(HttpServletRequest req, HttpServletResponse res) {}

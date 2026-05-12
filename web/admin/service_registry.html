@@ -139,13 +139,38 @@
             </header>
             <div class="p-6 space-y-4">
                 <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">Service Type <span class="text-red-400">*</span></label>
+                    <div class="flex gap-3">
+                        <label class="flex items-center gap-1.5 text-xs font-semibold cursor-pointer"><input type="radio" name="svcType" value="PULL" checked class="accent-indigo-600"> PULL</label>
+                        <label class="flex items-center gap-1.5 text-xs font-semibold cursor-pointer"><input type="radio" name="svcType" value="PUSH" class="accent-indigo-600"> PUSH</label>
+                        <label class="flex items-center gap-1.5 text-xs font-semibold cursor-pointer"><input type="radio" name="svcType" value="INGEST" class="accent-indigo-600"> INGEST</label>
+                    </div>
+                </div>
+                <div id="pullFields">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">Entity Type</label>
+                    <input id="fEntityType" type="text" placeholder="member"
+                        class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
+                    <p class="text-[10px] text-slate-400 mt-1">When a user views a context card for this entity type, Nexus will call this service and merge the response as <code class="font-mono">&#123;&#123; entity.live.FIELD &#125;&#125;</code> variables.</p>
+                </div>
+                <div id="pushFields" class="hidden">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">Trigger Action</label>
+                    <input id="fTriggerAction" type="text" placeholder="DISBURSE"
+                        class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-mono uppercase focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
+                    <p class="text-[10px] text-slate-400 mt-1">After this action is confirmed, Nexus will POST to this service with <code class="font-mono">&#123;action_type, external_id, timestamp&#125;</code>.</p>
+                </div>
+                <div id="ingestHint" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p class="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1.5">Ingest Endpoint</p>
+                    <p class="text-[11px] text-amber-700 font-mono mb-1">POST /api/ingest</p>
+                    <p class="text-[10px] text-amber-600">External systems should send: <code class="bg-amber-100 px-1 rounded">&#123;"identifier":"YOUR_ID","external_id":"...","data":&#123;...&#125;&#125;</code><br>Set auth_config to <code class="bg-amber-100 px-1 rounded">&#123;"header":"X-Your-Header","secret":"your-key"&#125;</code> — the header will be validated on each call. API Base URL is not required for INGEST.</p>
+                </div>
+                <div>
                     <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">Identifier <span class="text-red-400">*</span></label>
                     <input id="fIdentifier" type="text" placeholder="AADHAAR_KYC"
                         class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-mono uppercase focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
                     <p class="text-[10px] text-slate-400 mt-1">Auto-uppercased, only A–Z 0–9 _</p>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">API Base URL <span class="text-red-400">*</span></label>
+                <div id="apiUrlField">
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1.5">API Base URL</label>
                     <input id="fApiBaseUrl" type="url" placeholder="https://api.partner.com/v1"
                         class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200">
                 </div>
@@ -252,8 +277,11 @@ function buildCard(svc) {
         </div>
 
         <div>
-            <h4 class="text-sm font-bold text-slate-800 font-mono">${esc(svc.identifier)}</h4>
-            <p class="text-[10px] text-slate-400 mt-0.5 truncate" title="${esc(svc.api_base_url)}">${esc(svc.api_base_url)}</p>
+            <div class="flex items-center gap-2 mb-0.5">
+                <h4 class="text-sm font-bold text-slate-800 font-mono">${esc(svc.identifier)}</h4>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${svcTypeCls(svc.service_type)}">${esc(svc.service_type || 'PULL')}</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-0.5 truncate" title="${esc(svc.api_base_url)}">${svcSubtitle(svc)}</p>
         </div>
 
         <div>
@@ -340,6 +368,30 @@ async function pingAll() {
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Global Health Check`;
 }
 
+/* ─── service type toggle ─────────────────────────────────────────── */
+function onSvcTypeChange() {
+    const type = document.querySelector('input[name="svcType"]:checked')?.value || 'PULL';
+    document.getElementById('pullFields').classList.toggle('hidden', type !== 'PULL');
+    document.getElementById('pushFields').classList.toggle('hidden', type !== 'PUSH');
+    document.getElementById('ingestHint').classList.toggle('hidden', type !== 'INGEST');
+    document.getElementById('apiUrlField').classList.toggle('hidden', type === 'INGEST');
+}
+
+function svcTypeCls(t) {
+    if (t === 'PULL')   return 'bg-blue-50 text-blue-700';
+    if (t === 'PUSH')   return 'bg-violet-50 text-violet-700';
+    if (t === 'INGEST') return 'bg-orange-50 text-orange-700';
+    return 'bg-slate-100 text-slate-500';
+}
+
+function svcSubtitle(svc) {
+    const t = svc.service_type || 'PULL';
+    if (t === 'PULL'   && svc.entity_type)    return 'Entity: ' + esc(svc.entity_type);
+    if (t === 'PUSH'   && svc.trigger_action) return 'Trigger: ' + esc(svc.trigger_action);
+    if (t === 'INGEST')                        return 'Receives: POST /api/ingest';
+    return esc(svc.api_base_url || '');
+}
+
 /* ─── modal ───────────────────────────────────────────────────────── */
 function openModal(svc) {
     _editId = svc ? svc.service_id : null;
@@ -347,7 +399,12 @@ function openModal(svc) {
     document.getElementById('fIdentifier').value        = svc ? svc.identifier    : '';
     document.getElementById('fIdentifier').readOnly     = !!svc;
     document.getElementById('fIdentifier').classList.toggle('bg-slate-50', !!svc);
-    document.getElementById('fApiBaseUrl').value        = svc ? svc.api_base_url  : '';
+    document.getElementById('fApiBaseUrl').value        = svc ? (svc.api_base_url || '') : '';
+    document.getElementById('fEntityType').value        = svc ? (svc.entity_type    || '') : '';
+    document.getElementById('fTriggerAction').value     = svc ? (svc.trigger_action || '') : '';
+    const svcType = svc ? (svc.service_type || 'PULL') : 'PULL';
+    document.querySelectorAll('input[name="svcType"]').forEach(r => { r.checked = r.value === svcType; });
+    onSvcTypeChange();
     try { document.getElementById('fAuthConfig').value  = svc ? JSON.stringify(svc.auth_config || {}, null, 2) : '{}'; } catch(e) {}
     document.getElementById('authConfigError').classList.add('hidden');
     document.getElementById('serviceModal').classList.add('modal-open');
@@ -367,12 +424,15 @@ function closeDeleteModal() {
 
 /* ─── save ────────────────────────────────────────────────────────── */
 async function saveService() {
-    const btn        = document.getElementById('btnSaveService');
-    const identifier = document.getElementById('fIdentifier').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');
-    const apiBaseUrl = document.getElementById('fApiBaseUrl').value.trim();
-    const authRaw    = document.getElementById('fAuthConfig').value.trim();
+    const btn           = document.getElementById('btnSaveService');
+    const identifier    = document.getElementById('fIdentifier').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');
+    const apiBaseUrl    = document.getElementById('fApiBaseUrl').value.trim();
+    const authRaw       = document.getElementById('fAuthConfig').value.trim();
+    const serviceType   = document.querySelector('input[name="svcType"]:checked')?.value || 'PULL';
+    const entityType    = document.getElementById('fEntityType').value.trim();
+    const triggerAction = document.getElementById('fTriggerAction').value.trim().toUpperCase();
 
-    if (!identifier || !apiBaseUrl) { showToast('Identifier and API URL are required.', true); return; }
+    if (!identifier) { showToast('Identifier is required.', true); return; }
     try { JSON.parse(authRaw || '{}'); } catch(e) {
         document.getElementById('authConfigError').classList.remove('hidden'); return;
     }
@@ -380,7 +440,8 @@ async function saveService() {
 
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
-        const body = { action: 'upsert', identifier, api_base_url: apiBaseUrl, auth_config: authRaw || '{}' };
+        const body = { action: 'upsert', identifier, api_base_url: apiBaseUrl, auth_config: authRaw || '{}',
+                       service_type: serviceType, entity_type: entityType, trigger_action: triggerAction };
         if (_editId) body.service_id = _editId;
         const r = await fetch('/api/services', { method: 'POST', headers: AUTH(), body: JSON.stringify(body) });
         const d = await r.json();
@@ -420,6 +481,7 @@ function showToast(msg, isError) {
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ─── wiring ──────────────────────────────────────────────────────── */
+document.querySelectorAll('input[name="svcType"]').forEach(r => r.addEventListener('change', onSvcTypeChange));
 document.getElementById('btnNewService').addEventListener('click', () => openModal(null));
 document.getElementById('btnGlobalPing').addEventListener('click', pingAll);
 document.getElementById('btnCloseModal').addEventListener('click', closeModal);

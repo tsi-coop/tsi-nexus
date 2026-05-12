@@ -123,6 +123,9 @@ public class Capture implements Action {
 
             conn.commit();
 
+            String ft = actionType; String fe = externalId;
+            new Thread(() -> callPushServices(ft, fe)).start();
+
             JSONObject ok = new JSONObject();
             ok.put("success", true);
             ok.put("message", "Captured and recorded.");
@@ -306,6 +309,38 @@ public class Capture implements Action {
         if (reason != null)      r.put("reason", reason);
         if (streamEntry != null) r.put("stream_entry", streamEntry);
         OutputProcessor.send(res, 200, r);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void callPushServices(String actionType, String externalId) {
+        PoolDB pool = null; Connection conn = null;
+        try {
+            pool = new PoolDB(); conn = pool.getConnection();
+            String sql = "SELECT api_base_url, auth_config::text FROM service_registry " +
+                         "WHERE service_type='PUSH' AND trigger_action=? AND status='Active'";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, actionType.toUpperCase());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        JSONObject cfg = (JSONObject) new JSONParser().parse(rs.getString("auth_config"));
+                        JSONObject body = new JSONObject();
+                        body.put("action_type", actionType);
+                        body.put("external_id", externalId);
+                        body.put("timestamp",   java.time.Instant.now().toString());
+                        try {
+                            new HttpClient().sendPost(
+                                rs.getString("api_base_url"), body,
+                                (String) cfg.get("header"), (String) cfg.get("secret")
+                            );
+                        } catch (Exception e) {
+                            System.err.println("[PUSH] " + rs.getString("api_base_url") + ": " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[PUSH] callPushServices failed: " + e.getMessage());
+        } finally { if (pool != null) pool.cleanup(null, null, conn); }
     }
 
     @Override public void put(HttpServletRequest q, HttpServletResponse s) {}

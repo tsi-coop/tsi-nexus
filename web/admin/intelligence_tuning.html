@@ -177,17 +177,73 @@
             </div>
         </div>
 
-        <!-- Standard Commands section -->
+        <!-- Institution Commands section -->
         <div class="max-w-4xl pt-8 border-t border-slate-200">
-            <div class="mb-4">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Standard Command Verbs</p>
-                <p class="text-xs text-slate-500 max-w-xl">Built-in slash-commands available in every TSI Nexus instance. These drive intent resolution and policy routing and cannot be modified.</p>
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Institution Commands</p>
+                    <p class="text-xs text-slate-500 max-w-xl">Slash-commands available to field staff. Each command routes to a form or template and is protected by one or more guardrail policies.</p>
+                </div>
+                <button onclick="openCommandModal(null)" class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                    Add Command
+                </button>
             </div>
-            <div id="cmdList" class="space-y-2"></div>
+            <div id="cmdList" class="space-y-3"></div>
+            <div id="emptyCommands" class="hidden bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+                <p class="text-sm font-bold text-slate-500 mb-1">No commands defined yet</p>
+                <p class="text-xs text-slate-400 mb-4">Commands are created during seeding or added manually here. Each command routes to a form or template.</p>
+            </div>
         </div>
 
     </section>
 </main>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Add / Edit Command
+════════════════════════════════════════════════════════════════════════ -->
+<div id="commandModal" class="modal fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-box bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-95 opacity-0">
+        <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <h3 id="cmdModalTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Add Command</h3>
+            <button onclick="closeModal('commandModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-8 space-y-4">
+            <div id="cmdFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Verb <span class="text-red-400">*</span></label>
+                    <input id="fCmdVerb" type="text" class="input-field font-mono" placeholder="disburse">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Label <span class="text-red-400">*</span></label>
+                    <input id="fCmdLabel" type="text" class="input-field" placeholder="Disburse Loan">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Action Type <span class="text-[10px] font-normal normal-case text-slate-400">(auto-derived from verb if blank)</span></label>
+                <input id="fCmdActionType" type="text" class="input-field font-mono uppercase" placeholder="DISBURSE">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hint</label>
+                <input id="fCmdHint" type="text" class="input-field" placeholder="Release approved loan funds to a member">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Linked Form <span class="text-[10px] font-normal normal-case text-slate-400">(required if no template)</span></label>
+                <select id="fCmdForm" class="input-field"></select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Linked Template <span class="text-[10px] font-normal normal-case text-slate-400">(required if no form)</span></label>
+                <select id="fCmdTemplate" class="input-field"></select>
+            </div>
+            <button id="cmdSaveBtn" onclick="saveCommand()" class="w-full py-4 bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 transition-colors">
+                Save Command
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════════════════
      MODAL: Add / Edit Term
@@ -227,9 +283,12 @@
 
 <script>
 /* ── state ──────────────────────────────────────────────────────────── */
-let vocab    = {};
-let commands = [];
-let editingTerm = null;
+let vocab     = {};
+let commands  = [];
+let templates = [];
+let schemas   = [];
+let editingTerm    = null;
+let editingCmdVerb = null;
 
 /* ── load ───────────────────────────────────────────────────────────── */
 async function loadTuning() {
@@ -238,8 +297,10 @@ async function loadTuning() {
         const data = await res.json();
         if (!data.success) throw new Error('Server error');
 
-        vocab    = data.vocab     || {};
-        commands = data.commands  || [];
+        vocab     = data.vocab     || {};
+        commands  = data.commands  || [];
+        templates = data.templates || [];
+        schemas   = data.schemas   || [];
         renderStatus(data);
         renderVocab();
         renderCommands();
@@ -307,26 +368,131 @@ function renderVocab() {
     });
 }
 
-/* ── render standard commands (read-only) ───────────────────────────── */
+/* ── render institution commands ────────────────────────────────────── */
 function renderCommands() {
-    const list = document.getElementById('cmdList');
+    const list  = document.getElementById('cmdList');
+    const empty = document.getElementById('emptyCommands');
     list.innerHTML = '';
+    if (!commands.length) { empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
     commands.forEach(cmd => {
+        const policies = cmd.policies || [];
+        const formLabel = cmd.linked_form
+            ? (schemas.find(s => s.schema_id === cmd.linked_form)?.label || cmd.linked_form)
+            : null;
+        const tmplLabel = cmd.linked_template
+            ? (templates.find(t => t.template_id === cmd.linked_template)?.name || cmd.linked_template)
+            : null;
+
         const row = document.createElement('div');
-        row.className = 'bg-white rounded-xl border border-slate-100 flex items-center gap-6 px-6 py-4 shadow-sm';
+        row.className = 'bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden';
         row.innerHTML = `
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="font-mono text-xs font-black text-indigo-600">/${esc(cmd.command_verb)}</span>
-                    <span class="text-[10px] font-black text-slate-300">•</span>
-                    <span class="text-xs font-bold text-slate-800 uppercase tracking-tight">${esc(cmd.label)}</span>
-                    <span class="ml-auto px-2 py-0.5 rounded-md bg-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-wider border border-slate-200">Standard</span>
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-slate-100">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-mono text-xs font-black text-indigo-600">/${esc(cmd.command_verb)}</span>
+                        <span class="text-[10px] text-slate-300">·</span>
+                        <span class="text-xs font-bold text-slate-800">${esc(cmd.label)}</span>
+                        <span class="text-[10px] text-slate-300">·</span>
+                        <span class="font-mono text-[10px] text-slate-500 uppercase">${esc(cmd.action_type)}</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-0.5 truncate">${esc(cmd.hint || '')}</p>
                 </div>
-                <p class="text-xs text-slate-500 leading-relaxed truncate">${esc(cmd.hint || '—')}</p>
-                <p class="text-[10px] text-slate-400 mt-1 font-mono">/${esc(cmd.command_verb)} ${esc(cmd.args_hint || '')} → ${esc(cmd.action_type)}</p>
+                <div class="flex gap-1 shrink-0">
+                    <button onclick="openCommandModal(${JSON.stringify(cmd.command_verb)})" class="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <button onclick="doDeleteCommand(${JSON.stringify(cmd.command_verb)})" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-3 space-y-1.5 bg-slate-50/50">
+                ${formLabel ? `<div class="flex items-center gap-2 text-[11px]"><span class="text-slate-400 font-bold w-16">→ Form</span><span class="text-slate-600">${esc(formLabel)}</span><span class="font-mono text-slate-300 text-[10px]">(${esc(cmd.linked_form)})</span></div>` : '<div class="flex items-center gap-2 text-[11px]"><span class="text-slate-300 font-bold w-16">→ Form</span><span class="text-slate-300 italic">none linked</span></div>'}
+                ${tmplLabel ? `<div class="flex items-center gap-2 text-[11px]"><span class="text-slate-400 font-bold w-16">→ Template</span><span class="text-slate-600">${esc(tmplLabel)}</span></div>` : '<div class="flex items-center gap-2 text-[11px]"><span class="text-slate-300 font-bold w-16">→ Template</span><span class="text-slate-300 italic">none linked</span></div>'}
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-slate-400 font-bold text-[11px] w-16">→ Guards</span>
+                    ${policies.length ? policies.map(p => `
+                        <a href="policy_manifest.html?action_type=${esc(cmd.action_type)}"
+                           class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide ${p.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}"
+                           title="${esc(p.description || '')}">${esc(p.policy_id)}</a>`).join('') : '<span class="text-slate-300 italic text-[11px]">no guardrails</span>'}
+                    <a href="policy_manifest.html?action_type=${esc(cmd.action_type)}" class="ml-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide border border-dashed border-slate-300 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">+ Policy</a>
+                </div>
             </div>`;
         list.appendChild(row);
     });
+}
+
+/* ── command modal ──────────────────────────────────────────────────── */
+function openCommandModal(verb) {
+    editingCmdVerb = verb || null;
+    const cmd = verb ? commands.find(c => c.command_verb === verb) : null;
+
+    document.getElementById('cmdModalTitle').textContent = verb ? 'Edit Command' : 'Add Command';
+    document.getElementById('fCmdVerb').value            = cmd ? cmd.command_verb   : '';
+    document.getElementById('fCmdVerb').readOnly         = !!cmd;
+    document.getElementById('fCmdLabel').value           = cmd ? cmd.label          : '';
+    document.getElementById('fCmdHint').value            = cmd ? (cmd.hint  || '')  : '';
+    document.getElementById('fCmdActionType').value      = cmd ? cmd.action_type    : '';
+
+    const fForm = document.getElementById('fCmdForm');
+    fForm.innerHTML = '<option value="">— None —</option>' +
+        schemas.map(s => `<option value="${esc(s.schema_id)}" ${cmd?.linked_form === s.schema_id ? 'selected' : ''}>${esc(s.label)} (${esc(s.schema_id)})</option>`).join('');
+
+    const fTmpl = document.getElementById('fCmdTemplate');
+    fTmpl.innerHTML = '<option value="">— None —</option>' +
+        templates.map(t => `<option value="${esc(t.template_id)}" ${cmd?.linked_template === t.template_id ? 'selected' : ''}>${esc(t.name)} (${esc(t.entity_type)})</option>`).join('');
+
+    document.getElementById('cmdFeedback').classList.add('hidden');
+    openModal('commandModal');
+}
+
+async function saveCommand() {
+    const btn          = document.getElementById('cmdSaveBtn');
+    const verb         = (editingCmdVerb || document.getElementById('fCmdVerb').value.trim().toLowerCase());
+    const label        = document.getElementById('fCmdLabel').value.trim();
+    const hint         = document.getElementById('fCmdHint').value.trim();
+    const actionType   = document.getElementById('fCmdActionType').value.trim().toUpperCase() || verb.toUpperCase();
+    const linkedForm   = document.getElementById('fCmdForm').value;
+    const linkedTmpl   = document.getElementById('fCmdTemplate').value;
+
+    if (!verb || !label) { showFeedback('cmdFeedback', 'Command verb and label are required', true); return; }
+    if (!linkedForm && !linkedTmpl) { showFeedback('cmdFeedback', 'At least one of form or template is required', true); return; }
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+        const body = { action: 'add_command', command_verb: verb, label, hint, action_type: actionType,
+                       linked_form: linkedForm || '', linked_template: linkedTmpl || '' };
+        const r = await fetch('/api/tuning', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Save failed');
+        showFeedback('cmdFeedback', `/${verb} saved`, false);
+        setTimeout(() => closeModal('commandModal'), 700);
+        await reloadCommands();
+    } catch(e) { showFeedback('cmdFeedback', e.message, true); }
+    finally { btn.disabled = false; btn.textContent = editingCmdVerb ? 'Update Command' : 'Save Command'; }
+}
+
+async function doDeleteCommand(verb) {
+    if (!confirm(`Delete command /${verb}?`)) return;
+    try {
+        const r = await fetch('/api/tuning', { method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ action: 'delete_command', command_verb: verb }) });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Delete failed');
+        await reloadCommands();
+    } catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+async function reloadCommands() {
+    const r = await fetch('/api/tuning');
+    const d = await r.json();
+    if (d.success) {
+        commands  = d.commands  || [];
+        templates = d.templates || [];
+        schemas   = d.schemas   || [];
+        renderCommands();
+    }
 }
 
 /* ── modal ──────────────────────────────────────────────────────────── */
@@ -431,7 +597,8 @@ function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-document.getElementById('termModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('termModal'); });
+document.getElementById('termModal').addEventListener('click',    e => { if (e.target === e.currentTarget) closeModal('termModal'); });
+document.getElementById('commandModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('commandModal'); });
 
 try {
     const u = JSON.parse(localStorage.getItem('nexus_user') || '{}');

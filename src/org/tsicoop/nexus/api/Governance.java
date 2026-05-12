@@ -5,14 +5,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -63,16 +62,6 @@ public class Governance implements Action {
                 conn.commit();
                 return result;
             }
-            if ("ANALYZE".equalsIgnoreCase(actionType)) {
-                JSONObject result = executeDefaultAnalyze(conn, params);
-                conn.commit();
-                return result;
-            }
-            if ("COMPARE".equalsIgnoreCase(actionType)) {
-                JSONObject result = executeDefaultCompare(conn, params);
-                conn.commit();
-                return result;
-            }
 
             // 1. DYNAMIC POLICY GUARD
             String violation = checkPolicyManifest(conn, actionType, params);
@@ -87,9 +76,15 @@ public class Governance implements Action {
             executeStateChange(conn, params);
 
             // 3. AUDIT LOGGING
+            String targetExternalId = params.get("target_external_id") != null
+                ? ((String) params.get("target_external_id")).replaceFirst("^@", "") : "";
             logAudit(conn, UUID.fromString(actorStr), intentRaw, actionType, params);
 
             conn.commit();
+
+            // 4. PUSH notifications to external systems (fire-and-forget)
+            String ft = actionType; String fe = targetExternalId;
+            new Thread(() -> callPushServices(ft, fe)).start();
 
             JSONObject success = new JSONObject();
             success.put("success", true);
@@ -99,8 +94,8 @@ public class Governance implements Action {
         } catch (Exception e) {
             if (conn != null) conn.rollback();
             throw e;
-        } finally { 
-            pool.cleanup(null, null, conn); 
+        } finally {
+            pool.cleanup(null, null, conn);
         }
     }
 
@@ -117,7 +112,7 @@ public class Governance implements Action {
 
     private String checkPolicyManifest(Connection conn, String action, JSONObject params) throws SQLException {
         String sql = "SELECT query_logic, error_message FROM policy_manifest WHERE action_type = ? AND is_active = TRUE";
-        
+
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, action.toUpperCase());
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -126,8 +121,8 @@ public class Governance implements Action {
                     String error = rs.getString("error_message");
 
                     try (PreparedStatement guardPstmt = conn.prepareStatement(query)) {
-                        // Logic safely scoped by action type to avoid NullPointerExceptions
-                        if ("COMPARE".equalsIgnoreCase(action)) {
+                        boolean multiTarget = params.containsKey("target_1");
+                        if (multiTarget) {
                             String t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
                             String t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
                             guardPstmt.setString(1, t1);
@@ -142,16 +137,13 @@ public class Governance implements Action {
                         }
 
                         try (ResultSet guardRs = guardPstmt.executeQuery()) {
-                            // Standard guardrails block if any count > 0 is returned
-                            if (guardRs.next() && guardRs.getInt(1) > 0) {
-                                return error;
-                            }
+                            if (guardRs.next() && guardRs.getInt(1) > 0) return error;
                         }
                     }
                 }
             }
         }
-        return null; // Passes all guardrails
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -164,15 +156,16 @@ public class Governance implements Action {
                     String query = rs.getString("query_logic");
                     String label = rs.getString("error_message");
                     JSONArray rows = new JSONArray();
+                    boolean multiTarget = params.containsKey("target_1");
                     String t1 = null, t2 = null, targetId = null;
-                    if ("COMPARE".equalsIgnoreCase(action)) {
+                    if (multiTarget) {
                         t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
                         t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
                     } else {
                         targetId = ((String) params.get("target_external_id")).replaceFirst("^@", "");
                     }
                     try (PreparedStatement analysisPstmt = conn.prepareStatement(query)) {
-                        if ("COMPARE".equalsIgnoreCase(action)) {
+                        if (multiTarget) {
                             analysisPstmt.setString(1, t1);
                             analysisPstmt.setString(2, t2);
                         } else {
@@ -190,154 +183,19 @@ public class Governance implements Action {
                             }
                         }
                     }
-
-                    // Gather member contexts for narrative generation
-                    JSONArray memberContexts = new JSONArray();
-                    if ("COMPARE".equalsIgnoreCase(action)) {
-                        memberContexts.addAll(fetchMemberContexts(conn, t1));
-                        memberContexts.addAll(fetchMemberContexts(conn, t2));
-                    } else {
-                        memberContexts.addAll(fetchMemberContexts(conn, targetId));
-                    }
-
-                    String narrative = Intelligence.generateNarrative(action, rows, memberContexts);
-
                     JSONObject result = new JSONObject();
                     result.put("success", true);
                     result.put("reason", label);
                     result.put("data", rows);
-                    if (narrative != null && !narrative.isEmpty()) result.put("narrative", narrative);
                     return result;
                 }
             }
-        }
-        if ("COMPARE".equalsIgnoreCase(action)) {
-            return executeDefaultCompare(conn, params);
         }
         JSONObject result = new JSONObject();
         result.put("success", true);
         result.put("reason", "Analysis complete.");
         result.put("data", new JSONArray());
         return result;
-    }
-
-    @SuppressWarnings("unchecked")
-    private JSONObject executeDefaultAnalyze(Connection conn, JSONObject params) throws SQLException {
-        String target = ((String) params.get("target_external_id")).replaceFirst("^@", "");
-        JSONArray rows = fetchTwinSummaryRows(conn, target, null);
-
-        JSONObject result = new JSONObject();
-        result.put("success", true);
-        result.put("reason", "Analysis ready.");
-        result.put("data", rows);
-        return result;
-    }
-
-    @SuppressWarnings("unchecked")
-    private JSONObject executeDefaultCompare(Connection conn, JSONObject params) throws SQLException {
-        String t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
-        String t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
-        JSONArray rows = fetchTwinSummaryRows(conn, t1, t2);
-
-        JSONObject result = new JSONObject();
-        result.put("success", true);
-        result.put("reason", "Comparison ready.");
-        result.put("data", rows);
-        return result;
-    }
-
-    @SuppressWarnings("unchecked")
-    private JSONArray fetchTwinSummaryRows(Connection conn, String target1, String target2) throws SQLException {
-        JSONArray rows = new JSONArray();
-        String sql =
-            "SELECT external_id, type, current_state::text AS state, " +
-            "COALESCE(NULLIF(current_state->>'name',''), NULLIF(current_state->>'system_name',''), " +
-            "NULLIF(current_state->>'label',''), NULLIF(current_state->>'title',''), external_id) AS display_name " +
-            "FROM digital_twins WHERE external_id IN (?, COALESCE(?, ?)) " +
-            "ORDER BY CASE external_id WHEN ? THEN 1 WHEN ? THEN 2 ELSE 3 END";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, target1);
-            ps.setString(2, target2);
-            ps.setString(3, target1);
-            ps.setString(4, target1);
-            ps.setString(5, target2 != null ? target2 : target1);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    JSONObject row = new JSONObject();
-                    row.put("external_id", rs.getString("external_id"));
-                    row.put("name",        rs.getString("display_name"));
-                    row.put("type",        rs.getString("type"));
-
-                    Object parsed = org.json.simple.JSONValue.parse(rs.getString("state"));
-                    if (parsed instanceof JSONObject) {
-                        JSONObject state = (JSONObject) parsed;
-                        copyIfPresent(row, state, "status");
-                        copyIfPresent(row, state, "branch");
-                        copyIfPresent(row, state, "group");
-                        copyIfPresent(row, state, "loan_amount");
-                        copyIfPresent(row, state, "disbursed");
-                        copyIfPresent(row, state, "repaid");
-                        copyIfPresent(row, state, "outstanding");
-                        copyIfPresent(row, state, "risk_score");
-                    }
-                    rows.add(row);
-                }
-            }
-        }
-        return rows;
-    }
-
-    @SuppressWarnings("unchecked")
-    private void copyIfPresent(JSONObject row, JSONObject state, String key) {
-        if (state.containsKey(key)) row.put(key, state.get(key));
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<JSONObject> fetchMemberContexts(Connection conn, String targetExternalId) throws SQLException {
-        String memberSql =
-            "WITH target AS (SELECT id FROM digital_twins WHERE external_id = ?)," +
-            "hop1 AS (SELECT DISTINCT CASE WHEN r.from_twin_id = t.id THEN r.to_twin_id ELSE r.from_twin_id END AS node_id " +
-            "         FROM target t JOIN twin_relationships r ON r.from_twin_id = t.id OR r.to_twin_id = t.id)," +
-            "hop2 AS (SELECT DISTINCT CASE WHEN r.from_twin_id = h.node_id THEN r.to_twin_id ELSE r.from_twin_id END AS node_id " +
-            "         FROM hop1 h JOIN twin_relationships r ON r.from_twin_id = h.node_id OR r.to_twin_id = h.node_id " +
-            "         WHERE (CASE WHEN r.from_twin_id = h.node_id THEN r.to_twin_id ELSE r.from_twin_id END) " +
-            "               NOT IN (SELECT id FROM target))," +
-            "all_reach AS (SELECT node_id FROM hop1 UNION SELECT node_id FROM hop2) " +
-            "SELECT m.id, m.external_id, m.current_state " +
-            "FROM all_reach ar JOIN digital_twins m ON m.id = ar.node_id AND m.type = 'member'";
-
-        List<JSONObject> members = new ArrayList<>();
-        try (PreparedStatement pstmt = conn.prepareStatement(memberSql)) {
-            pstmt.setString(1, targetExternalId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    JSONObject member = new JSONObject();
-                    member.put("external_id", rs.getString("external_id"));
-                    member.put("state", rs.getString("current_state"));
-                    member.put("recent_interactions", fetchMemberInteractions(conn, (UUID) rs.getObject("id")));
-                    members.add(member);
-                }
-            }
-        }
-        return members;
-    }
-
-    @SuppressWarnings("unchecked")
-    private JSONArray fetchMemberInteractions(Connection conn, UUID memberId) throws SQLException {
-        JSONArray interactions = new JSONArray();
-        String sql = "SELECT content, created_at FROM interaction_stream WHERE owner_id = ? ORDER BY created_at DESC LIMIT 5";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setObject(1, memberId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    JSONObject entry = new JSONObject();
-                    entry.put("content", rs.getString("content"));
-                    entry.put("timestamp", rs.getTimestamp("created_at").toString());
-                    interactions.add(entry);
-                }
-            }
-        }
-        return interactions;
     }
 
     private void executeStateChange(Connection conn, JSONObject params) throws SQLException {
@@ -365,6 +223,38 @@ public class Governance implements Action {
             pstmt.setString(3, params.toJSONString());
             pstmt.executeUpdate();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void callPushServices(String actionType, String externalId) {
+        PoolDB pool = null; Connection conn = null;
+        try {
+            pool = new PoolDB(); conn = pool.getConnection();
+            String sql = "SELECT api_base_url, auth_config::text FROM service_registry " +
+                         "WHERE service_type='PUSH' AND trigger_action=? AND status='Active'";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, actionType.toUpperCase());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        JSONObject cfg = (JSONObject) new JSONParser().parse(rs.getString("auth_config"));
+                        JSONObject body = new JSONObject();
+                        body.put("action_type", actionType);
+                        body.put("external_id", externalId);
+                        body.put("timestamp",   java.time.Instant.now().toString());
+                        try {
+                            new HttpClient().sendPost(
+                                rs.getString("api_base_url"), body,
+                                (String) cfg.get("header"), (String) cfg.get("secret")
+                            );
+                        } catch (Exception e) {
+                            System.err.println("[PUSH] " + rs.getString("api_base_url") + ": " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[PUSH] callPushServices failed: " + e.getMessage());
+        } finally { if (pool != null) pool.cleanup(null, null, conn); }
     }
 
     @Override public void get(HttpServletRequest q, HttpServletResponse s) {}

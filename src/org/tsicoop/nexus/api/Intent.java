@@ -45,7 +45,6 @@ public class Intent implements Action {
             JSONObject input  = InputProcessor.getInput(req);
             String rawIntent  = (String) input.get("intent");
 
-            StandardCommands.ensure(conn);
             List<JSONObject> commands = loadCommands(conn);
             String llmCommand = llmParseIntent(rawIntent, commands);
             String intentToProcess = (llmCommand != null) ? llmCommand : rawIntent;
@@ -67,20 +66,25 @@ public class Intent implements Action {
     @SuppressWarnings("unchecked")
     private List<JSONObject> loadCommands(Connection conn) throws Exception {
         List<JSONObject> commands = new ArrayList<>();
-        String sql = "SELECT command_verb, label, args_hint, hint, component_type, action_type, multi_target, has_value " +
+        String sql = "SELECT command_verb, label, args_hint, hint, component_type, action_type, multi_target, has_value, " +
+                     "linked_template::text, linked_form " +
                      "FROM command_manifest WHERE is_active = TRUE ORDER BY command_verb";
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 JSONObject cmd = new JSONObject();
-                cmd.put("command_verb",   rs.getString("command_verb"));
-                cmd.put("label",          rs.getString("label"));
-                cmd.put("args_hint",      rs.getString("args_hint"));
-                cmd.put("hint",           rs.getString("hint"));
-                cmd.put("component_type", rs.getString("component_type"));
-                cmd.put("action_type",    rs.getString("action_type"));
-                cmd.put("multi_target",   rs.getBoolean("multi_target"));
-                cmd.put("has_value",      rs.getBoolean("has_value"));
+                cmd.put("command_verb",     rs.getString("command_verb"));
+                cmd.put("label",            rs.getString("label"));
+                cmd.put("args_hint",        rs.getString("args_hint"));
+                cmd.put("hint",             rs.getString("hint"));
+                cmd.put("component_type",   rs.getString("component_type"));
+                cmd.put("action_type",      rs.getString("action_type"));
+                cmd.put("multi_target",     rs.getBoolean("multi_target"));
+                cmd.put("has_value",        rs.getBoolean("has_value"));
+                String lt = rs.getString("linked_template");
+                if (lt != null) cmd.put("linked_template", lt);
+                String lf = rs.getString("linked_form");
+                if (lf != null) cmd.put("linked_form", lf);
                 commands.add(cmd);
             }
         }
@@ -198,6 +202,8 @@ public class Intent implements Action {
                 JSONObject props = new JSONObject();
                 props.put("action_type", verb.toUpperCase());
                 props.put("intent_raw",  cleanIntent);
+                if (cmd.get("linked_template") != null) props.put("linked_template", cmd.get("linked_template"));
+                if (cmd.get("linked_form")     != null) props.put("linked_form",     cmd.get("linked_form"));
 
                 if ("interaction_capture_form".equals(componentType)) {
                     props.put("target", extractTarget(cleanIntent));

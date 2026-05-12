@@ -32,7 +32,6 @@ public class Tuning implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
-            StandardCommands.ensure(conn);
 
             String vllmUrl   = System.getenv("VLLM_URL");
             String vllmModel = System.getenv("VLLM_MODEL");
@@ -45,6 +44,8 @@ public class Tuning implements Action {
             out.put("success",     true);
             out.put("vocab",       loadVocab(conn));
             out.put("commands",    loadCommands(conn));
+            out.put("templates",   loadTemplates(conn));
+            out.put("schemas",     loadSchemas(conn));
             out.put("vllm_online", online);
             out.put("vllm_url",    vllmUrl   != null ? vllmUrl   : "");
             out.put("vllm_model",  vllmModel != null ? vllmModel : "");
@@ -70,11 +71,13 @@ public class Tuning implements Action {
             JSONObject input = InputProcessor.getInput(req);
             String action = str(input, "action");
             conn = pool.getConnection();
-            StandardCommands.ensure(conn);
 
             switch (action) {
-                case "add_term":    addTerm(conn, req, res, input);    break;
-                case "delete_term": deleteTerm(conn, req, res, input); break;
+                case "add_term":      addTerm(conn, req, res, input);      break;
+                case "delete_term":   deleteTerm(conn, req, res, input);   break;
+                case "add_command":   addCommand(conn, req, res, input);   break;
+                case "link_command":  linkCommand(conn, req, res, input);  break;
+                case "delete_command":deleteCommand(conn, req, res, input);break;
                 default: OutputProcessor.errorResponse(res, 400, "Bad request", "Unknown action: " + action, req.getRequestURI());
             }
         } catch (Exception e) {
@@ -142,27 +145,179 @@ public class Tuning implements Action {
         return new JSONObject();
     }
 
-    /* ── load standard commands ──────────────────────────────────────────── */
+    /* ── load institution commands ───────────────────────────────────────── */
 
     @SuppressWarnings("unchecked")
     private JSONArray loadCommands(Connection conn) {
         JSONArray arr = new JSONArray();
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT command_verb, label, hint, args_hint, action_type, component_type " +
+                "SELECT command_id::text, command_verb, label, hint, args_hint, action_type, component_type, " +
+                "linked_template::text, linked_form " +
                 "FROM command_manifest WHERE is_active = TRUE ORDER BY command_verb");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 JSONObject o = new JSONObject();
+                o.put("command_id",     rs.getString("command_id"));
                 o.put("command_verb",   rs.getString("command_verb"));
                 o.put("label",          rs.getString("label"));
                 o.put("hint",           rs.getString("hint"));
                 o.put("args_hint",      rs.getString("args_hint"));
                 o.put("action_type",    rs.getString("action_type"));
                 o.put("component_type", rs.getString("component_type"));
+                String lt = rs.getString("linked_template");
+                if (lt != null) o.put("linked_template", lt);
+                String lf = rs.getString("linked_form");
+                if (lf != null) o.put("linked_form", lf);
+                o.put("policies", loadPoliciesForAction(conn, rs.getString("action_type")));
                 arr.add(o);
             }
         } catch (Exception ignore) {}
         return arr;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONArray loadPoliciesForAction(Connection conn, String actionType) {
+        JSONArray arr = new JSONArray();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT policy_id, description, is_active FROM policy_manifest WHERE action_type=? ORDER BY policy_id")) {
+            ps.setString(1, actionType);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject p = new JSONObject();
+                    p.put("policy_id",   rs.getString("policy_id"));
+                    p.put("description", rs.getString("description"));
+                    p.put("is_active",   rs.getBoolean("is_active"));
+                    arr.add(p);
+                }
+            }
+        } catch (Exception ignore) {}
+        return arr;
+    }
+
+    /* ── load templates list ─────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private JSONArray loadTemplates(Connection conn) {
+        JSONArray arr = new JSONArray();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT template_id::text, name, entity_type FROM liquid_templates WHERE is_active=TRUE ORDER BY name");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                JSONObject o = new JSONObject();
+                o.put("template_id",  rs.getString("template_id"));
+                o.put("name",         rs.getString("name"));
+                o.put("entity_type",  rs.getString("entity_type"));
+                arr.add(o);
+            }
+        } catch (Exception ignore) {}
+        return arr;
+    }
+
+    /* ── load schemas list ───────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private JSONArray loadSchemas(Connection conn) {
+        JSONArray arr = new JSONArray();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT schema_id, label, action_type FROM interaction_schema WHERE is_active=TRUE ORDER BY label");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                JSONObject o = new JSONObject();
+                o.put("schema_id",   rs.getString("schema_id"));
+                o.put("label",       rs.getString("label"));
+                o.put("action_type", rs.getString("action_type"));
+                arr.add(o);
+            }
+        } catch (Exception ignore) {}
+        return arr;
+    }
+
+    /* ── add command ─────────────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void addCommand(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String verb          = str(in, "command_verb").toLowerCase().replaceAll("[^a-z0-9_]", "");
+        String label         = str(in, "label");
+        String actionType    = str(in, "action_type").toUpperCase();
+        String componentType = str(in, "component_type");
+        String hint          = str(in, "hint");
+        String argsHint      = str(in, "args_hint");
+        String linkedForm    = str(in, "linked_form");
+        String linkedTemplate = str(in, "linked_template");
+
+        if (verb.isEmpty() || label.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "command_verb and label are required", req.getRequestURI()); return;
+        }
+        if (linkedForm.isEmpty() && linkedTemplate.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "At least one of linked_form or linked_template is required", req.getRequestURI()); return;
+        }
+        if (actionType.isEmpty()) actionType = verb.toUpperCase();
+        if (componentType.isEmpty()) componentType = linkedForm.isEmpty() ? "universal_action_confirm" : "interaction_capture_form";
+
+        String sql = "INSERT INTO command_manifest (command_verb, label, action_type, component_type, hint, args_hint, linked_form, linked_template) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?::uuid) " +
+                     "ON CONFLICT (command_verb) DO UPDATE SET label=EXCLUDED.label, action_type=EXCLUDED.action_type, " +
+                     "component_type=EXCLUDED.component_type, hint=EXCLUDED.hint, args_hint=EXCLUDED.args_hint, " +
+                     "linked_form=EXCLUDED.linked_form, linked_template=EXCLUDED.linked_template RETURNING command_id::text";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, verb);
+            ps.setString(2, label);
+            ps.setString(3, actionType);
+            ps.setString(4, componentType);
+            ps.setString(5, hint);
+            ps.setString(6, argsHint);
+            ps.setString(7, linkedForm.isEmpty() ? null : linkedForm);
+            ps.setString(8, linkedTemplate.isEmpty() ? null : linkedTemplate);
+            try (ResultSet rs = ps.executeQuery()) { rs.next(); }
+        }
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("command_verb", verb);
+        OutputProcessor.send(res, 200, result);
+    }
+
+    /* ── link command to form/template ──────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void linkCommand(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String verb           = str(in, "command_verb");
+        String linkedForm     = str(in, "linked_form");
+        String linkedTemplate = str(in, "linked_template");
+        if (verb.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "command_verb is required", req.getRequestURI()); return;
+        }
+        String sql = "UPDATE command_manifest SET " +
+                     "linked_form=?, linked_template=?::uuid WHERE command_verb=?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, linkedForm.isEmpty() ? null : linkedForm);
+            ps.setString(2, linkedTemplate.isEmpty() ? null : linkedTemplate);
+            ps.setString(3, verb);
+            if (ps.executeUpdate() == 0) {
+                OutputProcessor.errorResponse(res, 404, "Not found", "Command not found: " + verb, req.getRequestURI()); return;
+            }
+        }
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        OutputProcessor.send(res, 200, result);
+    }
+
+    /* ── delete command ──────────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void deleteCommand(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String verb = str(in, "command_verb");
+        if (verb.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "command_verb is required", req.getRequestURI()); return;
+        }
+        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM command_manifest WHERE command_verb=?")) {
+            ps.setString(1, verb);
+            if (ps.executeUpdate() == 0) {
+                OutputProcessor.errorResponse(res, 404, "Not found", "Command not found: " + verb, req.getRequestURI()); return;
+            }
+        }
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        OutputProcessor.send(res, 200, result);
     }
 
     /* ── helpers ─────────────────────────────────────────────────────────── */

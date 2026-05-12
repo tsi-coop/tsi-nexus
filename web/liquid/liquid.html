@@ -779,11 +779,9 @@
                 .filter(e => e.handle);
             const memberSamples = allSamples.filter(e => e.type === 'member');
             const commands = data.commands || [];
-            const compareCommand = commands.find(c =>
-                memberSamples.length >= 2 &&
-                c.multi_target &&
-                (String(c.action_type || '').toUpperCase() === 'COMPARE' || String(c.command_verb || '').toLowerCase() === 'compare')
-            );
+            const compareCommand = memberSamples.length >= 2
+                ? commands.find(c => c.multi_target)
+                : null;
             allSamples.forEach(e => { entityLabelByHandle[e.handle] = e.name || e.handle; });
             renderIntentHistory();
 
@@ -858,9 +856,10 @@
                 group.sample.forEach(e => {
                     const chip = document.createElement('span');
                     chip.className = `ent-chip ${colorClass}`;
-                    chip.textContent = e.name;
-                    chip.dataset.intent = e.handle;
-                    chip.dataset.label = e.name;
+                    const cleanHandle = (e.handle || '').replace(/^@/, '');
+                    chip.innerHTML = `${esc(e.name || cleanHandle)}<span style="color:#94a3b8;font-size:8px;margin-left:5px;font-family:monospace;font-weight:600;">@${esc(cleanHandle)}</span>`;
+                    chip.dataset.intent = e.name || e.handle;
+                    chip.dataset.label  = e.name || e.handle;
                     chip.onclick = () => fire(chip);
                     row.appendChild(chip);
                 });
@@ -885,25 +884,20 @@
 
     function commandUsage(command, samples) {
         if (!samples.length) return null;
-        const verb = command.command_verb;
-        const action = String(command.action_type || '').toUpperCase();
-        const first = samples[0];
+        const verb  = command.command_verb;
+        const first  = samples[0];
         const second = samples[1];
 
-        if ((command.multi_target || action === 'COMPARE') && second) {
-            const intent = `/${verb} ${first.handle} ${second.handle}`;
+        if (command.multi_target && second) {
             return {
-                intent,
-                label: `/${verb} ${first.name} ${second.name}`
+                intent: `/${verb} ${first.handle} ${second.handle}`,
+                label:  `/${verb} ${first.name} ${second.name}`
             };
         }
 
-        if (action === 'COMPARE') return null;
-
-        const intent = `/${verb} ${first.handle}`;
         return {
-            intent,
-            label: `/${verb} ${first.name}`
+            intent: `/${verb} ${first.handle}`,
+            label:  `/${verb} ${first.name}`
         };
     }
 
@@ -983,6 +977,23 @@
         }
     }
 
+    /* ── Liquid template renderer ────────────── */
+    function renderLiquid(template, externalId, type, state, live = {}) {
+        const data = {
+            'entity.name':        state.name || externalId,
+            'entity.external_id': externalId,
+            'entity.type':        type
+        };
+        for (const [k, v] of Object.entries(state)) data[`entity.current_state.${k}`] = v ?? '';
+        for (const [k, v] of Object.entries(live))  data[`entity.live.${k}`]          = v ?? '';
+        let out = template;
+        for (const [k, v] of Object.entries(data)) {
+            const rx = new RegExp(`\\{\\{\\s*${k.replace(/\./g,'\\.')}\\s*\\}\\}`, 'g');
+            out = out.replace(rx, String(v));
+        }
+        return out.replace(/\{\{\s*[\w.]+\s*\}\}/g, '');
+    }
+
     /* ── Context card ─────────────────────────── */
     async function renderContextCard(props) {
         const tpl   = document.getElementById('tpl-ctx-card');
@@ -1008,14 +1019,34 @@
             if (state.name) card.querySelector('.target-handle').textContent = state.name;
             card.querySelector('.twin-type').textContent = prettyType(ctx.type);
 
+            const live = ctx.live_data || {};
             const grid = card.querySelector('.state-grid');
-            grid.innerHTML = Object.entries(state)
-                .filter(([k]) => prettyKey(k) !== null && k !== 'name')
-                .map(([k,v]) => `
-                <div>
-                    <div class="state-key">${esc(prettyKey(k))}</div>
-                    <div>${prettyVal(k,v)}</div>
-                </div>`).join('');
+            if (ctx.template_html) {
+                const externalId = props.target.replace(/^@/, '');
+                grid.innerHTML = renderLiquid(ctx.template_html, externalId, ctx.type, state, live);
+                grid.style.gridTemplateColumns = '1fr';
+            } else {
+                grid.innerHTML = Object.entries(state)
+                    .filter(([k]) => prettyKey(k) !== null && k !== 'name')
+                    .map(([k,v]) => `
+                    <div>
+                        <div class="state-key">${esc(prettyKey(k))}</div>
+                        <div>${prettyVal(k,v)}</div>
+                    </div>`).join('');
+                if (Object.keys(live).length > 0) {
+                    const liveWrap = document.createElement('div');
+                    liveWrap.style.cssText = 'background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:14px;margin-top:8px;';
+                    liveWrap.innerHTML = `<div class="sec-label" style="margin-bottom:8px;color:#059669;">Live Data</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;">
+                            ${Object.entries(live).map(([k,v]) => `
+                                <div>
+                                    <div class="state-key">${esc(prettyKey(k) || k.replace(/_/g,' '))}</div>
+                                    <div>${prettyVal(k,v)}</div>
+                                </div>`).join('')}
+                        </div>`;
+                    grid.after(liveWrap);
+                }
+            }
 
             const links  = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
             const topo   = card.querySelector('.graph-links');
@@ -1138,23 +1169,13 @@
         const clone = tpl.content.cloneNode(true);
         const card  = clone.querySelector('.dark-card');
 
-        const isAnalytics = ['ANALYZE','COMPARE'].includes(props.action_type);
-        card.querySelector('.action-header').textContent = isAnalytics ? 'Portfolio Report' : 'Confirmation Required';
-
+        card.querySelector('.action-header').textContent = 'Confirmation Required';
         const btn = card.querySelector('.exec-btn');
-        if (props.action_type === 'COMPARE') {
-            card.querySelector('.action-desc').textContent = `Compare ${prettyId(props.target_1)} with ${prettyId(props.target_2)}`;
-            btn.textContent = 'Run Comparison';
-        } else if (props.action_type === 'ANALYZE') {
-            card.querySelector('.action-desc').textContent = `Show full performance report for ${prettyId(props.target_external_id)}`;
-            btn.textContent = 'Run Report';
-        } else if (props.action_type === 'DISBURSE') {
-            card.querySelector('.action-desc').textContent = `Disburse${props.value ? ' ' + props.value : ''} to ${prettyId(props.target_external_id)}`;
-            btn.textContent = 'Confirm & Proceed';
-        } else {
-            card.querySelector('.action-desc').textContent = `${props.action_type} · ${prettyId(props.target_external_id)}`;
-            btn.textContent = 'Confirm & Proceed';
-        }
+        const targetId = props.target_1
+            ? `${prettyId(props.target_1)} & ${prettyId(props.target_2)}`
+            : prettyId(props.target_external_id || props.target);
+        card.querySelector('.action-desc').textContent = `${props.action_type} · ${targetId}`;
+        btn.textContent = 'Confirm & Proceed';
 
         btn.onclick = () => finalizeAction(props);
         appendToStage(card);
@@ -1188,12 +1209,12 @@
                             <svg width="18" height="18" fill="none" stroke="#4f46e5" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                         </div>
                         <div style="font-size:16px;font-weight:900;color:#3730a3;letter-spacing:-.01em;">
-                            ${['ANALYZE','COMPARE'].includes(props.action_type) ? 'Report Ready' : 'Done'}
+                            ${result.data ? 'Report Ready' : 'Done'}
                         </div>
                         <button onclick="resetStage()" style="margin-left:auto;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← Start over</button>
                     </div>
                     <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:16px;">
-                        ${result.data ? renderTable(result.data, props.action_type) : `<span style="font-size:13px;color:#475569;">${esc(result.reason||result.message||'')}</span>`}
+                        ${result.data ? renderTable(result.data) : `<span style="font-size:13px;color:#475569;">${esc(result.reason||result.message||'')}</span>`}
                     </div>
                     ${result.narrative ? `
                     <div style="margin-top:12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:16px;">
@@ -1202,8 +1223,8 @@
                     </div>` : ''}`;
                 appendToStage(wrap);
 
-                if (props.action_type === 'DISBURSE') {
-                    setTimeout(() => resolveIntent(`@${(props.target_external_id||'').replace(/^@/,'')}`), 3000);
+                if (!result.data && props.target_external_id) {
+                    setTimeout(() => resolveIntent(`@${props.target_external_id.replace(/^@/,'')}`), 2500);
                 }
             } else {
                 const deny = document.createElement('div');
@@ -1415,13 +1436,11 @@
             } else {
                 btn.disabled    = false;
                 btn.textContent = 'Save & Submit';
-                const deny = document.createElement('div');
-                deny.className = 'fade-in';
-                deny.style.cssText = 'background:#fff;border-left:6px solid #e11d48;border-radius:12px;padding:18px 22px;margin-top:0;';
-                deny.innerHTML = `
-                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.35em;color:#e11d48;margin-bottom:6px;">Action Blocked</div>
-                    <div style="font-size:14px;font-weight:700;color:#0f172a;">${esc(result.reason || 'Unknown error')}</div>`;
-                appendToStage(deny);
+                const errEl = document.createElement('div');
+                errEl.className = 'fade-in';
+                errEl.style.cssText = 'margin-top:12px;padding:16px;background:#fff5f5;border-left:4px solid #e11d48;border-radius:10px;color:#9f1239;font-weight:700;font-size:13px;';
+                errEl.textContent = result.reason || 'Action blocked by policy.';
+                card.appendChild(errEl);
             }
         } catch(e) {
             btn.disabled    = false;
@@ -1434,36 +1453,38 @@
     }
 
     /* ── Render table (analysis results) ─────── */
-    function renderTable(data, actionType) {
+    function renderTable(data) {
         if (!data || !data.length) return '<span style="color:#94a3b8;font-style:italic;font-size:12px;">No data returned.</span>';
 
-        if (actionType === 'ANALYZE') {
+        if (data.length === 1) {
             const row = data[0];
-            return Object.entries(row).filter(([k]) => k !== 'external_id').map(([k,v]) => `
+            return Object.entries(row).map(([k,v]) => `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;">
                     <span style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;">${esc(k.replace(/_/g,' '))}</span>
                     <span style="font-size:20px;font-weight:900;color:#0f172a;">${esc(String(v??'—'))}${k.includes('rate')?'%':''}</span>
                 </div>`).join('');
         }
 
-        if (actionType === 'COMPARE') {
-            const cols = Object.keys(data[0]).filter(k => !['external_id','name'].includes(k));
-            return `<table style="width:100%;border-collapse:collapse;font-size:12px;">
-                <thead><tr>
-                    <th style="text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">Entity</th>
-                    ${cols.map(c=>`<th style="text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">${esc(c.replace(/_/g,' '))}</th>`).join('')}
-                </tr></thead>
-                <tbody>${data.map(row=>`
-                    <tr style="border-top:1px solid #f1f5f9;">
-                        <td style="padding:10px 0;font-weight:700;color:#334155;">
-                            ${esc(String(row.name || row.external_id))}
-                            ${row.name ? `<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px;">@${esc(String(row.external_id))}</div>` : ''}
-                        </td>
-                        ${cols.map(c=>`<td style="padding:10px 0;text-align:right;font-weight:900;color:#0f172a;font-size:16px;">${esc(String(row[c]??'—'))}${c.includes('rate')?'%':''}</td>`).join('')}
-                    </tr>`).join('')}
-                </tbody></table>`;
-        }
-        return '';
+        const cols = Object.keys(data[0]);
+        const labelCols = cols.filter(k => ['external_id','name'].includes(k));
+        const valueCols = cols.filter(k => !['external_id','name'].includes(k));
+        const displayCols = valueCols.length ? valueCols : cols;
+
+        return `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead><tr>
+                ${labelCols.length ? `<th style="text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">Entity</th>` : ''}
+                ${displayCols.map(c=>`<th style="text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;padding-bottom:10px;">${esc(c.replace(/_/g,' '))}</th>`).join('')}
+            </tr></thead>
+            <tbody>${data.map(row=>`
+                <tr style="border-top:1px solid #f1f5f9;">
+                    ${labelCols.length ? `
+                    <td style="padding:10px 0;font-weight:700;color:#334155;">
+                        ${esc(String(row.name || row.external_id || ''))}
+                        ${row.name && row.external_id ? `<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px;">@${esc(String(row.external_id))}</div>` : ''}
+                    </td>` : ''}
+                    ${displayCols.map(c=>`<td style="padding:10px 0;text-align:right;font-weight:900;color:#0f172a;font-size:16px;">${esc(String(row[c]??'—'))}${c.includes('rate')?'%':''}</td>`).join('')}
+                </tr>`).join('')}
+            </tbody></table>`;
     }
 </script>
 </body>

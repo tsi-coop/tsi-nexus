@@ -1,4 +1,5 @@
 # Client APIs
+/api/ingest=org.tsicoop.nexus.api.Ingest
 /api/intent=org.tsicoop.nexus.api.Intent
 /api/context=org.tsicoop.nexus.api.Context
 /api/governance=org.tsicoop.nexus.api.Governance

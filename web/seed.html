@@ -120,10 +120,33 @@
                 </div>
             </div>
 
-            <!-- Step 3: Parameters -->
+            <!-- Step 3: Commands & Guardrails -->
             <div>
                 <div class="flex items-center gap-3 mb-5">
                     <div class="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shrink-0">3</div>
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Commands &amp; Guardrails</h3>
+                </div>
+                <div class="pl-9 space-y-3">
+                    <p class="text-xs text-slate-400">Describe your key operational workflows. The AI will generate commands and paired policy guardrails.</p>
+                    <div class="flex gap-2">
+                        <textarea id="commandPrompt" rows="2"
+                            class="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-700 placeholder-slate-300 transition-all input-focus resize-none"
+                            placeholder="e.g. disburse loans, onboard new members, collect repayments, review applications…"></textarea>
+                        <button onclick="suggestCommands()" id="suggestCmdBtn"
+                            class="shrink-0 px-4 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider rounded-2xl hover:bg-indigo-700 transition-colors disabled:opacity-50 self-stretch flex items-center">
+                            AI Suggest
+                        </button>
+                    </div>
+                    <div id="commandList" class="space-y-2"></div>
+                    <button onclick="addCustomCommand()" class="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Add Command</button>
+                    <p class="text-[10px] text-slate-400">Each command will generate a paired policy guardrail automatically.</p>
+                </div>
+            </div>
+
+            <!-- Step 4: Parameters -->
+            <div>
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shrink-0">4</div>
                     <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Simulation Parameters</h3>
                 </div>
                 <div class="pl-9 space-y-5">
@@ -182,6 +205,13 @@
                                     <p class="text-[9px] text-slate-400">Governance guardrails</p>
                                 </div>
                             </label>
+                            <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-teal-300 cursor-pointer transition-colors bg-slate-50">
+                                <input type="checkbox" id="gen-commands" checked class="w-3.5 h-3.5 accent-indigo-600">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700">Commands</p>
+                                    <p class="text-[9px] text-slate-400">Commands &amp; guardrails</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -234,6 +264,10 @@
                 <div class="bg-rose-50 rounded-2xl p-4 text-center">
                     <p class="text-2xl font-black text-rose-600" id="res-policies">0</p>
                     <p class="text-[8px] font-black text-rose-400 uppercase tracking-widest mt-1">Policies</p>
+                </div>
+                <div class="bg-teal-50 rounded-2xl p-4 text-center col-span-3">
+                    <p class="text-2xl font-black text-teal-600" id="res-commands">0</p>
+                    <p class="text-[8px] font-black text-teal-400 uppercase tracking-widest mt-1">Commands</p>
                 </div>
             </div>
 
@@ -450,6 +484,61 @@ async function suggestEntityTypes() {
     }
 }
 
+/* ── Command rows ───────────────────────────────────────────────────── */
+function commandRow(verb, label) {
+    const safe = verb.replace(/[^a-z0-9_]/gi, '_');
+    return `
+        <div class="cmd-row flex items-center gap-3 px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 transition-colors" id="cmd-${safe}">
+            <span class="text-[10px] font-black text-indigo-600">/${verb}</span>
+            <span class="text-sm font-semibold text-slate-700 flex-1">${label}</span>
+            <button onclick="removeCmdRow('${safe}')" class="text-slate-300 hover:text-red-400 transition-colors ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>`;
+}
+
+function removeCmdRow(safe) {
+    const el = document.getElementById('cmd-' + safe);
+    if (el) el.remove();
+}
+
+function addCustomCommand() {
+    const verb = prompt('Command verb (e.g. disburse, onboard, review):');
+    if (!verb || !verb.trim()) return;
+    const safe = verb.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    if (!safe) { toast('Invalid command name', 'bg-amber-600'); return; }
+    if (document.getElementById('cmd-' + safe)) { toast('Command already in list', 'bg-amber-600'); return; }
+    const label = prompt('Label for /' + safe + ' (e.g. Disburse Loan):') || safe;
+    document.getElementById('commandList').insertAdjacentHTML('beforeend', commandRow(safe, label.trim()));
+}
+
+async function suggestCommands() {
+    const context    = document.getElementById('industryContext').value.trim();
+    const cmdHint    = document.getElementById('commandPrompt').value.trim();
+    const entityTypes = [];
+    document.querySelectorAll('.type-cb:checked').forEach(cb => entityTypes.push(cb.dataset.type));
+    if (!context && !cmdHint) { showFeedback('Enter industry context or describe your workflows first', 'error'); return; }
+
+    const btn = document.getElementById('suggestCmdBtn');
+    btn.disabled = true; btn.textContent = 'Thinking…';
+
+    try {
+        const r = await fetch('/api/seeding', {
+            method: 'POST', headers: hdrs(),
+            body: JSON.stringify({ action: 'suggest_commands', industry_context: context + ' ' + cmdHint, entity_types: entityTypes })
+        });
+        const d = await r.json();
+        if (!r.ok || !d.success) throw new Error(d.message || 'Suggestion failed');
+
+        const el = document.getElementById('commandList');
+        el.innerHTML = d.commands.map(c => commandRow(c.verb, c.label)).join('');
+    } catch(e) {
+        showFeedback(e.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = 'AI Suggest';
+    }
+}
+
 /* ── Collect payload ────────────────────────────────────────────────── */
 function collectPayload() {
     const context = document.getElementById('industryContext').value.trim();
@@ -463,6 +552,7 @@ function collectPayload() {
     if (document.getElementById('gen-templates').checked)     generate.push('templates');
     if (document.getElementById('gen-forms').checked)         generate.push('forms');
     if (document.getElementById('gen-policies').checked)      generate.push('policies');
+    if (document.getElementById('gen-commands').checked)      generate.push('commands');
 
     const entity_types  = [];
     const entity_counts = {};
@@ -473,12 +563,19 @@ function collectPayload() {
         entity_counts[type] = cEl ? (parseInt(cEl.value, 10) || 10) : 10;
     });
 
-    return { context, flavor, edgePct, generate, entity_types, entity_counts };
+    const commands = [];
+    document.querySelectorAll('.cmd-row').forEach(row => {
+        const verb  = row.querySelector('.text-indigo-600')?.textContent?.replace(/^\//, '').trim();
+        const label = row.querySelector('.text-slate-700')?.textContent?.trim();
+        if (verb) commands.push({ verb, label: label || verb });
+    });
+
+    return { context, flavor, edgePct, generate, entity_types, entity_counts, commands };
 }
 
 /* ── Start seeding ──────────────────────────────────────────────────── */
 async function startSeeding() {
-    const { context, flavor, edgePct, generate, entity_types, entity_counts } = collectPayload();
+    const { context, flavor, edgePct, generate, entity_types, entity_counts, commands } = collectPayload();
 
     if (!context) { showFeedback('Industry context is required', 'error'); return; }
     if (!entity_types.length) { showFeedback('Select at least one entity type', 'error'); return; }
@@ -508,7 +605,8 @@ async function startSeeding() {
                 entity_types,
                 entity_counts,
                 edge_pct:         edgePct,
-                generate
+                generate,
+                commands
             })
         });
         const d = await r.json();
@@ -523,6 +621,7 @@ async function startSeeding() {
         document.getElementById('res-templates').textContent     = d.templates_seeded     ?? 0;
         document.getElementById('res-forms').textContent         = d.forms_seeded         ?? 0;
         document.getElementById('res-policies').textContent      = d.policies_seeded      ?? 0;
+        document.getElementById('res-commands').textContent      = d.commands_seeded      ?? 0;
 
         await loadScenarios();
 
@@ -638,7 +737,7 @@ async function doClean() {
         toast(
             `Cleared: ${d.cleared_twins} twins · ${d.cleared_relationships} relationships · ` +
             `${d.cleared_interactions} interactions · ${d.cleared_templates} templates · ` +
-            `${d.cleared_forms} forms · ${d.cleared_policies} policies`,
+            `${d.cleared_forms} forms · ${d.cleared_policies} policies · ${d.cleared_commands} commands`,
             'bg-emerald-700'
         );
         document.getElementById('existingStats').classList.add('hidden');

@@ -40,7 +40,7 @@ public class ServiceRegistry implements Action {
 
             String sql = "SELECT service_id::text, identifier, api_base_url, " +
                          "COALESCE(auth_config::text, '{}') AS auth_config, " +
-                         "status, uptime_percentage, " +
+                         "status, uptime_percentage, service_type, entity_type, trigger_action, " +
                          "to_char(last_health_check, 'DD Mon YYYY HH24:MI') AS last_check_fmt " +
                          "FROM service_registry ORDER BY identifier ASC";
             try (PreparedStatement ps = conn.prepareStatement(sql);
@@ -56,6 +56,10 @@ public class ServiceRegistry implements Action {
                     svc.put("status",            status != null ? status : "Active");
                     svc.put("uptime_percentage", rs.getDouble("uptime_percentage"));
                     svc.put("last_check_fmt",    rs.getString("last_check_fmt"));
+                    String svcType = rs.getString("service_type");
+                    svc.put("service_type",   svcType != null ? svcType : "PULL");
+                    svc.put("entity_type",    rs.getString("entity_type"));
+                    svc.put("trigger_action", rs.getString("trigger_action"));
                     services.add(svc);
                     total++;
                     if ("Active".equals(status))   active++;
@@ -117,35 +121,50 @@ public class ServiceRegistry implements Action {
 
     @SuppressWarnings("unchecked")
     private void upsertService(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
-        String serviceId  = str(in, "service_id");
-        String identifier = str(in, "identifier").toUpperCase().replaceAll("[^A-Z0-9_]", "_");
-        String apiBaseUrl = str(in, "api_base_url");
-        String authConfig = str(in, "auth_config");
+        String serviceId     = str(in, "service_id");
+        String identifier    = str(in, "identifier").toUpperCase().replaceAll("[^A-Z0-9_]", "_");
+        String apiBaseUrl    = str(in, "api_base_url");
+        String authConfig    = str(in, "auth_config");
+        String serviceType   = str(in, "service_type");
+        String entityType    = str(in, "entity_type");
+        String triggerAction = str(in, "trigger_action").toUpperCase();
 
-        if (identifier.isEmpty() || apiBaseUrl.isEmpty()) {
+        if (identifier.isEmpty()) {
             OutputProcessor.errorResponse(res, 400, "Bad request",
-                "identifier and api_base_url are required", req.getRequestURI()); return;
+                "identifier is required", req.getRequestURI()); return;
         }
         if (authConfig.isEmpty()) authConfig = "{}";
+        if (serviceType.isEmpty()) serviceType = "PULL";
+        if (!serviceType.equals("PULL") && !serviceType.equals("PUSH") && !serviceType.equals("INGEST")) {
+            OutputProcessor.errorResponse(res, 400, "Bad request",
+                "service_type must be PULL, PUSH, or INGEST", req.getRequestURI()); return;
+        }
 
         String resultId;
         if (serviceId.isEmpty()) {
-            String sql = "INSERT INTO service_registry (identifier, api_base_url, auth_config) " +
-                         "VALUES (?, ?, ?::jsonb) RETURNING service_id::text";
+            String sql = "INSERT INTO service_registry (identifier, api_base_url, auth_config, service_type, entity_type, trigger_action) " +
+                         "VALUES (?, ?, ?::jsonb, ?, ?, ?) RETURNING service_id::text";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, identifier);
                 ps.setString(2, apiBaseUrl);
                 ps.setString(3, authConfig);
+                ps.setString(4, serviceType);
+                ps.setString(5, entityType);
+                ps.setString(6, triggerAction);
                 try (ResultSet rs = ps.executeQuery()) { rs.next(); resultId = rs.getString(1); }
             }
         } else {
-            String sql = "UPDATE service_registry SET identifier=?, api_base_url=?, auth_config=?::jsonb " +
+            String sql = "UPDATE service_registry SET identifier=?, api_base_url=?, auth_config=?::jsonb, " +
+                         "service_type=?, entity_type=?, trigger_action=? " +
                          "WHERE service_id=?::uuid RETURNING service_id::text";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, identifier);
                 ps.setString(2, apiBaseUrl);
                 ps.setString(3, authConfig);
-                ps.setString(4, serviceId);
+                ps.setString(4, serviceType);
+                ps.setString(5, entityType);
+                ps.setString(6, triggerAction);
+                ps.setString(7, serviceId);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (!rs.next()) {
                         OutputProcessor.errorResponse(res, 404, "Not found", serviceId, req.getRequestURI()); return;

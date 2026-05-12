@@ -50,11 +50,14 @@ CREATE TABLE twin_relationships (
 CREATE TABLE service_registry (
     service_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     identifier TEXT UNIQUE NOT NULL,   -- 'AADHAAR_KYC', 'CIBIL_PROXY'
-    api_base_url TEXT NOT NULL,
-    auth_config JSONB,                 -- Keys/Secrets
+    api_base_url TEXT NOT NULL DEFAULT '',
+    auth_config JSONB,                 -- Keys/Secrets: {"header":"X-API-KEY","secret":"value"}
     status TEXT DEFAULT 'Active',      -- 'Active', 'Degraded', 'Offline'
     last_health_check TIMESTAMPTZ,
-    uptime_percentage NUMERIC DEFAULT 100.00
+    uptime_percentage NUMERIC DEFAULT 100.00,
+    service_type TEXT DEFAULT 'PULL',  -- 'PULL' | 'PUSH' | 'INGEST'
+    entity_type TEXT DEFAULT '',       -- PULL: which entity type this enriches
+    trigger_action TEXT DEFAULT ''     -- PUSH: action_type that triggers this service call
 );
 
 -- 6. APP ACCESS & RBAC (Sovereign Access Keys)
@@ -81,41 +84,23 @@ CREATE TABLE interaction_stream (
 );
 
 -- 7b. COMMAND MANIFEST (Intent → Action Routing)
--- Defines every slash-command the system understands; drives Intent resolution and Policy targeting
+-- Defines every slash-command the system understands; drives Intent resolution and Policy targeting.
+-- All commands are institution-defined — no defaults. Seeding or admin populates this table.
 CREATE TABLE command_manifest (
-    command_id    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    command_verb  TEXT UNIQUE NOT NULL,  -- 'disburse', 'onboard', 'collect'
-    label         TEXT NOT NULL,         -- Human-readable: 'Fund Release'
-    action_type   TEXT NOT NULL,         -- Uppercase verb used in policy_manifest: 'DISBURSE'
-    args_hint     TEXT DEFAULT '',       -- '@target [amount]'
-    hint          TEXT DEFAULT '',       -- Short description for LLM prompt
-    component_type TEXT DEFAULT 'action', -- UI component hint
-    multi_target  BOOLEAN DEFAULT FALSE,
-    has_value     BOOLEAN DEFAULT FALSE,
-    is_active     BOOLEAN DEFAULT TRUE,
-    created_at    TIMESTAMPTZ DEFAULT NOW()
+    command_id      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    command_verb    TEXT UNIQUE NOT NULL,  -- 'disburse', 'onboard', 'collect'
+    label           TEXT NOT NULL,         -- Human-readable: 'Fund Release'
+    action_type     TEXT NOT NULL,         -- Uppercase verb used in policy_manifest: 'DISBURSE'
+    args_hint       TEXT DEFAULT '',       -- '@target [amount]'
+    hint            TEXT DEFAULT '',       -- Short description for LLM prompt
+    component_type  TEXT DEFAULT 'action', -- UI component hint
+    multi_target    BOOLEAN DEFAULT FALSE,
+    has_value       BOOLEAN DEFAULT FALSE,
+    is_active       BOOLEAN DEFAULT TRUE,
+    linked_template UUID,
+    linked_form     TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Standard commands that every Nexus deployment should understand.
-INSERT INTO command_manifest
-    (command_verb, label, args_hint, hint, action_type, component_type, multi_target, has_value, is_active)
-VALUES
-    ('analyze',  'Analyze',  '@entity',         'Pull up profile, context, and performance details for an entity.',        'ANALYZE',  'universal_action_confirm', FALSE, FALSE, TRUE),
-    ('compare',  'Compare',  '@entity @entity', 'Compare two entities side by side using available institutional data.',   'COMPARE',  'universal_action_confirm', TRUE,  FALSE, TRUE),
-    ('approve',  'Approve',  '@entity',         'Approve a pending request or workflow for the selected entity.',          'APPROVE',  'universal_action_confirm', FALSE, FALSE, TRUE),
-    ('reject',   'Reject',   '@entity',         'Reject a pending request or workflow for the selected entity.',           'REJECT',   'universal_action_confirm', FALSE, FALSE, TRUE),
-    ('escalate', 'Escalate', '@entity',         'Escalate an entity or case for supervisory review.',                      'ESCALATE', 'universal_action_confirm', FALSE, FALSE, TRUE),
-    ('hold',     'Hold',     '@entity',         'Place an entity or case on operational hold pending review.',             'HOLD',     'universal_action_confirm', FALSE, FALSE, TRUE),
-    ('record',   'Record',   '@entity',         'Record a structured interaction or field update for the selected entity.', 'RECORD',   'interaction_capture_form', FALSE, FALSE, TRUE)
-ON CONFLICT (command_verb) DO UPDATE SET
-    label = EXCLUDED.label,
-    args_hint = EXCLUDED.args_hint,
-    hint = EXCLUDED.hint,
-    action_type = EXCLUDED.action_type,
-    component_type = EXCLUDED.component_type,
-    multi_target = EXCLUDED.multi_target,
-    has_value = EXCLUDED.has_value,
-    is_active = TRUE;
 
 -- 7c. INTERACTION SCHEMA (Form-driven Capture)
 -- Each row is a schema-driven form; its action_type hooks into policy_manifest
@@ -212,6 +197,14 @@ CREATE TABLE liquid_templates (
     created_at    TIMESTAMPTZ DEFAULT NOW(),
     updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add FKs from command_manifest (deferred — referenced tables created after command_manifest)
+ALTER TABLE command_manifest
+    ADD CONSTRAINT fk_command_linked_template
+    FOREIGN KEY (linked_template) REFERENCES liquid_templates(template_id) ON DELETE SET NULL;
+ALTER TABLE command_manifest
+    ADD CONSTRAINT fk_command_linked_form
+    FOREIGN KEY (linked_form) REFERENCES interaction_schema(schema_id) ON DELETE SET NULL;
 
 -- 12. NEXUS USERS (Admin & Staff Accounts)
 CREATE TABLE IF NOT EXISTS nexus_users (
