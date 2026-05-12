@@ -432,50 +432,66 @@ public class Seeding implements Action {
 
     /* ── AI generation phases ──────────────────────────────────────────── */
 
+    private static final int TWINS_BATCH = 20; // max entities per AI call
+
     @SuppressWarnings("unchecked")
     private List<String[]> generateTwins(Connection conn, String context, String flavor,
                                           JSONArray types, JSONObject counts, int edgePct) throws Exception {
-        StringBuilder spec = new StringBuilder();
-        for (Object t : types) {
-            String type  = (String) t;
-            int    count = counts.containsKey(type) ? ((Number) counts.get(type)).intValue() : 10;
-            spec.append(type).append(": ").append(count).append(" entities\n");
-        }
-
-        String prompt =
-            "You are generating synthetic digital twins for an institutional management platform.\n\n" +
-            "INDUSTRY CONTEXT: " + context + "\n" +
-            (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
-            "EDGE CASES: " + edgePct + "% of entities should represent problem cases " +
-            "(overdue payments, inactive status, flagged, at-risk, suspended)\n\n" +
-            "ENTITIES TO GENERATE:\n" + spec + "\n" +
-            "Rules:\n" +
-            "- external_id MUST start with 'SEED_' then type, then zero-padded 3-digit number (e.g. SEED_member_001)\n" +
-            "- state must contain: name, status, and 4-6 industry-specific fields\n" +
-            "- Use realistic local names, phone formats, and domain values\n" +
-            "- Vary the data — do not repeat the same names or values\n\n" +
-            "Return ONLY valid JSON, no markdown, no explanation:\n" +
-            "{\"twins\":[{\"external_id\":\"SEED_member_001\",\"type\":\"member\"," +
-            "\"state\":{\"name\":\"...\",\"status\":\"active\",...}},...]}";
-
-        JSONObject generated = extractJson(callAI(prompt));
-        JSONArray  twinsArr  = arrOf(generated, "twins");
-
         List<String[]> inserted = new ArrayList<>();
-        for (Object obj : twinsArr) {
-            JSONObject t     = (JSONObject) obj;
-            String     extId = str(t, "external_id");
-            String     type  = str(t, "type");
-            JSONObject state = objOf(t, "state");
-            if (extId == null || !extId.startsWith("SEED_")) continue;
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO digital_twins (external_id, type, current_state) VALUES (?, ?, ?::jsonb) " +
-                    "ON CONFLICT (external_id) DO NOTHING RETURNING external_id")) {
-                ps.setString(1, extId);
-                ps.setString(2, type != null ? type : "entity");
-                ps.setString(3, state.toJSONString());
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) inserted.add(new String[]{ extId, type });
+
+        for (Object typeObj : types) {
+            String type  = (String) typeObj;
+            int    total = counts.containsKey(type) ? ((Number) counts.get(type)).intValue() : 10;
+            int    done  = 0;
+
+            while (done < total) {
+                int batch  = Math.min(TWINS_BATCH, total - done);
+                int offset = done + 1; // starting index for external_id numbering
+
+                String prompt =
+                    "You are generating synthetic digital twins for an institutional management platform.\n\n" +
+                    "INDUSTRY CONTEXT: " + context + "\n" +
+                    (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
+                    "EDGE CASES: " + edgePct + "% of entities should represent problem cases " +
+                    "(overdue payments, inactive status, flagged, at-risk, suspended)\n\n" +
+                    "Generate exactly " + batch + " entities of type '" + type + "'.\n" +
+                    "Rules:\n" +
+                    "- external_id MUST be 'SEED_" + type + "_NNN' where NNN is zero-padded from " +
+                      String.format("%03d", offset) + " to " + String.format("%03d", offset + batch - 1) + "\n" +
+                    "- state must contain: name, status, and 4-6 industry-specific fields\n" +
+                    "- Use realistic local names and domain values; vary across all entries\n\n" +
+                    "Return ONLY valid JSON, no markdown, no explanation:\n" +
+                    "{\"twins\":[{\"external_id\":\"SEED_" + type + "_" + String.format("%03d", offset) +
+                    "\",\"type\":\"" + type + "\",\"state\":{\"name\":\"...\",\"status\":\"active\",...}},...]}";
+
+                try {
+                    JSONObject generated = extractJson(callAI(prompt));
+                    JSONArray  twinsArr  = arrOf(generated, "twins");
+                    int batchInserted = 0;
+                    for (Object obj : twinsArr) {
+                        JSONObject t     = (JSONObject) obj;
+                        String     extId = str(t, "external_id");
+                        String     tType = str(t, "type");
+                        JSONObject state = objOf(t, "state");
+                        if (extId == null || !extId.startsWith("SEED_")) continue;
+                        try (PreparedStatement ps = conn.prepareStatement(
+                                "INSERT INTO digital_twins (external_id, type, current_state) VALUES (?, ?, ?::jsonb) " +
+                                "ON CONFLICT (external_id) DO NOTHING RETURNING external_id")) {
+                            ps.setString(1, extId);
+                            ps.setString(2, tType != null ? tType : type);
+                            ps.setString(3, state.toJSONString());
+                            try (ResultSet rs = ps.executeQuery()) {
+                                if (rs.next()) {
+                                    inserted.add(new String[]{ extId, tType != null ? tType : type });
+                                    batchInserted++;
+                                }
+                            }
+                        }
+                    }
+                    done += batchInserted > 0 ? batchInserted : batch; // advance even if partial
+                } catch (Exception e) {
+                    System.err.println("[Seeding] generateTwins batch failed for type " + type + ": " + e.getMessage());
+                    done += batch; // skip this batch and continue
                 }
             }
         }
@@ -897,11 +913,15 @@ public class Seeding implements Action {
         return content != null ? content.trim() : "";
     }
 
+    @SuppressWarnings("unchecked")
     private JSONObject extractJson(String content) throws Exception {
         if (content == null || content.isBlank())
             throw new RuntimeException("AI returned empty content");
 
         String s = content.trim();
+        System.out.println("[Seeding] extractJson raw head: " + s.substring(0, Math.min(200, s.length())).replace('\n',' '));
+
+        // 1. Strip markdown code fences
         if (s.contains("```")) {
             int first = s.indexOf("```");
             int second = s.indexOf("```", first + 3);
@@ -913,48 +933,94 @@ public class Seeding implements Action {
         }
 
         int start = s.indexOf('{');
-        int end   = s.lastIndexOf('}');
-        if (start < 0) throw new RuntimeException("No JSON found in response");
+        if (start < 0) throw new RuntimeException("No JSON object found in AI response");
 
-        s = s.substring(start, end + 1);
-
-        try {
-            return (JSONObject) new JSONParser().parse(s);
-        } catch (Exception e) {
+        // 2. Try to extract first balanced brace block (most reliable)
+        String firstBlock = extractFirstBalancedBlock(s, start);
+        if (firstBlock != null) {
             try {
-                String wrapped = s.replaceAll("}\\s*\\{", "},{");
-                Object multi = new JSONParser().parse("[" + wrapped + "]");
-                if (multi instanceof JSONArray) {
-                    JSONArray arr = (JSONArray) multi;
-                    JSONObject merged = new JSONObject();
-                    for (Object obj : arr) {
-                        if (obj instanceof JSONObject) {
-                            JSONObject o = (JSONObject) obj;
-                            for (Object key : o.keySet()) {
-                                Object val = o.get(key);
-                                if (val instanceof JSONArray) {
-                                    JSONArray existing = (JSONArray) merged.get(key);
-                                    if (existing == null) { existing = new JSONArray(); merged.put(key, existing); }
-                                    existing.addAll((JSONArray) val);
-                                } else {
-                                    merged.put(key, val);
-                                }
-                            }
-                        }
-                    }
-                    System.out.println("[Seeding] Successfully merged multi-object AI response.");
-                    return merged;
+                Object parsed = new JSONParser().parse(firstBlock);
+                if (parsed instanceof JSONObject) {
+                    return (JSONObject) parsed;
+                } else if (parsed instanceof JSONArray) {
+                    return wrapArray((JSONArray) parsed);
                 }
-            } catch (Exception ignore) {}
-
-            try {
-                String repaired = repairJson(s);
-                return (JSONObject) new JSONParser().parse(repaired);
-            } catch (Exception e2) {
-                System.err.println("[Seeding] Failed to parse/repair JSON. Length: " + s.length());
-                throw new RuntimeException("AI response was not valid JSON: " + e.getMessage());
+            } catch (Exception ignore) {
+                // fall through to repair
+                try {
+                    String repaired = repairJson(firstBlock);
+                    Object parsed2 = new JSONParser().parse(repaired);
+                    if (parsed2 instanceof JSONObject) return (JSONObject) parsed2;
+                } catch (Exception ignore2) {}
             }
         }
+
+        // 3. Try from first { to last } (original approach)
+        int end = s.lastIndexOf('}');
+        if (end > start) {
+            String slice = s.substring(start, end + 1);
+            try {
+                return (JSONObject) new JSONParser().parse(slice);
+            } catch (Exception e1) {
+                // 4. Multi-object merge
+                try {
+                    String wrapped = slice.replaceAll("}\\s*\\{", "},{");
+                    Object multi = new JSONParser().parse("[" + wrapped + "]");
+                    if (multi instanceof JSONArray) return wrapArray((JSONArray) multi);
+                } catch (Exception ignore) {}
+                // 5. Repair
+                try {
+                    return (JSONObject) new JSONParser().parse(repairJson(slice));
+                } catch (Exception e2) {
+                    System.err.println("[Seeding] All JSON parse attempts failed. Content length: " + s.length());
+                    System.err.println("[Seeding] Tail: " + s.substring(Math.max(0, s.length()-200)).replace('\n',' '));
+                    throw new RuntimeException("AI response was not valid JSON: " + e1);
+                }
+            }
+        }
+
+        throw new RuntimeException("No parseable JSON object in AI response");
+    }
+
+    private String extractFirstBalancedBlock(String s, int start) {
+        int depth = 0;
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = start; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (escape) { escape = false; continue; }
+            if (c == '\\' && inString) { escape = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+            if (!inString) {
+                if (c == '{') depth++;
+                else if (c == '}') {
+                    depth--;
+                    if (depth == 0) return s.substring(start, i + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONObject wrapArray(JSONArray arr) {
+        JSONObject merged = new JSONObject();
+        for (Object obj : arr) {
+            if (obj instanceof JSONObject) {
+                JSONObject o = (JSONObject) obj;
+                for (Object key : o.keySet()) {
+                    Object val = o.get(key);
+                    if (val instanceof JSONArray) {
+                        JSONArray existing = (JSONArray) merged.get(key);
+                        if (existing == null) { existing = new JSONArray(); merged.put(key, existing); }
+                        existing.addAll((JSONArray) val);
+                    } else {
+                        merged.put(key, val);
+                    }
+                }
+            }
+        }
+        return merged;
     }
 
     private String repairJson(String s) {
