@@ -120,7 +120,13 @@
                     <span>Inactive: <span id="statInactive" class="text-slate-400">—</span></span>
                 </div>
             </div>
-            <button id="btnNewSchema" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-indigo-700 transition-colors">+ New Schema</button>
+            <div class="flex items-center gap-2">
+                <button id="btnAiGenerate" class="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    AI Generate
+                </button>
+                <button id="btnNewSchema" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-indigo-700 transition-colors">+ New Schema</button>
+            </div>
         </header>
 
         <!-- Cards -->
@@ -244,6 +250,56 @@
         </div>
     </div>
 
+    <!-- ─── AI Generate Modal ────────────────────────────────────────────── -->
+    <div id="aiModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center opacity-0 pointer-events-none">
+        <div class="modal-container bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 flex flex-col gap-6 transform scale-95 opacity-0 transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">AI Form Architect</h3>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Describe the form you need and I'll build the schema</p>
+                </div>
+                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+            </div>
+            <div id="aiFeedback" class="hidden text-[11px] font-bold uppercase rounded-xl px-4 py-3 text-center bg-red-50 text-red-600 border border-red-100"></div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target Entity Type</label>
+                <select id="aiEntityType" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"></select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Form Description</label>
+                <textarea id="aiPrompt" rows="4" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 resize-none" placeholder="e.g. A KYC verification form that captures photo ID type and number, then updates the member's kyc_status in state…"></textarea>
+            </div>
+            <button id="aiGenBtn" class="w-full py-4 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
+                Generate Schema
+            </button>
+        </div>
+    </div>
+
+    <!-- ─── Preview Modal ─────────────────────────────────────────────────── -->
+    <div id="previewModal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center opacity-0 pointer-events-none">
+        <div class="modal-container bg-white w-full max-w-lg h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col transform scale-95 opacity-0 transition-all duration-300">
+            <header class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <div>
+                    <h3 id="previewModalTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Form Preview</h3>
+                    <p id="previewModalSub" class="text-[10px] text-slate-400 mt-0.5"></p>
+                </div>
+                <button id="btnClosePreview" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </header>
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div id="previewModalLabel" class="text-base font-bold text-slate-800 mb-1"></div>
+                    <div id="previewModalType" class="text-[10px] text-slate-400 uppercase tracking-wide mb-5"></div>
+                    <div id="previewModalFields" class="space-y-4"></div>
+                    <div id="previewModalEmpty" class="hidden text-xs text-slate-400 text-center py-6">No fields defined.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ─── Toast ───────────────────────────────────────────────────────── -->
     <div id="toast" class="fixed bottom-6 right-6 z-[100] transition-all duration-300 opacity-0 translate-y-2 pointer-events-none">
         <div class="bg-slate-900 text-white text-xs font-semibold px-5 py-3 rounded-xl shadow-xl" id="toastMsg"></div>
@@ -314,6 +370,9 @@ function renderGrid() {
             <div class="flex justify-between items-start">
                 <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${typeColor(s.applies_to)}">${s.applies_to}</span>
                 <div class="flex items-center gap-1">
+                    <button class="btn-preview p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title="Preview">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    </button>
                     <button class="btn-toggle p-1.5 rounded-lg transition-colors ${s.is_active ? 'text-emerald-500 hover:bg-emerald-50' : 'text-slate-300 hover:bg-slate-100'}" title="${s.is_active ? 'Deactivate' : 'Activate'}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9"/></svg>
                     </button>
@@ -334,6 +393,7 @@ function renderGrid() {
                 <span>${(s.fields||[]).length} field${(s.fields||[]).length!==1?'s':''}</span>
                 <span class="ml-auto ${s.is_active ? 'text-emerald-600' : 'text-slate-400'} font-bold">${s.is_active ? 'Active' : 'Inactive'}</span>
             </div>`;
+        card.querySelector('.btn-preview').addEventListener('click', () => openPreviewModal(s));
         card.querySelector('.btn-toggle').addEventListener('click', () => toggleSchema(s.schema_id));
         card.querySelector('.btn-edit').addEventListener('click', () => openModal(s));
         card.querySelector('.btn-delete').addEventListener('click', () => openDeleteConfirm(s));
@@ -629,7 +689,106 @@ function esc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* ─── AI Generate ─────────────────────────────────────────────────── */
+function openAiModal() {
+    const sel = document.getElementById('aiEntityType');
+    sel.innerHTML = _entityTypes.length
+        ? _entityTypes.map(t => `<option value="${t}">${t}</option>`).join('')
+        : '<option value="">No entity types defined</option>';
+    document.getElementById('aiPrompt').value = '';
+    document.getElementById('aiFeedback').classList.add('hidden');
+    document.getElementById('aiModal').classList.add('modal-open');
+}
+
+function closeAiModal() {
+    document.getElementById('aiModal').classList.remove('modal-open');
+}
+
+async function generateWithAi() {
+    const prompt     = document.getElementById('aiPrompt').value.trim();
+    const entityType = document.getElementById('aiEntityType').value;
+    const btn        = document.getElementById('aiGenBtn');
+
+    if (!prompt)     { showAiFeedback('Please describe the form'); return; }
+    if (!entityType) { showAiFeedback('Select an entity type'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Thinking…';
+
+    try {
+        const r = await fetch('/api/schemas', {
+            method: 'POST', headers: AUTH(),
+            body: JSON.stringify({ action: 'generate', prompt, entity_type: entityType })
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.message || d.error || 'Generation failed');
+
+        closeAiModal();
+
+        const schema = d.schema;
+        // Open in create mode so schema_id is editable, then populate from AI
+        openModal(null);
+        document.getElementById('modalTitle').textContent = 'Review AI Schema';
+        document.getElementById('fSchemaId').value    = (schema.schema_id || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+        document.getElementById('fLabel').value       = schema.label || '';
+        document.getElementById('fAppliesTo').value   = entityType;
+        document.getElementById('fActionType').value  = (schema.action_type || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+        document.getElementById('fStreamTmpl').value  = schema.stream_tmpl || '';
+        try { document.getElementById('fStatePatch').value = JSON.stringify(schema.state_patch || {}, null, 2); } catch(e) {}
+
+        _fields = (schema.fields || []).map(f => ({
+            key:       f.key       || '',
+            label:     f.label     || '',
+            type:      f.type      || 'text',
+            required:  !!f.required,
+            hint:      f.hint      || '',
+            state_key: f.state_key || '',
+            options:   Array.isArray(f.options) ? f.options : []
+        }));
+        renderFields();
+        refreshPreview();
+
+    } catch (err) {
+        showAiFeedback(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Generate Schema';
+    }
+}
+
+function showAiFeedback(msg) {
+    const el = document.getElementById('aiFeedback');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+
+/* ─── Preview modal ───────────────────────────────────────────────── */
+function openPreviewModal(schema) {
+    document.getElementById('previewModalTitle').textContent = schema.label || schema.schema_id;
+    document.getElementById('previewModalSub').textContent   = schema.applies_to + ' · ' + schema.schema_id;
+    document.getElementById('previewModalLabel').textContent = schema.label;
+    document.getElementById('previewModalType').textContent  = schema.applies_to;
+    const fields = schema.fields || [];
+    const empty  = document.getElementById('previewModalEmpty');
+    const cont   = document.getElementById('previewModalFields');
+    if (fields.length) {
+        cont.innerHTML = fields.map(f => buildPreviewField(f)).join('');
+        empty.classList.add('hidden');
+    } else {
+        cont.innerHTML = '';
+        empty.classList.remove('hidden');
+    }
+    document.getElementById('previewModal').classList.add('modal-open');
+}
+
+function closePreviewModal() {
+    document.getElementById('previewModal').classList.remove('modal-open');
+}
+
 /* ─── wiring ──────────────────────────────────────────────────────── */
+document.getElementById('btnAiGenerate').addEventListener('click', openAiModal);
+document.getElementById('aiGenBtn').addEventListener('click', generateWithAi);
+document.getElementById('btnClosePreview').addEventListener('click', closePreviewModal);
 document.getElementById('btnNewSchema').addEventListener('click', () => openModal(null));
 document.getElementById('btnCloseModal').addEventListener('click', closeModal);
 document.getElementById('btnCancelModal').addEventListener('click', closeModal);
@@ -666,9 +825,10 @@ document.addEventListener('click', e => {
 // live preview refresh on label/appliesTo change
 ['fLabel','fAppliesTo'].forEach(id => document.getElementById(id).addEventListener('input', refreshPreview));
 
-// close modals on overlay click
-document.getElementById('schemaModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+// close modals on overlay click (schemaModal excluded — only X / Cancel / Save should close it)
 document.getElementById('deleteModal').addEventListener('click',  e => { if (e.target === e.currentTarget) closeDeleteModal(); });
+document.getElementById('aiModal').addEventListener('click',      e => { if (e.target === e.currentTarget) closeAiModal(); });
+document.getElementById('previewModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePreviewModal(); });
 
 boot();
 </script>

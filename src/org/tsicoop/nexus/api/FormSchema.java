@@ -91,9 +91,10 @@ public class FormSchema implements Action {
             String action = str(input, "action");
 
             switch (action) {
-                case "upsert": upsertSchema(conn, req, res, input); break;
-                case "toggle": toggleSchema(conn, req, res, input); break;
-                case "delete": deleteSchema(conn, req, res, input); break;
+                case "upsert":    upsertSchema(conn, req, res, input);  break;
+                case "toggle":    toggleSchema(conn, req, res, input);  break;
+                case "delete":    deleteSchema(conn, req, res, input);  break;
+                case "generate":  generateSchema(req, res, input);      break;
                 default: OutputProcessor.errorResponse(res, 400, "Bad request", "Unknown action: " + action, req.getRequestURI());
             }
         } catch (Exception e) {
@@ -198,6 +199,31 @@ public class FormSchema implements Action {
 
         JSONObject result = new JSONObject();
         result.put("success", true);
+        OutputProcessor.send(res, 200, result);
+    }
+
+    /* ── generate ────────────────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void generateSchema(HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
+        String prompt     = str(in, "prompt");
+        String entityType = str(in, "entity_type");
+        String attributes = str(in, "attributes");
+
+        if (prompt.isEmpty() || entityType.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "prompt and entity_type are required", req.getRequestURI());
+            return;
+        }
+
+        JSONObject generated = Intelligence.generateSchema(prompt, entityType, attributes);
+        if (generated == null) {
+            OutputProcessor.errorResponse(res, 500, "AI Error", "Failed to generate schema", req.getRequestURI());
+            return;
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        result.put("schema",  generated);
         OutputProcessor.send(res, 200, result);
     }
 

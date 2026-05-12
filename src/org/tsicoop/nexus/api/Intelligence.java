@@ -176,6 +176,73 @@ public class Intelligence {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
+    public static JSONObject generateSchema(String userPrompt, String entityType, String attributes) {
+        if (VLLM_URL == null || VLLM_MODEL == null) return null;
+        try {
+            String systemPrompt =
+                "You are an expert form designer for TSI Nexus, a microfinance cooperative platform. " +
+                "Generate an interaction form schema based on the user's description.\n\n" +
+                "CONTEXT:\n" +
+                "- Entity Type: " + entityType + "\n" +
+                "- Available State Attributes: " + (attributes.isEmpty() ? "none specified" : attributes) + "\n\n" +
+                "Return ONLY a valid JSON object with exactly these fields:\n" +
+                "{\n" +
+                "  \"schema_id\": \"UPPER_SNAKE_CASE_ID\",\n" +
+                "  \"label\": \"Human readable form title\",\n" +
+                "  \"action_type\": \"UPPER_SNAKE_CASE_EVENT_TYPE\",\n" +
+                "  \"stream_tmpl\": \"{{ actor }} performed action for {{ entity_id }}\",\n" +
+                "  \"fields\": [\n" +
+                "    { \"key\": \"field_key\", \"label\": \"Field Label\", \"type\": \"text|number|select|date|textarea|checkbox\", \"required\": true, \"hint\": \"optional hint\", \"options\": [\"only for select type\"], \"state_key\": \"optional_state_attr\" }\n" +
+                "  ],\n" +
+                "  \"state_patch\": { \"state_attr\": \"{{ field_key }}\" }\n" +
+                "}\n" +
+                "Do not include markdown formatting. Use standard JSON with double-quoted strings.";
+
+            JSONArray messages = new JSONArray();
+            JSONObject sysMsg = new JSONObject();
+            sysMsg.put("role", "system");
+            sysMsg.put("content", systemPrompt);
+            messages.add(sysMsg);
+
+            JSONObject userMsg = new JSONObject();
+            userMsg.put("role", "user");
+            userMsg.put("content", userPrompt);
+            messages.add(userMsg);
+
+            JSONObject body = new JSONObject();
+            body.put("model", VLLM_MODEL);
+            body.put("messages", messages);
+            body.put("temperature", 0.3);
+            body.put("max_tokens", 2048);
+
+            HttpClient http = new HttpClient();
+            System.out.println("[Intelligence] generateSchema POST " + VLLM_URL + "/v1/chat/completions model=" + VLLM_MODEL);
+            JSONObject response = http.sendPost(VLLM_URL + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
+            System.out.println("[Intelligence] generateSchema response keys=" + response.keySet());
+
+            JSONArray choices = (JSONArray) response.get("choices");
+            if (choices == null || choices.isEmpty()) {
+                System.err.println("[Intelligence] generateSchema: no choices in response: " + response.toJSONString());
+                return null;
+            }
+            JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
+            if (message == null) {
+                System.err.println("[Intelligence] generateSchema: null message in first choice");
+                return null;
+            }
+            String content = (String) message.get("content");
+            System.out.println("[Intelligence] generateSchema raw content: " + content);
+            JSONObject parsed = extractJson(content);
+            if (parsed == null) System.err.println("[Intelligence] generateSchema: extractJson returned null");
+            return parsed;
+        } catch (Exception e) {
+            System.err.println("[Intelligence] generateSchema error: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private static JSONObject extractJson(String content) {
         if (content == null) return null;
         try {
