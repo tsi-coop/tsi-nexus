@@ -1410,10 +1410,11 @@
                 appendToStage(banner);
             }
 
+            const displayName = data.entity_name || prettyId(props.target);
             if (data.schemas.length === 1) {
-                renderSchemaForm(data.schemas[0], props.target);
+                renderSchemaForm(data.schemas[0], props.target, displayName);
             } else {
-                renderSchemaPicker(data.schemas, props.target);
+                renderSchemaPicker(data.schemas, props.target, displayName);
             }
         } catch(e) {
             placeholder.remove();
@@ -1424,13 +1425,13 @@
         }
     }
 
-    function renderSchemaPicker(schemas, target) {
+    function renderSchemaPicker(schemas, target, displayName) {
         const card = document.createElement('div');
         card.className = 'nexus-card fade-in';
         card.style.borderLeftColor = '#059669';
         card.innerHTML = `
             <div style="font-size:10px;font-weight:900;letter-spacing:.4em;text-transform:uppercase;color:#059669;margin-bottom:4px;">Record Interaction</div>
-            <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px;">${esc(prettyId(target))}</div>
+            <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px;">${esc(displayName || prettyId(target))}</div>
             <div style="font-size:12px;color:#64748b;margin-bottom:18px;">Choose the type of interaction to record</div>
             <div style="display:flex;flex-direction:column;gap:10px;">
                 ${schemas.map(s => `
@@ -1462,13 +1463,13 @@
         appendToStage(card);
     }
 
-    function renderSchemaForm(schema, target) {
+    function renderSchemaForm(schema, target, displayName) {
         const tpl   = document.getElementById('tpl-capture-card');
         const clone = tpl.content.cloneNode(true);
         const card  = clone.querySelector('.nexus-card');
 
         card.querySelector('.cap-schema-label').textContent = schema.label;
-        card.querySelector('.cap-entity-name').textContent  = prettyId(target);
+        card.querySelector('.cap-entity-name').textContent  = displayName || prettyId(target);
 
         const body     = card.querySelector('.cap-fields-body');
         const fieldMap = {};

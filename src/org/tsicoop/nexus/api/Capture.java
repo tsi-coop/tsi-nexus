@@ -44,11 +44,13 @@ public class Capture implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
-            String entityType = resolveEntityType(conn, cleanId);
-            if (entityType == null) {
+            String[] entityMeta = resolveEntityMeta(conn, cleanId);
+            if (entityMeta == null) {
                 OutputProcessor.errorResponse(res, 404, "Not found", "Entity not found: " + cleanId, req.getRequestURI());
                 return;
             }
+            String entityType = entityMeta[0];
+            String entityName = entityMeta[1]; // may be null
             String schemaId = req.getParameter("schema_id");
             JSONArray schemas;
             if (schemaId != null && !schemaId.isBlank()) {
@@ -59,10 +61,11 @@ public class Capture implements Action {
                 schemas = fetchSchemas(conn, entityType);
             }
             JSONObject result = new JSONObject();
-            result.put("success", true);
+            result.put("success",     true);
             result.put("external_id", "@" + cleanId);
             result.put("entity_type", entityType);
-            result.put("schemas", schemas);
+            result.put("entity_name", entityName != null ? entityName : "");
+            result.put("schemas",     schemas);
             OutputProcessor.send(res, 200, result);
         } catch (Exception e) {
             e.printStackTrace();
@@ -151,12 +154,13 @@ public class Capture implements Action {
 
     /* ── DB helpers ───────────────────────────────────────────────────────── */
 
-    private String resolveEntityType(Connection conn, String externalId) throws Exception {
-        String sql = "SELECT type FROM digital_twins WHERE external_id = ?";
+    private String[] resolveEntityMeta(Connection conn, String externalId) throws Exception {
+        String sql = "SELECT type, current_state->>'name' AS name FROM digital_twins WHERE external_id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, externalId);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getString("type") : null;
+                if (!rs.next()) return null;
+                return new String[]{ rs.getString("type"), rs.getString("name") };
             }
         }
     }
