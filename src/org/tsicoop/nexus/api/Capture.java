@@ -201,8 +201,10 @@ public class Capture implements Action {
                 s.put("label",       rs.getString("label"));
                 s.put("action_type", rs.getString("action_type"));
                 s.put("fields",      parser.parse(rs.getString("fields")));
-                s.put("state_patch", parser.parse(rs.getString("state_patch")));
-                s.put("stream_tmpl", rs.getString("stream_tmpl"));
+                String rawPatch = rs.getString("state_patch");
+                s.put("state_patch", rawPatch != null ? parser.parse(rawPatch) : new JSONObject());
+                String rawTmpl = rs.getString("stream_tmpl");
+                s.put("stream_tmpl", rawTmpl != null ? rawTmpl : "");
                 return s;
             }
         }

@@ -227,8 +227,8 @@
                 <input id="fCmdActionType" type="text" class="input-field font-mono uppercase" placeholder="DISBURSE">
             </div>
             <div>
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Entity Type <span class="text-[10px] font-normal normal-case text-slate-400">(optional — scopes command to this entity type)</span></label>
-                <input id="fCmdEntityType" type="text" class="input-field" placeholder="center, member, officer…">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Entity Type <span class="text-red-400">*</span></label>
+                <select id="fCmdEntityType" class="input-field"></select>
             </div>
             <div>
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hint</label>
@@ -331,10 +331,11 @@
 
 <script>
 /* ── state ──────────────────────────────────────────────────────────── */
-let vocab     = {};
-let commands  = [];
-let templates = [];
-let schemas   = [];
+let vocab        = {};
+let commands     = [];
+let templates    = [];
+let schemas      = [];
+let entityTypes  = [];
 let editingTerm    = null;
 let editingCmdVerb = null;
 
@@ -345,10 +346,11 @@ async function loadTuning() {
         const data = await res.json();
         if (!data.success) throw new Error('Server error');
 
-        vocab     = data.vocab     || {};
-        commands  = data.commands  || [];
-        templates = data.templates || [];
-        schemas   = data.schemas   || [];
+        vocab       = data.vocab        || {};
+        commands    = data.commands     || [];
+        templates   = data.templates    || [];
+        schemas     = data.schemas      || [];
+        entityTypes = data.entity_types || [];
         renderStatus(data);
         renderVocab();
         renderCommands();
@@ -478,12 +480,17 @@ function openCommandModal(verb) {
     const cmd = verb ? commands.find(c => c.command_verb === verb) : null;
 
     document.getElementById('cmdModalTitle').textContent = verb ? 'Edit Command' : 'Add Command';
-    document.getElementById('fCmdVerb').value            = cmd ? cmd.command_verb   : '';
-    document.getElementById('fCmdVerb').readOnly         = !!cmd;
-    document.getElementById('fCmdLabel').value           = cmd ? cmd.label          : '';
-    document.getElementById('fCmdHint').value            = cmd ? (cmd.hint  || '')  : '';
-    document.getElementById('fCmdActionType').value      = cmd ? cmd.action_type    : '';
-    document.getElementById('fCmdEntityType').value      = cmd ? (cmd.entity_type || '') : '';
+    document.getElementById('fCmdVerb').value        = cmd ? cmd.command_verb  : '';
+    document.getElementById('fCmdVerb').readOnly     = !!cmd;
+    document.getElementById('fCmdLabel').value       = cmd ? cmd.label         : '';
+    document.getElementById('fCmdHint').value        = cmd ? (cmd.hint || '')  : '';
+    document.getElementById('fCmdActionType').value  = cmd ? cmd.action_type   : '';
+
+    const fEt = document.getElementById('fCmdEntityType');
+    const currentEt = cmd ? (cmd.entity_type || '') : '';
+    fEt.innerHTML = '<option value="">— Select entity type —</option>' +
+        entityTypes.map(t => `<option value="${esc(t)}" ${t === currentEt ? 'selected' : ''}>${esc(t)}</option>`).join('');
+    if (currentEt) fEt.value = currentEt;
 
     const fForm = document.getElementById('fCmdForm');
     fForm.innerHTML = '<option value="">— None —</option>' +
@@ -511,6 +518,7 @@ async function saveCommand() {
     const entityType   = document.getElementById('fCmdEntityType').value.trim().toLowerCase();
 
     if (!verb || !label) { showFeedback('cmdFeedback', 'Command verb and label are required', true); return; }
+    if (!entityType) { showFeedback('cmdFeedback', 'Entity type is required', true); return; }
     if (!linkedForm && !linkedTmpl) { showFeedback('cmdFeedback', 'At least one of form or template is required', true); return; }
 
     btn.disabled = true; btn.textContent = 'Saving…';
@@ -657,9 +665,10 @@ async function reloadCommands() {
     const r = await fetch('/api/tuning');
     const d = await r.json();
     if (d.success) {
-        commands  = d.commands  || [];
-        templates = d.templates || [];
-        schemas   = d.schemas   || [];
+        commands    = d.commands     || [];
+        templates   = d.templates    || [];
+        schemas     = d.schemas      || [];
+        entityTypes = d.entity_types || [];
         renderCommands();
     }
 }

@@ -41,11 +41,12 @@ public class Tuning implements Action {
             }
 
             JSONObject out = new JSONObject();
-            out.put("success",     true);
-            out.put("vocab",       loadVocab(conn));
-            out.put("commands",    loadCommands(conn));
-            out.put("templates",   loadTemplates(conn));
-            out.put("schemas",     loadSchemas(conn));
+            out.put("success",      true);
+            out.put("vocab",        loadVocab(conn));
+            out.put("commands",     loadCommands(conn));
+            out.put("templates",    loadTemplates(conn));
+            out.put("schemas",      loadSchemas(conn));
+            out.put("entity_types", loadEntityTypes(conn));
             out.put("vllm_online", online);
             out.put("vllm_url",    vllmUrl   != null ? vllmUrl   : "");
             out.put("vllm_model",  vllmModel != null ? vllmModel : "");
@@ -236,12 +237,26 @@ public class Tuning implements Action {
         return arr;
     }
 
+    /* ── load entity types ───────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private JSONArray loadEntityTypes(Connection conn) {
+        JSONArray arr = new JSONArray();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT DISTINCT type FROM digital_twins ORDER BY type");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) arr.add(rs.getString("type"));
+        } catch (Exception ignore) {}
+        return arr;
+    }
+
     /* ── add command ─────────────────────────────────────────────────────── */
 
     @SuppressWarnings("unchecked")
     private void addCommand(Connection conn, HttpServletRequest req, HttpServletResponse res, JSONObject in) throws Exception {
         String verb          = str(in, "command_verb").toLowerCase().replaceAll("[^a-z0-9_]", "");
         String label         = str(in, "label");
+        String entityType    = str(in, "entity_type").toLowerCase();
         String actionType    = str(in, "action_type").toUpperCase();
         String componentType = str(in, "component_type");
         String hint          = str(in, "hint");
@@ -252,13 +267,14 @@ public class Tuning implements Action {
         if (verb.isEmpty() || label.isEmpty()) {
             OutputProcessor.errorResponse(res, 400, "Bad request", "command_verb and label are required", req.getRequestURI()); return;
         }
+        if (entityType.isEmpty()) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "entity_type is required", req.getRequestURI()); return;
+        }
         if (linkedForm.isEmpty() && linkedTemplate.isEmpty()) {
             OutputProcessor.errorResponse(res, 400, "Bad request", "At least one of linked_form or linked_template is required", req.getRequestURI()); return;
         }
         if (actionType.isEmpty()) actionType = verb.toUpperCase();
         if (componentType.isEmpty()) componentType = linkedForm.isEmpty() ? "universal_action_confirm" : "interaction_capture_form";
-
-        String entityType = str(in, "entity_type").toLowerCase();
 
         String sql = "INSERT INTO command_manifest (command_verb, label, action_type, entity_type, component_type, hint, args_hint, linked_form, linked_template) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::uuid) " +

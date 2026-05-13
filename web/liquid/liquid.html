@@ -158,9 +158,40 @@
             text-transform: uppercase;
             letter-spacing: .3em;
             color: #4f46e5;
-            margin-bottom: 8px;
+            margin-bottom: 0;
         }
-        .sec-divider { border-color: #f1f5f9; margin: 16px 0; }
+        .sec-divider { border-color: #f1f5f9; margin: 16px 0 0; }
+
+        /* ── Collapsible nav sections ─────────────────── */
+        .nav-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 10px 0 8px;
+            user-select: none;
+        }
+        .nav-section-header:hover .sec-label { color: #3730a3; }
+        .nav-chevron {
+            width: 12px;
+            height: 12px;
+            color: #94a3b8;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+        .nav-section-header.collapsed .nav-chevron { transform: rotate(-90deg); }
+        .nav-section-body {
+            overflow: hidden;
+            max-height: 600px;
+            transition: max-height 0.25s ease, opacity 0.2s ease;
+            opacity: 1;
+            padding-bottom: 4px;
+        }
+        .nav-section-body.collapsed {
+            max-height: 0;
+            opacity: 0;
+            padding-bottom: 0;
+        }
 
         /* ── Example chips ───────────────────────────── */
         .ex-chip {
@@ -476,56 +507,76 @@
         <!-- Scrollable help content -->
         <div id="left-scroll">
 
+            <!-- How it works — expanded by default -->
             <hr class="sec-divider">
+            <div class="nav-section-header" id="hdr-how-it-works" onclick="toggleSection('how-it-works')">
+                <div class="sec-label">How it works</div>
+                <svg class="nav-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="nav-section-body" id="body-how-it-works">
+                <div class="step">
+                    <div class="step-n">1</div>
+                    <div><div class="step-title">Ask anything</div><div class="step-body">Type a name or a question in plain English. No special syntax needed.</div></div>
+                </div>
+                <div class="step">
+                    <div class="step-n">2</div>
+                    <div><div class="step-title">See the full picture</div><div class="step-body">Current details, connections, and recent activity are pulled up instantly.</div></div>
+                </div>
+                <div class="step">
+                    <div class="step-n">3</div>
+                    <div><div class="step-title">Act with confidence</div><div class="step-body">Every step follows your institution's rules automatically.</div></div>
+                </div>
+            </div>
 
-            <!-- Try asking — populated dynamically from /api/entities -->
-            <div class="sec-label">Try asking</div>
-            <div id="ex-chips-container" style="display:contents;">
-                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
+            <!-- Try asking — expanded by default, populated dynamically from /api/entities -->
+            <hr class="sec-divider">
+            <div class="nav-section-header" id="hdr-try-asking" onclick="toggleSection('try-asking')">
+                <div class="sec-label">Try asking</div>
+                <svg class="nav-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="nav-section-body" id="body-try-asking">
+                <div id="ex-chips-container">
+                    <span style="font-size:11px;color:#94a3b8;">Loading…</span>
+                </div>
+            </div>
+
+            <!-- What you can do — collapsed by default, populated dynamically from /api/entities -->
+            <hr class="sec-divider">
+            <div class="nav-section-header collapsed" id="hdr-what-you-can-do" onclick="toggleSection('what-you-can-do')">
+                <div class="sec-label">What you can do</div>
+                <svg class="nav-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="nav-section-body collapsed" id="body-what-you-can-do">
+                <div id="commands-container">
+                    <span style="font-size:11px;color:#94a3b8;">Loading…</span>
+                </div>
+            </div>
+
+            <!-- Intent history — collapsed by default, stored locally per browser -->
+            <hr class="sec-divider">
+            <div class="nav-section-header collapsed" id="hdr-intent-history" onclick="toggleSection('intent-history')">
+                <div class="sec-label">Intent History</div>
+                <svg class="nav-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="nav-section-body collapsed" id="body-intent-history">
+                <div id="intent-history-container" class="history-list"></div>
+            </div>
+
+            <!-- Quick Access — collapsed by default, populated dynamically from /api/entities -->
+            <hr class="sec-divider">
+            <div class="nav-section-header collapsed" id="hdr-quick-access" onclick="toggleSection('quick-access')">
+                <div class="sec-label">Quick Access</div>
+                <svg class="nav-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="nav-section-body collapsed" id="body-quick-access">
+                <div id="entity-index-container">
+                    <span style="font-size:11px;color:#94a3b8;">Loading…</span>
+                </div>
             </div>
 
             <hr class="sec-divider">
 
-            <!-- Intent history — stored locally per browser -->
-            <div class="sec-label">Intent History</div>
-            <div id="intent-history-container" class="history-list"></div>
-
-            <hr class="sec-divider">
-
-            <!-- Commands — populated dynamically from /api/entities -->
-            <div class="sec-label">What you can do</div>
-            <div id="commands-container">
-                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
-            </div>
-
-            <hr class="sec-divider">
-
-            <!-- Entity index — populated dynamically from /api/entities -->
-            <div class="sec-label">Quick Access</div>
-            <div id="entity-index-container">
-                <span style="font-size:11px;color:#94a3b8;">Loading…</span>
-            </div>
-
-            <hr class="sec-divider">
-
-            <!-- How it works -->
-            <div class="sec-label">How it works</div>
-            <div class="step">
-                <div class="step-n">1</div>
-                <div><div class="step-title">Ask anything</div><div class="step-body">Type a name or a question in plain English. No special syntax needed.</div></div>
-            </div>
-            <div class="step">
-                <div class="step-n">2</div>
-                <div><div class="step-title">See the full picture</div><div class="step-body">Current details, connections, and recent activity are pulled up instantly.</div></div>
-            </div>
-            <div class="step">
-                <div class="step-n">3</div>
-                <div><div class="step-title">Act with confidence</div><div class="step-body">Every step follows your institution's rules automatically.</div></div>
-            </div>
-
-            <hr class="sec-divider">
-
-            <button onclick="signOut()" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;color:#94a3b8;hover:bg-slate-50;transition:all .2s;border:1px solid transparent;hover:border-slate-200;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">
+            <button onclick="signOut()" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;color:#94a3b8;transition:all .2s;border:1px solid transparent;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                 Sign Out
             </button>
@@ -612,6 +663,50 @@
     const HISTORY_KEY = 'nexus_liquid_intent_history';
     const HISTORY_LIMIT = 12;
     const entityLabelByHandle = {};
+
+    /* ── Nav section collapse ────────────────────── */
+    const NAV_STATE_KEY = 'nexus_nav_sections';
+
+    function getNavState() {
+        try { return JSON.parse(localStorage.getItem(NAV_STATE_KEY) || '{}'); } catch(_) { return {}; }
+    }
+
+    function toggleSection(id) {
+        const hdr  = document.getElementById('hdr-'  + id);
+        const body = document.getElementById('body-' + id);
+        if (!hdr || !body) return;
+        const isCollapsed = hdr.classList.toggle('collapsed');
+        body.classList.toggle('collapsed', isCollapsed);
+        const state = getNavState();
+        state[id] = isCollapsed ? 'collapsed' : 'expanded';
+        localStorage.setItem(NAV_STATE_KEY, JSON.stringify(state));
+    }
+
+    function initNavSections() {
+        const defaults = {
+            'how-it-works':   'expanded',
+            'try-asking':     'expanded',
+            'what-you-can-do':'collapsed',
+            'intent-history': 'collapsed',
+            'quick-access':   'collapsed'
+        };
+        const saved = getNavState();
+        Object.entries(defaults).forEach(([id, def]) => {
+            const state = saved[id] || def;
+            const hdr  = document.getElementById('hdr-'  + id);
+            const body = document.getElementById('body-' + id);
+            if (!hdr || !body) return;
+            if (state === 'collapsed') {
+                hdr.classList.add('collapsed');
+                body.classList.add('collapsed');
+            } else {
+                hdr.classList.remove('collapsed');
+                body.classList.remove('collapsed');
+            }
+        });
+    }
+
+    initNavSections();
 
     /* ── Auth ─────────────────────────────────── */
     if (!localStorage.getItem('nexus_token')) {
@@ -1126,7 +1221,10 @@
 
         const title = document.createElement('div');
         title.style.cssText = 'font-size:16px;font-weight:700;color:#0f172a;margin-bottom:16px;';
-        title.innerHTML = `Found ${props.matches.length} people named &ldquo;<span style="color:#4f46e5;">${esc(props.query)}</span>&rdquo; — which one did you mean?`;
+        const actionLabel = props.original_command
+            ? `run <code style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:13px;">/${esc(props.original_command)}</code> for`
+            : 'look up';
+        title.innerHTML = `Who do you mean? ${actionLabel} &ldquo;<span style="color:#4f46e5;">${esc(props.query)}</span>&rdquo;`;
         card.appendChild(title);
 
         const list = document.createElement('div');
@@ -1137,7 +1235,9 @@
             btn.style.cssText = 'display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;cursor:pointer;text-align:left;width:100%;transition:all .12s;font-family:inherit;';
             btn.onmouseover = () => { btn.style.background='#eef2ff'; btn.style.borderColor='#a5b4fc'; };
             btn.onmouseout  = () => { btn.style.background='#f8fafc'; btn.style.borderColor='#e2e8f0'; };
-            btn.onclick = () => resolveIntent(m.handle);
+            btn.onclick = () => props.original_command
+                ? userSearch(`/${props.original_command} ${m.handle}`)
+                : resolveIntent(m.handle);
 
             const icon = document.createElement('div');
             icon.style.cssText = 'width:32px;height:32px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
@@ -1251,6 +1351,19 @@
 
     /* ── Capture form ────────────────────────── */
     async function renderCaptureCard(props) {
+        const target = props.target || '';
+        if (!target || target === 'unknown') {
+            const hint = document.createElement('div');
+            hint.className = 'nexus-card fade-in';
+            hint.style.borderLeftColor = '#ea580c';
+            hint.innerHTML = `
+                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#ea580c;margin-bottom:8px;">Target required</div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:8px;">Specify who this applies to using an <span style="color:#4f46e5;">@handle</span></div>
+                <div style="font-size:11px;color:#64748b;">For example: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">/${esc(props.action_type?.toLowerCase()||'command')} @member_handle</code></div>`;
+            appendToStage(hint);
+            return;
+        }
+
         const placeholder = document.createElement('div');
         placeholder.className = 'nexus-card fade-in';
         placeholder.style.borderLeftColor = '#059669';
@@ -1259,19 +1372,42 @@
 
         try {
             const captureUrl = props.linked_form
-                ? `/api/capture?external_id=${encodeURIComponent(props.target||'')}&schema_id=${encodeURIComponent(props.linked_form)}`
-                : `/api/capture?external_id=${encodeURIComponent(props.target||'')}`;
+                ? `/api/capture?external_id=${encodeURIComponent(target)}&schema_id=${encodeURIComponent(props.linked_form)}`
+                : `/api/capture?external_id=${encodeURIComponent(target)}`;
             const res  = await fetch(captureUrl);
             const data = await res.json();
             placeholder.remove();
 
-            if (!data.success || !data.schemas || !data.schemas.length) {
+            if (!data.success) {
                 const msg = document.createElement('div');
                 msg.className = 'nexus-card fade-in';
                 msg.style.borderLeftColor = '#e11d48';
-                msg.innerHTML = `<div style="color:#9f1239;font-weight:700;font-size:13px;">No forms are set up for this account type (${esc(data.entity_type||'unknown')}).</div>`;
+                const reason = data.error || data.message || data.reason || 'Unknown error';
+                const isNotFound = res.status === 404 || reason.toLowerCase().includes('not found');
+                msg.innerHTML = isNotFound
+                    ? `<div style="color:#9f1239;font-weight:700;font-size:13px;">Entity <code style="background:#fee2e2;padding:1px 5px;border-radius:4px;">${esc(target)}</code> not found. Check the @handle and try again.</div>`
+                    : `<div style="color:#9f1239;font-weight:700;font-size:13px;">Could not load form: ${esc(reason)}</div>`;
                 appendToStage(msg);
                 return;
+            }
+
+            if (!data.schemas || !data.schemas.length) {
+                const msg = document.createElement('div');
+                msg.className = 'nexus-card fade-in';
+                msg.style.borderLeftColor = '#e11d48';
+                const entityLabel = data.entity_type ? `<strong>${esc(data.entity_type)}</strong>` : 'this entity';
+                msg.innerHTML = props.linked_form
+                    ? `<div style="color:#9f1239;font-weight:700;font-size:13px;">The linked form is not available. It may be inactive — check the Form Builder.</div>`
+                    : `<div style="color:#9f1239;font-weight:700;font-size:13px;">No active forms are configured for ${entityLabel}. Add one in Form Builder.</div>`;
+                appendToStage(msg);
+                return;
+            }
+
+            if (props.auto_resolved_name) {
+                const banner = document.createElement('div');
+                banner.style.cssText = 'display:flex;align-items:center;gap:8px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:4px;';
+                banner.innerHTML = `<svg width="12" height="12" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><span style="color:#065f46;font-weight:700;">Matched <em>${esc(props.auto_resolved_name)}</em></span>`;
+                appendToStage(banner);
             }
 
             if (data.schemas.length === 1) {

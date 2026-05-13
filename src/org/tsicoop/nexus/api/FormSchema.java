@@ -48,7 +48,8 @@ public class FormSchema implements Action {
                     s.put("applies_to",  rs.getString("applies_to"));
                     s.put("action_type", rs.getString("action_type"));
                     s.put("fields",      parser.parse(rs.getString("fields")));
-                    s.put("state_patch", parser.parse(rs.getString("state_patch")));
+                    String rawPatch = rs.getString("state_patch");
+                    s.put("state_patch", rawPatch != null ? parser.parse(rawPatch) : new JSONObject());
                     s.put("stream_tmpl", rs.getString("stream_tmpl"));
                     s.put("is_active",   rs.getBoolean("is_active"));
                     s.put("created",     rs.getString("created_fmt"));

@@ -185,49 +185,71 @@ public class Intent implements Action {
         // 2. Command routing — driven entirely by command_manifest
         if (cleanIntent.startsWith("/")) {
             String[] parts = cleanIntent.split("\\s+");
-            if (parts.length >= 2) {
-                String verb = parts[0].substring(1).toLowerCase();
-                JSONObject cmd = findCommand(commands, verb);
-                if (cmd == null) {
-                    JSONObject props = new JSONObject();
-                    props.put("query", cleanIntent);
-                    components.add(createComponent("nexus_semantic_results", props.toJSONString()));
-                    response.put("success", true);
-                    response.put("components", components);
-                    return response;
-                }
-
-                String componentType = (String) cmd.get("component_type");
-                boolean multiTarget  = Boolean.TRUE.equals(cmd.get("multi_target"));
-
+            String verb = parts[0].substring(1).toLowerCase();
+            JSONObject cmd = findCommand(commands, verb);
+            if (cmd == null) {
                 JSONObject props = new JSONObject();
-                String actionType = cmd.get("action_type") != null ? (String) cmd.get("action_type") : verb.toUpperCase();
-                props.put("action_type", actionType);
-                props.put("intent_raw",  cleanIntent);
-                if (cmd.get("linked_template") != null) props.put("linked_template", cmd.get("linked_template"));
-                if (cmd.get("linked_form")     != null) props.put("linked_form",     cmd.get("linked_form"));
-                if (cmd.get("entity_type")     != null) props.put("entity_type",     cmd.get("entity_type"));
+                props.put("query", cleanIntent);
+                components.add(createComponent("nexus_semantic_results", props.toJSONString()));
+                response.put("success", true);
+                response.put("components", components);
+                return response;
+            }
 
-                if ("interaction_capture_form".equals(componentType)) {
-                    props.put("target", extractTarget(cleanIntent));
-                    components.add(createComponent("interaction_capture_form", props.toJSONString()));
-                } else {
-                    if (multiTarget) {
-                        List<String> targets = extractAllTargets(cleanIntent);
-                        if (targets.size() >= 2) {
-                            props.put("target_1", targets.get(0));
-                            props.put("target_2", targets.get(1));
-                        }
-                    } else {
-                        props.put("target_external_id", extractTarget(cleanIntent));
-                        String value = "";
-                        for (String part : parts) {
-                            if (part.matches("\\d+")) { value = part; break; }
-                        }
-                        props.put("value", value);
+            String componentType = (String) cmd.get("component_type");
+            boolean multiTarget  = Boolean.TRUE.equals(cmd.get("multi_target"));
+
+            JSONObject props = new JSONObject();
+            String actionType = cmd.get("action_type") != null ? (String) cmd.get("action_type") : verb.toUpperCase();
+            props.put("action_type", actionType);
+            props.put("intent_raw",  cleanIntent);
+            if (cmd.get("linked_template") != null) props.put("linked_template", cmd.get("linked_template"));
+            if (cmd.get("linked_form")     != null) props.put("linked_form",     cmd.get("linked_form"));
+            if (cmd.get("entity_type")     != null) props.put("entity_type",     cmd.get("entity_type"));
+
+            // Resolve name → @handle when no @handle is present in the command
+            String target = extractTarget(cleanIntent);
+            if ("unknown".equals(target)) {
+                String namePart = extractSearchTerm(cleanIntent, commands);
+                if (!namePart.isEmpty()) {
+                    List<JSONObject> matches = fuzzySearchEntities(namePart);
+                    if (matches.size() == 1) {
+                        target = (String) matches.get(0).get("handle");
+                        props.put("auto_resolved_name", matches.get(0).get("name"));
+                    } else if (matches.size() > 1) {
+                        JSONObject dProps = new JSONObject();
+                        dProps.put("query",            namePart);
+                        dProps.put("original_command", verb);
+                        JSONArray matchArray = new JSONArray();
+                        for (JSONObject m : matches) matchArray.add(m);
+                        dProps.put("matches", matchArray);
+                        components.add(createComponent("nexus_disambiguation_card", dProps.toJSONString()));
+                        response.put("success", true);
+                        response.put("components", components);
+                        return response;
                     }
-                    components.add(createComponent("universal_action_confirm", props.toJSONString()));
                 }
+            }
+
+            if ("interaction_capture_form".equals(componentType)) {
+                props.put("target", target);
+                components.add(createComponent("interaction_capture_form", props.toJSONString()));
+            } else {
+                if (multiTarget) {
+                    List<String> targets = extractAllTargets(cleanIntent);
+                    if (targets.size() >= 2) {
+                        props.put("target_1", targets.get(0));
+                        props.put("target_2", targets.get(1));
+                    }
+                } else {
+                    props.put("target_external_id", target);
+                    String value = "";
+                    for (String part : parts) {
+                        if (part.matches("\\d+")) { value = part; break; }
+                    }
+                    props.put("value", value);
+                }
+                components.add(createComponent("universal_action_confirm", props.toJSONString()));
             }
         }
 
