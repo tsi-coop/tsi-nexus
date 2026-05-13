@@ -271,6 +271,20 @@
                 </div>
             </div>
 
+            <!-- Mock Server download panel (shown when mock services were generated) -->
+            <div id="mockPanel" class="hidden mt-4 bg-cyan-50 border border-cyan-100 rounded-2xl p-5 flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-[8px] font-black text-cyan-600 uppercase tracking-widest mb-1">Mock Service Registry</p>
+                    <p class="text-xs font-bold text-slate-800"><span id="res-services">0</span> external service(s) registered as PULL sources</p>
+                    <p class="text-[9px] text-slate-400 mt-1">Place <code class="bg-cyan-100 px-1 rounded">mock-data.json</code> in <code class="bg-cyan-100 px-1 rounded">mock/</code> and run <code class="bg-cyan-100 px-1 rounded">java mock/MockServer.java</code></p>
+                </div>
+                <a id="mockDownloadLink" href="#" download="mock-data.json"
+                   class="shrink-0 flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    mock-data.json
+                </a>
+            </div>
+
             <!-- Test Scenarios -->
             <div id="scenarioSection" class="hidden mb-10">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center mb-5">Try out these test scenarios</p>
@@ -549,6 +563,7 @@ function collectPayload() {
     if (document.getElementById('gen-twins').checked)         generate.push('twins');
     if (document.getElementById('gen-relationships').checked) generate.push('relationships');
     if (document.getElementById('gen-interactions').checked)  generate.push('interactions');
+    generate.push('mock_services');
     if (document.getElementById('gen-templates').checked)     generate.push('templates');
     if (document.getElementById('gen-forms').checked)         generate.push('forms');
     if (document.getElementById('gen-policies').checked)      generate.push('policies');
@@ -622,6 +637,12 @@ async function startSeeding() {
         document.getElementById('res-forms').textContent         = d.forms_seeded         ?? 0;
         document.getElementById('res-policies').textContent      = d.policies_seeded      ?? 0;
         document.getElementById('res-commands').textContent      = d.commands_seeded      ?? 0;
+
+        if (d.mock_services > 0 && d.session_id) {
+            document.getElementById('res-services').textContent = d.mock_services;
+            document.getElementById('mockDownloadLink').href = '/api/seeding?format=mock&session_id=' + d.session_id;
+            document.getElementById('mockPanel').classList.remove('hidden');
+        }
 
         await loadScenarios();
 

@@ -1,0 +1,16 @@
+{
+  "port": 9090,
+  "auth_header": "X-Mock-Key",
+  "auth_secret": "nexus-demo",
+  "services": {
+    "member": {
+      "service_name": "Credit Bureau",
+      "fields": {
+        "credit_score":      { "type": "int",  "min": 300, "max": 850 },
+        "bureau_status":     { "type": "enum", "values": ["Clear", "Flagged", "Under Review"] },
+        "outstanding_loans": { "type": "int",  "min": 0,   "max": 5 },
+        "last_bureau_check": { "type": "date" }
+      }
+    }
+  }
+}

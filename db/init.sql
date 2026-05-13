@@ -156,6 +156,7 @@ CREATE TABLE seeding_sessions (
     forms_seeded INTEGER DEFAULT 0,
     policies_seeded INTEGER DEFAULT 0,
     commands_seeded INTEGER DEFAULT 0,
+    mock_data JSONB,
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     completed_at TIMESTAMPTZ

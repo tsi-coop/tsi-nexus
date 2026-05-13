@@ -7,6 +7,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -95,12 +96,21 @@ public class Seeding implements Action {
                 stats.put("seeded_policies", rs.next() ? rs.getLong(1) : 0L);
             }
 
+            // Mock config download: GET /api/seeding?format=mock[&session_id=xxx]
+            String format    = req.getParameter("format");
+            String dlSession = req.getParameter("session_id");
+            if ("mock".equals(format)) {
+                downloadMockConfig(conn, req, res, dlSession); // null = latest session
+                return;
+            }
+
             // Session history
             JSONArray sessions = new JSONArray();
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT session_id::text, industry_context, status, " +
                     "twins_seeded, relationships_seeded, interactions_seeded, templates_seeded, forms_seeded, policies_seeded, commands_seeded, " +
-                    "to_char(created_at, 'DD Mon YYYY HH24:MI') AS created, error_message " +
+                    "to_char(created_at, 'DD Mon YYYY HH24:MI') AS created, error_message, " +
+                    "mock_data IS NOT NULL AS has_mock_data " +
                     "FROM seeding_sessions ORDER BY created_at DESC LIMIT 10");
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -117,6 +127,7 @@ public class Seeding implements Action {
                     s.put("commands_seeded",      rs.getInt("commands_seeded"));
                     s.put("created",              rs.getString("created"));
                     s.put("error_message",        rs.getString("error_message"));
+                    s.put("has_mock_data",        rs.getBoolean("has_mock_data"));
                     sessions.add(s);
                 }
             }
@@ -244,50 +255,58 @@ public class Seeding implements Action {
         int twinsSeeded = 0, relationshipsSeeded = 0, interactionsSeeded = 0,
             templatesSeeded = 0, formsSeeded = 0, commandsSeeded = 0, policiesSeeded = 0;
         List<String[]> twinList = new ArrayList<>();
+        JSONObject mockConfig = new JSONObject();
         JSONArray commandsPayload = arrOf(body, "commands");
         StringBuilder log = new StringBuilder();
 
         try {
             if (generate.contains("twins")) {
-                log.append("[1/7] Generating digital twins...\n");
+                log.append("[1/8] Generating digital twins...\n");
                 twinList = generateTwins(conn, context, flavor, types, counts, edgePct);
                 twinsSeeded = twinList.size();
                 log.append("      → ").append(twinsSeeded).append(" twins created\n");
             }
             if (generate.contains("relationships") && !twinList.isEmpty()) {
-                log.append("[2/7] Generating context relationships...\n");
+                log.append("[2/8] Generating context relationships...\n");
                 relationshipsSeeded = generateRelationships(conn, context, flavor, twinList);
                 log.append("      → ").append(relationshipsSeeded).append(" relationships created\n");
             }
             if (generate.contains("interactions") && !twinList.isEmpty()) {
-                log.append("[3/7] Generating interaction history...\n");
+                log.append("[3/8] Generating interaction history...\n");
                 interactionsSeeded = generateInteractions(conn, context, flavor, twinList, edgePct);
                 log.append("      → ").append(interactionsSeeded).append(" interactions created\n");
             }
+            if (generate.contains("mock_services")) {
+                log.append("[4/8] Generating mock service config...\n");
+                mockConfig = generateMockServices(conn, context, flavor, types);
+                JSONObject svcs = objOf(mockConfig, "services");
+                log.append("      → ").append(svcs.size()).append(" services configured\n");
+            }
             if (generate.contains("templates")) {
-                log.append("[4/7] Generating Liquid templates...\n");
-                templatesSeeded = generateTemplates(conn, context, flavor, types);
+                log.append("[5/8] Generating context cards...\n");
+                templatesSeeded = generateTemplates(conn, context, flavor, types, mockConfig);
                 log.append("      → ").append(templatesSeeded).append(" templates created\n");
             }
             if (generate.contains("forms")) {
-                log.append("[5/7] Generating form schemas...\n");
-                formsSeeded = generateForms(conn, context, flavor, types);
+                log.append("[6/8] Generating input manifests...\n");
+                formsSeeded = generateForms(conn, context, flavor, types, mockConfig);
                 log.append("      → ").append(formsSeeded).append(" forms created\n");
             }
             if (generate.contains("commands")) {
-                log.append("[6/7] Generating commands & guardrails...\n");
+                log.append("[7/8] Generating commands & guardrails...\n");
                 commandsSeeded = generateCommands(conn, context, flavor, types, commandsPayload);
                 log.append("      → ").append(commandsSeeded).append(" commands created\n");
             }
             if (generate.contains("policies")) {
-                log.append("[7/7] Generating additional policy manifests...\n");
+                log.append("[8/8] Generating additional policy manifests...\n");
                 policiesSeeded = generatePolicies(conn, context, flavor, types);
                 log.append("      → ").append(policiesSeeded).append(" policies created\n");
             }
 
+            String mockDataJson = mockConfig.isEmpty() ? null : mockConfig.toJSONString();
             try (PreparedStatement ps = conn.prepareStatement(
                     "UPDATE seeding_sessions SET status='complete', twins_seeded=?, relationships_seeded=?, interactions_seeded=?, " +
-                    "templates_seeded=?, forms_seeded=?, policies_seeded=?, commands_seeded=?, completed_at=now() WHERE session_id=?::uuid")) {
+                    "templates_seeded=?, forms_seeded=?, policies_seeded=?, commands_seeded=?, mock_data=?::jsonb, completed_at=now() WHERE session_id=?::uuid")) {
                 ps.setInt(1, twinsSeeded);
                 ps.setInt(2, relationshipsSeeded);
                 ps.setInt(3, interactionsSeeded);
@@ -295,7 +314,8 @@ public class Seeding implements Action {
                 ps.setInt(5, formsSeeded);
                 ps.setInt(6, policiesSeeded);
                 ps.setInt(7, commandsSeeded);
-                ps.setString(8, sessionId);
+                ps.setString(8, mockDataJson);
+                ps.setString(9, sessionId);
                 ps.executeUpdate();
             }
 
@@ -320,6 +340,7 @@ public class Seeding implements Action {
         out.put("forms_seeded",          formsSeeded);
         out.put("commands_seeded",       commandsSeeded);
         out.put("policies_seeded",       policiesSeeded);
+        out.put("mock_services",         (long) objOf(mockConfig, "services").size());
         out.put("log",                   log.toString());
         OutputProcessor.send(res, 200, out);
     }
@@ -598,18 +619,121 @@ public class Seeding implements Action {
         return count;
     }
 
+    /* ── generate mock service config ─────────────────────────────────── */
+
     @SuppressWarnings("unchecked")
-    private int generateTemplates(Connection conn, String context, String flavor, JSONArray types) throws Exception {
+    private JSONObject generateMockServices(Connection conn, String context, String flavor, JSONArray types) throws Exception {
+        StringBuilder typeList = new StringBuilder();
+        for (Object t : types) typeList.append(t).append(", ");
+
+        String prompt =
+            "You are configuring external service integrations for an institutional intelligence platform.\n\n" +
+            "INDUSTRY CONTEXT: " + context + "\n" +
+            (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
+            "ENTITY TYPES: " + typeList + "\n\n" +
+            "For each entity type, identify the most relevant external data service that would typically be integrated " +
+            "(e.g. credit bureau for members, HR system for officers, property registry for assets).\n" +
+            "Generate 3-5 data fields per service that it would expose for that entity type.\n\n" +
+            "Field definitions:\n" +
+            "- int: { \"type\":\"int\", \"min\":N, \"max\":N } — integer in range\n" +
+            "- enum: { \"type\":\"enum\", \"values\":[\"a\",\"b\",\"c\"] } — pick one from list\n" +
+            "- date: { \"type\":\"date\" } — recent ISO date\n" +
+            "- text: { \"type\":\"text\" } — short descriptive string\n\n" +
+            "Return ONLY valid JSON, no markdown:\n" +
+            "{\"services\":{\"member\":{\"service_name\":\"Credit Bureau\",\"fields\":{" +
+            "\"credit_score\":{\"type\":\"int\",\"min\":300,\"max\":850}," +
+            "\"bureau_status\":{\"type\":\"enum\",\"values\":[\"Clear\",\"Flagged\",\"Under Review\"]}," +
+            "\"last_bureau_check\":{\"type\":\"date\"}}}}}";
+
+        JSONObject generated = extractJson(callAI(prompt));
+        JSONObject services  = objOf(generated, "services");
+
+        // Register PULL services in service_registry (idempotent via ON CONFLICT)
+        for (Object key : services.keySet()) {
+            String entityType = (String) key;
+            JSONObject svc    = (JSONObject) services.get(key);
+            String svcName    = svc.containsKey("service_name") ? (String) svc.get("service_name") : entityType.toUpperCase() + "_SERVICE";
+            String identifier = ("MOCK_" + svcName.toUpperCase().replaceAll("[^A-Z0-9_]", "_"));
+            String apiBaseUrl = "http://localhost:9090/" + entityType;
+            String authConfig = "{\"header\":\"X-Mock-Key\",\"secret\":\"nexus-demo\"}";
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO service_registry (identifier, api_base_url, auth_config, service_type, entity_type, status) " +
+                    "VALUES (?, ?, ?::jsonb, 'PULL', ?, 'Active') " +
+                    "ON CONFLICT (identifier) DO UPDATE SET " +
+                    "api_base_url=EXCLUDED.api_base_url, entity_type=EXCLUDED.entity_type, status='Active'")) {
+                ps.setString(1, identifier);
+                ps.setString(2, apiBaseUrl);
+                ps.setString(3, authConfig);
+                ps.setString(4, entityType);
+                ps.executeUpdate();
+            }
+        }
+
+        // Build full mock-data.json structure
+        JSONObject mockConfig = new JSONObject();
+        mockConfig.put("port",        9090L);
+        mockConfig.put("auth_header", "X-Mock-Key");
+        mockConfig.put("auth_secret", "nexus-demo");
+        mockConfig.put("services",    services);
+        return mockConfig;
+    }
+
+    /* ── download mock config as file ─────────────────────────────────── */
+
+    private void downloadMockConfig(Connection conn, HttpServletRequest req,
+                                     HttpServletResponse res, String sessionId) throws Exception {
+        String sql = (sessionId != null && !sessionId.isBlank())
+            ? "SELECT mock_data::text FROM seeding_sessions WHERE session_id=?::uuid"
+            : "SELECT mock_data::text FROM seeding_sessions WHERE mock_data IS NOT NULL ORDER BY created_at DESC LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (sessionId != null && !sessionId.isBlank()) ps.setString(1, sessionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next() || rs.getString("mock_data") == null) {
+                    OutputProcessor.errorResponse(res, 404, "Not found",
+                        "No mock config found. Run seeding first.", req.getRequestURI());
+                    return;
+                }
+                byte[] bytes = rs.getString("mock_data").getBytes(StandardCharsets.UTF_8);
+                res.setContentType("application/json");
+                res.setHeader("Content-Disposition", "attachment; filename=mock-data.json");
+                res.setContentLength(bytes.length);
+                res.getOutputStream().write(bytes);
+                res.getOutputStream().flush();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private int generateTemplates(Connection conn, String context, String flavor, JSONArray types, JSONObject mockConfig) throws Exception {
         int total = 0;
+        JSONObject mockServices = objOf(mockConfig, "services");
         for (Object typeObj : types) {
             String type = typeObj.toString();
+
+            // Build live fields section for this entity type if mock config exists
+            String liveFieldsSection = "";
+            if (mockServices.containsKey(type)) {
+                JSONObject svc = (JSONObject) mockServices.get(type);
+                JSONObject fields = objOf(svc, "fields");
+                if (!fields.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("EXTERNAL LIVE DATA: This entity type has a registered PULL service that exposes these fields:\n");
+                    for (Object fk : fields.keySet()) sb.append("  - {{ entity.live.").append(fk).append(" }}\n");
+                    sb.append("Include 1-2 of these live data variables in the template to show real-time enrichment.\n");
+                    liveFieldsSection = sb.toString();
+                }
+            }
+
             String prompt =
                 "You are generating a Liquid HTML dashboard template for an institutional management system.\n\n" +
                 "INDUSTRY CONTEXT: " + context + "\n" +
                 (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
-                "ENTITY TYPE: " + type + "\n\n" +
+                "ENTITY TYPE: " + type + "\n" +
+                liveFieldsSection + "\n" +
                 "Generate exactly ONE template for this entity type. It is a compact HTML card for a profile dashboard.\n" +
                 "Use Liquid variables like {{ actor.state.name }}, {{ actor.state.status }}, {{ actor.external_id }}.\n" +
+                (liveFieldsSection.isEmpty() ? "" : "Also use the live data variables listed above where relevant.\n") +
                 "Keep HTML simple: a card div with a title, status badge, and 3-5 key data fields. No CSS styles.\n" +
                 "name should be a concise descriptive title (e.g. 'Member Profile').\n\n" +
                 "Return ONLY valid JSON, no markdown:\n" +
@@ -645,20 +769,39 @@ public class Seeding implements Action {
     }
 
     @SuppressWarnings("unchecked")
-    private int generateForms(Connection conn, String context, String flavor, JSONArray types) throws Exception {
+    private int generateForms(Connection conn, String context, String flavor, JSONArray types, JSONObject mockConfig) throws Exception {
         int total = 0;
+        JSONObject mockServices = objOf(mockConfig, "services");
         for (Object typeObj : types) {
             String type = typeObj.toString();
+
+            // Build prefill hint for this entity type
+            String prefillSection = "";
+            if (mockServices.containsKey(type)) {
+                JSONObject svc = (JSONObject) mockServices.get(type);
+                JSONObject fields = objOf(svc, "fields");
+                if (!fields.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("PRE-FILL AVAILABLE: The following live data fields can pre-populate form inputs " +
+                              "using \"prefill\":\"live.FIELD_KEY\" on a field definition:\n");
+                    for (Object fk : fields.keySet()) sb.append("  - live.").append(fk).append("\n");
+                    sb.append("Add \"prefill\":\"live.FIELD_KEY\" to fields whose values can be sourced from live data.\n");
+                    prefillSection = sb.toString();
+                }
+            }
+
             String prompt =
                 "You are generating data capture form schemas for an institutional management system.\n\n" +
                 "INDUSTRY CONTEXT: " + context + "\n" +
                 (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
-                "ENTITY TYPE: " + type + "\n\n" +
+                "ENTITY TYPE: " + type + "\n" +
+                prefillSection + "\n" +
                 "Generate exactly 1 realistic form schema for this entity type aligned to the industry context.\n" +
                 "schema_id must be snake_case (e.g. member_kyc). Do not add generated-data prefixes.\n" +
                 "Include 3-5 fields. Field types: text, email, number, date, select, textarea, checkbox.\n" +
-                "For select fields, include: \"options\":[{\"value\":\"v\",\"label\":\"Label\"}]\n\n" +
-                "Return ONLY valid JSON, no markdown:\n" +
+                "For select fields, include: \"options\":[{\"value\":\"v\",\"label\":\"Label\"}]\n" +
+                (prefillSection.isEmpty() ? "" : "For applicable fields, add \"prefill\":\"live.FIELD_KEY\".\n") +
+                "\nReturn ONLY valid JSON, no markdown:\n" +
                 "{\"forms\":[{\"schema_id\":\"" + type + "_update\",\"label\":\"" + type + " Update Form\"," +
                 "\"applies_to\":\"" + type + "\",\"action_type\":\"" + type.toUpperCase() + "_UPDATE\"," +
                 "\"fields\":[{\"key\":\"name\",\"label\":\"Full Name\",\"type\":\"text\",\"required\":true}]}]}";
@@ -1135,7 +1278,8 @@ public class Seeding implements Action {
     private JSONArray defaultGenerate() {
         JSONArray a = new JSONArray();
         a.add("twins"); a.add("relationships"); a.add("interactions");
-        a.add("templates"); a.add("forms"); a.add("commands"); a.add("policies");
+        a.add("mock_services"); a.add("templates"); a.add("forms");
+        a.add("commands"); a.add("policies");
         return a;
     }
 
