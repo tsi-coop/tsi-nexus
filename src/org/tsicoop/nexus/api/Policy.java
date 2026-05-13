@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -287,8 +288,9 @@ public class Policy implements Action {
                 "VLLM_MODEL is not configured — set it in docker-compose.yml", req.getRequestURI()); return;
         }
 
-        // Enrich prompt with live schema context
+        // Enrich prompt with live schema context and institutional vocabulary
         String schemaContext = buildSchemaContext(conn);
+        String vocabSection  = loadVocabSection(conn);
 
         // Build the user message
         StringBuilder userMsg = new StringBuilder();
@@ -298,6 +300,9 @@ public class Policy implements Action {
         userMsg.append("Mode: ").append("ANALYTICS".equals(execMode) ? "ANALYTICS (return rows)" : "GUARDRAIL (return COUNT(*), block if > 0)").append("\n");
         if (!schemaContext.isEmpty()) {
             userMsg.append("\nLive entity types in this deployment:\n").append(schemaContext);
+        }
+        if (!vocabSection.isEmpty()) {
+            userMsg.append("\nInstitutional vocabulary:\n").append(vocabSection);
         }
 
         JSONArray messages = new JSONArray();
@@ -324,6 +329,31 @@ public class Policy implements Action {
         result.put("success", true);
         result.put("sql",     cleanSql);
         OutputProcessor.send(res, 200, result);
+    }
+
+    private String loadVocabSection(Connection conn) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT domain_slang FROM root_organisation LIMIT 1");
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                String raw = rs.getString("domain_slang");
+                if (raw != null) {
+                    Object parsed = new JSONParser().parse(raw);
+                    if (parsed instanceof JSONObject) {
+                        JSONObject vocab = (JSONObject) parsed;
+                        if (vocab.isEmpty()) return "";
+                        StringBuilder sb = new StringBuilder();
+                        for (Object key : vocab.keySet()) {
+                            sb.append("  ").append(key).append(" = ").append(vocab.get(key)).append("\n");
+                        }
+                        return sb.toString().trim();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Policy] loadVocabSection failed: " + e.getMessage());
+        }
+        return "";
     }
 
     private String buildSchemaContext(Connection conn) {

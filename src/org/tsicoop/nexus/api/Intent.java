@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -46,7 +47,8 @@ public class Intent implements Action {
             String rawIntent  = (String) input.get("intent");
 
             List<JSONObject> commands = loadCommands(conn);
-            String llmCommand = llmParseIntent(rawIntent, commands);
+            String vocabSection = loadVocabSection(conn);
+            String llmCommand = llmParseIntent(rawIntent, commands, vocabSection);
             String intentToProcess = (llmCommand != null) ? llmCommand : rawIntent;
 
             JSONObject result = resolveToAdaptiveUI(intentToProcess, commands);
@@ -95,12 +97,12 @@ public class Intent implements Action {
     /* ── LLM: natural language → /command ────────────────────────────────── */
 
     @SuppressWarnings("unchecked")
-    private String llmParseIntent(String rawInput, List<JSONObject> commands) {
+    private String llmParseIntent(String rawInput, List<JSONObject> commands, String vocabSection) {
         if (VLLM_URL == null || VLLM_MODEL == null || rawInput == null) return null;
         if (rawInput.trim().startsWith("/")) return null;
 
         try {
-            String systemPrompt = buildSystemPrompt(commands);
+            String systemPrompt = buildSystemPrompt(commands, vocabSection);
             String entityList   = fetchEntityList();
             String userContent  = "Known entities:\n" + entityList + "\nUser said: \"" + rawInput + "\"";
 
@@ -148,20 +150,24 @@ public class Intent implements Action {
         return null;
     }
 
-    private String buildSystemPrompt(List<JSONObject> commands) {
+    private String buildSystemPrompt(List<JSONObject> commands, String vocabSection) {
         StringBuilder sb = new StringBuilder();
         sb.append("You are the command parser for TSI Nexus, an institutional intelligence platform.\n");
         sb.append("Translate the user's natural language into a single structured command.\n\n");
+        if (vocabSection != null && !vocabSection.isEmpty()) {
+            sb.append("Institutional vocabulary (expand abbreviations using these definitions):\n");
+            sb.append(vocabSection).append("\n\n");
+        }
         sb.append("Available commands:\n");
         for (JSONObject cmd : commands) {
             sb.append("  /").append(cmd.get("command_verb"))
               .append(" ").append(cmd.get("args_hint"))
-              .append("  — ").append(cmd.get("hint")).append("\n");
+              .append("  - ").append(cmd.get("hint")).append("\n");
         }
         sb.append("\nRules:\n");
         sb.append("1. Output ONLY the command string. No explanation, no markdown, no punctuation.\n");
         sb.append("2. Map names or descriptions to the correct @handle from the entity list provided.\n");
-        sb.append("3. The @handle must match exactly what is listed — do not invent handles.\n");
+        sb.append("3. The @handle must match exactly what is listed - do not invent handles.\n");
         sb.append("4. If intent is unclear or no matching entity exists, output: /unknown");
         return sb.toString();
     }
@@ -294,6 +300,31 @@ public class Intent implements Action {
     }
 
     /* ── DB helpers ───────────────────────────────────────────────────────── */
+
+    private String loadVocabSection(Connection conn) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT domain_slang FROM root_organisation LIMIT 1");
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                String raw = rs.getString("domain_slang");
+                if (raw != null) {
+                    Object parsed = new JSONParser().parse(raw);
+                    if (parsed instanceof JSONObject) {
+                        JSONObject vocab = (JSONObject) parsed;
+                        if (vocab.isEmpty()) return "";
+                        StringBuilder sb = new StringBuilder();
+                        for (Object key : vocab.keySet()) {
+                            sb.append("  ").append(key).append(" = ").append(vocab.get(key)).append("\n");
+                        }
+                        return sb.toString().trim();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Intent] loadVocabSection failed: " + e.getMessage());
+        }
+        return "";
+    }
 
     private String fetchEntityList() {
         PoolDB pool = null;

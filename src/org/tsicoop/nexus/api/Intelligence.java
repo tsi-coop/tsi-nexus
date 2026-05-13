@@ -1,9 +1,14 @@
 package org.tsicoop.nexus.api;
 
 import org.tsicoop.nexus.framework.HttpClient;
+import org.tsicoop.nexus.framework.PoolDB;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 /**
  * Calls a vLLM-hosted model via its OpenAI-compatible /v1/chat/completions endpoint.
@@ -128,12 +133,14 @@ public class Intelligence {
     public static JSONObject generateTemplate(String userPrompt, String entityType, String attributes) {
         if (VLLM_URL == null || VLLM_MODEL == null) return null;
         try {
+            String vocab = loadVocabSection();
             String systemPrompt =
                 "You are an expert UI developer for TSI Nexus, a microfinance platform. " +
                 "Generate a Liquid template with Tailwind CSS based on the user's description.\n\n" +
                 "CONTEXT:\n" +
                 "- Entity Type: " + entityType + "\n" +
-                "- Available Attributes: " + attributes + "\n\n" +
+                "- Available Attributes: " + attributes + "\n" +
+                (vocab.isEmpty() ? "" : "- Institutional vocabulary:\n" + vocab + "\n") + "\n" +
                 "RULES:\n" +
                 "- Use Tailwind CSS for styling.\n" +
                 "- Use Liquid syntax for variables (e.g., {{ entity.name }}, {{ entity.current_state.attribute_name }}).\n" +
@@ -180,12 +187,14 @@ public class Intelligence {
     public static JSONObject generateSchema(String userPrompt, String entityType, String attributes) {
         if (VLLM_URL == null || VLLM_MODEL == null) return null;
         try {
+            String vocab = loadVocabSection();
             String systemPrompt =
                 "You are an expert form designer for TSI Nexus, a microfinance cooperative platform. " +
                 "Generate an interaction form schema based on the user's description.\n\n" +
                 "CONTEXT:\n" +
                 "- Entity Type: " + entityType + "\n" +
-                "- Available State Attributes: " + (attributes.isEmpty() ? "none specified" : attributes) + "\n\n" +
+                "- Available State Attributes: " + (attributes.isEmpty() ? "none specified" : attributes) + "\n" +
+                (vocab.isEmpty() ? "" : "- Institutional vocabulary:\n" + vocab + "\n") + "\n" +
                 "Return ONLY a valid JSON object with exactly these fields:\n" +
                 "{\n" +
                 "  \"schema_id\": \"UPPER_SNAKE_CASE_ID\",\n" +
@@ -241,6 +250,39 @@ public class Intelligence {
             e.printStackTrace();
         }
         return null;
+    }
+
+    static String loadVocabSection() {
+        PoolDB pool = null;
+        Connection conn = null;
+        try {
+            pool = new PoolDB();
+            conn = pool.getConnection();
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT domain_slang FROM root_organisation LIMIT 1");
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String raw = rs.getString("domain_slang");
+                    if (raw != null) {
+                        Object parsed = new JSONParser().parse(raw);
+                        if (parsed instanceof JSONObject) {
+                            JSONObject vocab = (JSONObject) parsed;
+                            if (vocab.isEmpty()) return "";
+                            StringBuilder sb = new StringBuilder();
+                            for (Object key : vocab.keySet()) {
+                                sb.append("  ").append(key).append(" = ").append(vocab.get(key)).append("\n");
+                            }
+                            return sb.toString().trim();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Intelligence] loadVocabSection failed: " + e.getMessage());
+        } finally {
+            if (pool != null) pool.cleanup(null, null, conn);
+        }
+        return "";
     }
 
     private static JSONObject extractJson(String content) {

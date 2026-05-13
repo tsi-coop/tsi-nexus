@@ -102,7 +102,7 @@ public class Tuning implements Action {
             OutputProcessor.errorResponse(res, 400, "Bad request", "term is required", req.getRequestURI()); return;
         }
         try (PreparedStatement ps = conn.prepareStatement(
-                "UPDATE root_organisation SET domain_slang = domain_slang || jsonb_build_object(?::text, ?::text)")) {
+                "UPDATE root_organisation SET domain_slang = COALESCE(domain_slang, '{}') || jsonb_build_object(?::text, ?::text)")) {
             ps.setString(1, term);
             ps.setString(2, def);
             ps.executeUpdate();

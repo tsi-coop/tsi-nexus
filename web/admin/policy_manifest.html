@@ -146,19 +146,187 @@
 
     <!-- Error -->
     <div id="errorState" class="hidden flex-1 flex items-center justify-center">
-        <p class="text-red-500 font-bold text-sm">Failed to load — <span id="errorMsg" class="font-normal text-slate-400"></span></p>
+        <p class="text-red-500 font-bold text-sm">Failed to load - <span id="errorMsg" class="font-normal text-slate-400"></span></p>
     </div>
 
-    <!-- Policies -->
-    <section id="mainContent" class="hidden flex-1 overflow-y-auto p-8">
-        <div id="policiesList" class="space-y-4 max-w-4xl"></div>
-        <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center py-24 text-center">
-            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+    <!-- Policies + Explanation panel -->
+    <section id="mainContent" class="hidden flex-1 overflow-hidden flex">
+
+        <!-- Left: policies list -->
+        <div class="flex-1 overflow-y-auto p-8">
+            <div id="policiesList" class="space-y-4 max-w-3xl"></div>
+            <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center py-24 text-center">
+                <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </div>
+                <p class="text-sm font-bold text-slate-500">No policies yet</p>
+                <p class="text-xs text-slate-400 mt-1">Create your first governance rule to get started</p>
             </div>
-            <p class="text-sm font-bold text-slate-500">No policies yet</p>
-            <p class="text-xs text-slate-400 mt-1">Create your first governance rule to get started</p>
         </div>
+
+        <!-- Right: How it works panel -->
+        <aside class="w-80 xl:w-96 bg-white border-l border-slate-100 overflow-y-auto shrink-0 flex flex-col">
+            <!-- Panel header -->
+            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/60 shrink-0">
+                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-0.5">Reference</p>
+                <h3 class="text-sm font-black text-slate-800">How Policies Work</h3>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Describe rules in plain English - AI converts them to SQL the engine runs in real time.</p>
+            </div>
+
+            <div class="p-6 space-y-6 flex-1">
+
+                <!-- The Flow -->
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">The Flow</p>
+                    <div class="space-y-0">
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">1</div>
+                            <div class="pb-4 border-l border-dashed border-slate-200 pl-3 -ml-0 flex-1" style="margin-left:-1.125rem; padding-left:calc(1.125rem + 0.75rem)">
+                                <p class="text-[11px] font-bold text-slate-700">You describe the rule</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5 leading-relaxed italic">"Block payment if member has no KYC verification"</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">2</div>
+                            <div class="pb-4 border-l border-dashed border-slate-200 flex-1" style="margin-left:-1.125rem; padding-left:calc(1.125rem + 0.75rem)">
+                                <p class="text-[11px] font-bold text-slate-700">AI Assist generates SQL</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5 leading-relaxed">The vLLM module translates your intent into a parameterised SQL query against the data model. You can review and edit before saving.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">3</div>
+                            <div class="flex-1" style="margin-left:-1.125rem; padding-left:calc(1.125rem + 0.75rem)">
+                                <p class="text-[11px] font-bold text-slate-700">Runtime evaluation</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5 leading-relaxed">Every time the linked action is triggered in Liquid, the engine runs the SQL - substituting the entity's <code class="text-indigo-500 bg-indigo-50 px-0.5 rounded">external_id</code> for <code class="text-indigo-500 bg-indigo-50 px-0.5 rounded">?</code>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Execution Modes -->
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Execution Modes</p>
+                    <div class="space-y-2">
+                        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="text-[9px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">GUARDRAIL</span>
+                                <span class="text-[10px] text-emerald-600 font-bold">- blocks the action</span>
+                            </div>
+                            <p class="text-[10px] text-emerald-800 leading-relaxed">Query must return a <strong>COUNT(*)</strong>. If the count is <strong>&gt; 0</strong> the action is blocked and the error message is shown to the user. If the count is <strong>0</strong> the action proceeds normally.</p>
+                        </div>
+                        <div class="rounded-xl border border-violet-200 bg-violet-50 p-3.5">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="text-[9px] font-black uppercase tracking-widest text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">ANALYTICS</span>
+                                <span class="text-[10px] text-violet-600 font-bold">- surfaces insights</span>
+                            </div>
+                            <p class="text-[10px] text-violet-800 leading-relaxed">Query returns any data rows. These are surfaced as intelligence insights in context views and reports. The action is <strong>never blocked</strong> - the label field is used as the report heading.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Model -->
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Data Model</p>
+                    <div class="rounded-xl bg-slate-900 p-4 space-y-3">
+                        <div>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-2">digital_twins</p>
+                            <div class="space-y-1 font-mono text-[10px]">
+                                <p><span class="text-slate-200">external_id</span>    <span class="text-slate-500">TEXT</span></p>
+                                <p><span class="text-slate-200">type</span>           <span class="text-slate-500">TEXT</span>   <span class="text-slate-600 text-[9px]">- member, officer…</span></p>
+                                <p><span class="text-slate-200">current_state</span>  <span class="text-slate-500">JSONB</span>  <span class="text-slate-600 text-[9px]">- all attributes</span></p>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-800 pt-3">
+                            <p class="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-2">Accessing JSONB fields</p>
+                            <pre class="text-[10px] text-emerald-300 leading-relaxed">current_state->>'kyc'
+current_state->>'loan_status'
+(current_state->>'joined_date')
+  ::date</pre>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2 px-1 leading-relaxed">Every attribute captured via forms lives inside <code class="text-indigo-500 bg-indigo-50 px-1 rounded">current_state</code>. Use <code class="text-indigo-500 bg-indigo-50 px-1 rounded">->>'key'</code> to read a field as text.</p>
+                </div>
+
+                <!-- SQL Patterns -->
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Common SQL Patterns</p>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 mb-1.5 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>Block if KYC not verified
+                            </p>
+                            <pre class="text-[10px] bg-slate-900 text-indigo-300 rounded-xl p-3 leading-relaxed overflow-x-auto">SELECT COUNT(*)
+FROM digital_twins
+WHERE external_id = ?
+  AND current_state->>'kyc'
+      != 'Verified'</pre>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 mb-1.5 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>Block if loan already active
+                            </p>
+                            <pre class="text-[10px] bg-slate-900 text-indigo-300 rounded-xl p-3 leading-relaxed overflow-x-auto">SELECT COUNT(*)
+FROM digital_twins
+WHERE external_id = ?
+  AND current_state->>'loan_status'
+      = 'Active'</pre>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 mb-1.5 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>Block if joined &lt; 30 days ago
+                            </p>
+                            <pre class="text-[10px] bg-slate-900 text-indigo-300 rounded-xl p-3 leading-relaxed overflow-x-auto">SELECT COUNT(*)
+FROM digital_twins
+WHERE external_id = ?
+  AND (current_state
+       ->>'joined_date')::date
+      > NOW() - INTERVAL '30 days'</pre>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 mb-1.5 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-violet-400 rounded-full"></span>Analytics - recent visits
+                            </p>
+                            <pre class="text-[10px] bg-slate-900 text-violet-300 rounded-xl p-3 leading-relaxed overflow-x-auto">SELECT content, created_at
+FROM interaction_stream s
+JOIN digital_twins d
+  ON s.owner_id = d.id
+WHERE d.external_id = ?
+ORDER BY created_at DESC
+LIMIT 10</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Tips</p>
+                    <ul class="space-y-2.5">
+                        <li class="flex gap-2.5 text-[10px] text-slate-500 leading-relaxed">
+                            <span class="text-indigo-400 font-black shrink-0 mt-px">→</span>
+                            Always use <code class="text-indigo-500 bg-indigo-50 px-1 rounded">?</code> as the placeholder - never hardcode an entity ID in the query.
+                        </li>
+                        <li class="flex gap-2.5 text-[10px] text-slate-500 leading-relaxed">
+                            <span class="text-indigo-400 font-black shrink-0 mt-px">→</span>
+                            GUARDRAIL queries <em>must</em> return a single integer row. Non-integer results evaluate as 0 (allowed).
+                        </li>
+                        <li class="flex gap-2.5 text-[10px] text-slate-500 leading-relaxed">
+                            <span class="text-indigo-400 font-black shrink-0 mt-px">→</span>
+                            Multiple policies can share the same action type - all are evaluated sequentially. All must pass for the action to proceed.
+                        </li>
+                        <li class="flex gap-2.5 text-[10px] text-slate-500 leading-relaxed">
+                            <span class="text-indigo-400 font-black shrink-0 mt-px">→</span>
+                            Use <strong>Pause</strong> to temporarily disable a policy without deleting it.
+                        </li>
+                        <li class="flex gap-2.5 text-[10px] text-slate-500 leading-relaxed">
+                            <span class="text-indigo-400 font-black shrink-0 mt-px">→</span>
+                            Use the <strong>Test</strong> button on any card to run the SQL live against a real entity ID before activating.
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </aside>
+
     </section>
 </main>
 
@@ -170,7 +338,7 @@
         <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
             <div>
                 <h3 id="upsertTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">Create Governance Rule</h3>
-                <p class="text-[11px] text-slate-400 mt-0.5">All fields stored verbatim — no sector-specific defaults</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">All fields stored verbatim - no sector-specific defaults</p>
             </div>
             <button type="button" onclick="closeModal('upsertModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -187,7 +355,7 @@
                 <div>
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Action Type</label>
                     <select id="fActionTypeSelect" class="input-field" onchange="onActionTypeSelect(this.value)">
-                        <option value="">— Select a system action —</option>
+                        <option value="">- Select a system action -</option>
                     </select>
                     <input id="fActionTypeCustom" type="text" class="input-field mt-2 hidden" placeholder="Custom action type (e.g. DISBURSE)">
                     <p class="text-[10px] text-slate-400 mt-1 px-1">Policy will run whenever this command or form is triggered</p>
@@ -205,14 +373,14 @@
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="radio" name="execMode" id="modeGuardrail" value="GUARDRAIL" checked class="accent-indigo-600">
                         <span class="text-sm font-semibold text-slate-700">GUARDRAIL</span>
-                        <span class="text-[10px] text-slate-400">— blocks the action if query returns count &gt; 0</span>
+                        <span class="text-[10px] text-slate-400">- blocks the action if query returns count &gt; 0</span>
                     </label>
                 </div>
                 <div class="flex gap-3 mt-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="radio" name="execMode" id="modeAnalytics" value="ANALYTICS" class="accent-indigo-600">
                         <span class="text-sm font-semibold text-slate-700">ANALYTICS</span>
-                        <span class="text-[10px] text-slate-400">— runs query and returns data rows as intelligence</span>
+                        <span class="text-[10px] text-slate-400">- runs query and returns data rows as intelligence</span>
                     </label>
                 </div>
             </div>
@@ -221,7 +389,7 @@
             <div class="rounded-2xl border border-indigo-100 bg-indigo-50/40 overflow-hidden">
                 <button type="button" onclick="toggleAiPanel()" class="w-full flex items-center gap-2 px-4 py-3 text-left group">
                     <span class="text-base leading-none">✨</span>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-indigo-700">AI Assist — Generate SQL from natural language</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-indigo-700">AI Assist - Generate SQL from natural language</span>
                     <svg id="aiChevron" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-indigo-400 ml-auto transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div id="aiPanel" class="hidden border-t border-indigo-100">
@@ -252,7 +420,7 @@
             <div>
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">SQL Query Logic</label>
                 <textarea id="fQueryLogic" rows="6" class="code-field" placeholder="SELECT COUNT(*) FROM digital_twins&#10;WHERE external_id = ?&#10;AND current_state->>'kyc' != 'Verified'"></textarea>
-                <p class="text-[10px] text-slate-400 mt-1.5 px-1">Use <code class="text-indigo-500 bg-indigo-50 px-1 rounded">?</code> as the placeholder for the target entity's <code class="text-indigo-500 bg-indigo-50 px-1 rounded">external_id</code>. For GUARDRAIL, return a COUNT — blocked if &gt; 0.</p>
+                <p class="text-[10px] text-slate-400 mt-1.5 px-1">Use <code class="text-indigo-500 bg-indigo-50 px-1 rounded">?</code> as the placeholder for the target entity's <code class="text-indigo-500 bg-indigo-50 px-1 rounded">external_id</code>. For GUARDRAIL, return a COUNT - blocked if &gt; 0.</p>
             </div>
 
             <div>
@@ -458,14 +626,14 @@ function populateActionTypeSelect() {
         const opt = document.createElement('option');
         opt.value = at.action_type;
         const src = sourceLabel[at.source] || '';
-        opt.textContent = `${src}  ${at.action_type}${at.label && at.label !== at.action_type ? '  — ' + at.label : ''}`;
+        opt.textContent = `${src}  ${at.action_type}${at.label && at.label !== at.action_type ? '  - ' + at.label : ''}`;
         sel.appendChild(opt);
     });
 
     // Custom option always last
     const customOpt = document.createElement('option');
     customOpt.value = '__custom__';
-    customOpt.textContent = '✏️  Custom — type manually…';
+    customOpt.textContent = '✏️  Custom - type manually…';
     sel.appendChild(customOpt);
 
     // Restore previous value if still present

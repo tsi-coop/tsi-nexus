@@ -154,6 +154,10 @@
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Institutional Vocabulary</p>
                 <p class="text-xs text-slate-500 max-w-xl">Abbreviations, role names, and field slang that the AI should understand when interpreting queries, generating policies, and producing narrative insights.</p>
             </div>
+            <button onclick="openTermModal()" class="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-indigo-700 transition-colors shrink-0 ml-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                Add Term
+            </button>
         </div>
 
         <!-- Vocab count hint -->
@@ -403,13 +407,13 @@ function renderVocab() {
         row.className = 'bg-white rounded-xl border border-slate-100 flex items-center gap-4 px-5 py-4 shadow-sm hover:border-slate-200 transition-colors group';
         row.innerHTML = `
             <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[11px] font-black rounded-lg tracking-wide shrink-0 min-w-[3rem] text-center">${esc(term)}</span>
-            <span class="text-sm text-slate-600 flex-1 leading-relaxed">${esc(def || '—')}</span>
+            <span class="text-sm text-slate-600 flex-1 leading-relaxed">${esc(def || '-')}</span>
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                <button onclick="openTermModal(${JSON.stringify(term)})"
+                <button data-term="${esc(term)}" onclick="openTermModal(this.dataset.term)"
                     class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 </button>
-                <button onclick="initiateDelete(${JSON.stringify(term)}, this)"
+                <button data-term="${esc(term)}" onclick="initiateDelete(this.dataset.term, this)"
                     class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
@@ -722,15 +726,14 @@ function initiateDelete(term, btn) {
     if (!row) return;
     const actionDiv = btn.closest('div');
     actionDiv.innerHTML = `
-        <button onclick="cancelDelete(${JSON.stringify(term)})"
+        <button onclick="cancelDelete()"
             class="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
-        <button onclick="executeDelete(${JSON.stringify(term)})"
+        <button data-term="${esc(term)}" onclick="executeDelete(this.dataset.term)"
             class="px-2.5 py-1 bg-red-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-red-700 transition-colors">Delete</button>`;
     row.classList.add('border-red-100', 'bg-red-50/30');
 }
 
 function cancelDelete(term) {
-    delete vocab[term]; vocab[term] = vocab[term]; // no-op; re-render to restore buttons
     renderVocab();
 }
 
