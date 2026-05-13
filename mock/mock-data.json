@@ -1,16 +1,1 @@
-{
-  "port": 9090,
-  "auth_header": "X-Mock-Key",
-  "auth_secret": "nexus-demo",
-  "services": {
-    "member": {
-      "service_name": "Credit Bureau",
-      "fields": {
-        "credit_score":      { "type": "int",  "min": 300, "max": 850 },
-        "bureau_status":     { "type": "enum", "values": ["Clear", "Flagged", "Under Review"] },
-        "outstanding_loans": { "type": "int",  "min": 0,   "max": 5 },
-        "last_bureau_check": { "type": "date" }
-      }
-    }
-  }
-}
+{"port": 9090, "services": {"group": {"fields": {"member_count": {"max": 15, "min": 3, "type": "int"}, "risk_profile": {"type": "enum", "values": ["Low", "Medium", "High"]}, "stability_index": {"max": 100, "min": 0, "type": "int"}}, "service_name": "Social Dynamics Engine"}, "center": {"fields": {"center_type": {"type": "enum", "values": ["Rural", "Semi-Urban", "Urban"]}, "last_audit_date": {"type": "date"}, "regional_risk_index": {"max": 10, "min": 1, "type": "int"}}, "service_name": "Geospatial Intelligence Service"}, "member": {"fields": {"kyc_status": {"type": "enum", "values": ["Verified", "Pending", "Incomplete"]}, "credit_score": {"max": 850, "min": 300, "type": "int"}, "bureau_status": {"type": "enum", "values": ["Clear", "Flagged", "Under Review"]}, "last_check_date": {"type": "date"}}, "service_name": "Credit Bureau"}, "officer": {"fields": {"employee_id": {"max": 9999, "min": 1000, "type": "int"}, "employment_type": {"type": "enum", "values": ["Permanent", "Contract", "Seasonal"]}, "compliance_score": {"max": 100, "min": 0, "type": "int"}}, "service_name": "HR Management System"}, "loan_account": {"fields": {"next_due_date": {"type": "date"}, "repayment_cycle": {"type": "enum", "values": ["Daily", "Weekly", "Monthly"]}, "delinquency_status": {"type": "enum", "values": ["Current", "Grace", "Arrears"]}, "outstanding_principal": {"max": 100000, "min": 0, "type": "int"}}, "service_name": "Core Banking System"}, "collateral_asset": {"fields": {"asset_class": {"type": "enum", "values": ["Livestock", "Land", "Equipment"]}, "registry_id": {"max": 99999, "min": 10000, "type": "int"}, "inspection_date": {"type": "date"}, "verification_status": {"type": "enum", "values": ["Verified", "Pending", "Manual_Check"]}}, "service_name": "Asset Registry Service"}}, "auth_header": "X-Mock-Key", "auth_secret": "nexus-demo"}

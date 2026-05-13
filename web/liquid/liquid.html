@@ -1165,9 +1165,16 @@
         const data = {
             'entity.name':        state.name || externalId,
             'entity.external_id': externalId,
-            'entity.type':        type
+            'entity.type':        type,
+            // actor.* aliases — seeder historically generated these variable names
+            'actor.external_id':  externalId,
+            'actor.name':         state.name || externalId,
+            'actor.type':         type
         };
-        for (const [k, v] of Object.entries(state)) data[`entity.current_state.${k}`] = v ?? '';
+        for (const [k, v] of Object.entries(state)) {
+            data[`entity.current_state.${k}`] = v ?? '';
+            data[`actor.state.${k}`]           = v ?? '';  // actor.* alias
+        }
         for (const [k, v] of Object.entries(live))  data[`entity.live.${k}`]          = v ?? '';
         let out = template;
         for (const [k, v] of Object.entries(data)) {

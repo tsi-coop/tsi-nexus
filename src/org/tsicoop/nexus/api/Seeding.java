@@ -654,7 +654,7 @@ public class Seeding implements Action {
             JSONObject svc    = (JSONObject) services.get(key);
             String svcName    = svc.containsKey("service_name") ? (String) svc.get("service_name") : entityType.toUpperCase() + "_SERVICE";
             String identifier = ("MOCK_" + svcName.toUpperCase().replaceAll("[^A-Z0-9_]", "_"));
-            String apiBaseUrl = "http://localhost:9090/" + entityType;
+            String apiBaseUrl = "http://host.docker.internal:9090/" + entityType;
             String authConfig = "{\"header\":\"X-Mock-Key\",\"secret\":\"nexus-demo\"}";
 
             try (PreparedStatement ps = conn.prepareStatement(
@@ -732,13 +732,14 @@ public class Seeding implements Action {
                 "ENTITY TYPE: " + type + "\n" +
                 liveFieldsSection + "\n" +
                 "Generate exactly ONE template for this entity type. It is a compact HTML card for a profile dashboard.\n" +
-                "Use Liquid variables like {{ actor.state.name }}, {{ actor.state.status }}, {{ actor.external_id }}.\n" +
+                "Use Liquid variables: {{ entity.external_id }}, {{ entity.current_state.name }}, {{ entity.current_state.status }}, etc.\n" +
+                "State fields use the prefix {{ entity.current_state.FIELD_KEY }} — use exact field keys from the domain model.\n" +
                 (liveFieldsSection.isEmpty() ? "" : "Also use the live data variables listed above where relevant.\n") +
                 "Keep HTML simple: a card div with a title, status badge, and 3-5 key data fields. No CSS styles.\n" +
                 "name should be a concise descriptive title (e.g. 'Member Profile').\n\n" +
                 "Return ONLY valid JSON, no markdown:\n" +
                 "{\"templates\":[{\"name\":\"Member Profile\",\"entity_type\":\"" + type + "\"," +
-                "\"html_content\":\"<div><h3>{{ actor.state.name }}</h3></div>\",\"condition_sql\":\"\"}]}";
+                "\"html_content\":\"<div><h3>{{ entity.current_state.name }}</h3></div>\",\"condition_sql\":\"\"}]}";
 
             try {
                 JSONObject generated = extractJson(callAI(prompt));

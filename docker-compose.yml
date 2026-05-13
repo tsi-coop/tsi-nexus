@@ -55,6 +55,8 @@ services:
     volumes:
       - "tsi_reports_data:${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}:rw"
     
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       database:
         condition: service_healthy
