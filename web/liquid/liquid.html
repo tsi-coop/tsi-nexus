@@ -837,7 +837,7 @@
             btn.innerHTML = `
                 <span class="history-text">${esc(displayHistoryLabel(item))}</span>
                 <span class="history-time">${esc(formatHistoryTime(item.at))}</span>`;
-            btn.onclick = () => replayIntent(item.intent);
+            btn.onclick = () => replayIntent(item.intent, displayHistoryLabel(item));
             wrap.appendChild(btn);
         });
     }
@@ -857,8 +857,8 @@
             : date.toLocaleDateString([], { day: '2-digit', month: 'short' });
     }
 
-    function replayIntent(intent) {
-        cmd.value = intent;
+    function replayIntent(intent, display) {
+        cmd.value = display || intent;
         userSearch(intent, { remember: false });
     }
 
@@ -947,8 +947,9 @@
                 chip.className = 'ex-chip';
                 if (style) chip.setAttribute('style', style);
                 chip.textContent = text;
-                chip.dataset.intent = intent || text;
-                chip.dataset.label = text;
+                chip.dataset.intent  = intent || text;
+                chip.dataset.display = text;
+                chip.dataset.label   = text;
                 chip.onclick = () => fire(chip);
                 exContainer.appendChild(chip);
             };
@@ -986,7 +987,7 @@
                     <span class="cmd-args">${esc(cmd.args_hint)}</span>
                     <div class="cmd-hint">${esc(cmd.hint)}</div>
                     ${usage ? `
-                        <button class="cmd-use" type="button" data-intent="${esc(usage.intent)}" data-label="${esc(usage.label)}">
+                        <button class="cmd-use" type="button" data-intent="${esc(usage.intent)}" data-display="${esc(usage.label)}" data-label="${esc(usage.label)}">
                             <span class="cmd-use-label">Use</span>
                             <code>${esc(usage.label)}</code>
                         </button>` : ''}`;
