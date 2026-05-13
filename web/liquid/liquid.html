@@ -1481,8 +1481,8 @@
                 msg.style.borderLeftColor = '#e11d48';
                 const entityLabel = data.entity_type ? `<strong>${esc(data.entity_type)}</strong>` : 'this entity';
                 msg.innerHTML = props.linked_form
-                    ? `<div style="color:#9f1239;font-weight:700;font-size:13px;">The linked form is not available. It may be inactive — check the Form Builder.</div>`
-                    : `<div style="color:#9f1239;font-weight:700;font-size:13px;">No active forms are configured for ${entityLabel}. Add one in Form Builder.</div>`;
+                    ? `<div style="color:#9f1239;font-weight:700;font-size:13px;">The linked form is not available. It may be inactive — check the Input Manifests.</div>`
+                    : `<div style="color:#9f1239;font-weight:700;font-size:13px;">No active forms are configured for ${entityLabel}. Add one in Input Manifests.</div>`;
                 appendToStage(msg);
                 return;
             }
