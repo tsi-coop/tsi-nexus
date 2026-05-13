@@ -790,9 +790,10 @@
     });
 
     function fire(el) {
-        const t = el.dataset.intent || el.innerText;
-        const label = el.dataset.label || el.innerText;
-        cmd.value = t;
+        const t       = el.dataset.intent  || el.innerText;
+        const label   = el.dataset.label   || el.innerText;
+        const display = el.dataset.display || t;
+        cmd.value = display;
         userSearch(t, { label });
     }
 
@@ -1031,8 +1032,9 @@
                     chip.className = `ent-chip ${colorClass}`;
                     const cleanHandle = (e.handle || '').replace(/^@/, '');
                     chip.innerHTML = `${esc(e.name || cleanHandle)}<span style="color:#94a3b8;font-size:8px;margin-left:5px;font-family:monospace;font-weight:600;">@${esc(cleanHandle)}</span>`;
-                    chip.dataset.intent = e.name || e.handle;
-                    chip.dataset.label  = e.name || e.handle;
+                    chip.dataset.intent  = e.handle;           // precise @handle for lookup
+                    chip.dataset.display = e.name || cleanHandle; // human name for search box
+                    chip.dataset.label   = e.name || cleanHandle; // human name for history
                     chip.onclick = () => fire(chip);
                     chips.appendChild(chip);
                 });

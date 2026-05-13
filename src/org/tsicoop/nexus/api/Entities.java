@@ -103,7 +103,7 @@ public class Entities implements Action {
                     JSONObject e = new JSONObject();
                     String name = rs.getString("name");
                     e.put("handle", "@" + rs.getString("external_id"));
-                    e.put("name",   name != null ? name : rs.getString("external_id"));
+                    e.put("name",   (name != null && !name.isEmpty()) ? name : rs.getString("external_id"));
                     sample.add(e);
                 }
             }
