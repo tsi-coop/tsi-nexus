@@ -181,17 +181,73 @@
         }
         .nav-section-header.collapsed .nav-chevron { transform: rotate(-90deg); }
         .nav-section-body {
-            overflow: hidden;
+            overflow-y: auto;
             max-height: 600px;
             transition: max-height 0.25s ease, opacity 0.2s ease;
             opacity: 1;
             padding-bottom: 4px;
         }
         .nav-section-body.collapsed {
+            overflow: hidden;
             max-height: 0;
             opacity: 0;
             padding-bottom: 0;
         }
+
+        /* ── Quick Access sub-groups ─────────────────── */
+        .qa-group { border-radius: 8px; overflow: hidden; margin-bottom: 4px; }
+        .qa-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            transition: background .12s, border-color .12s;
+        }
+        .qa-group-header:hover { background: #eef2ff; border-color: #c7d2fe; }
+        .qa-group-header.open  { border-radius: 8px 8px 0 0; border-bottom-color: transparent; background: #eef2ff; border-color: #c7d2fe; }
+        .qa-group-left  { display: flex; align-items: center; gap: 7px; }
+        .qa-group-label {
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .22em;
+            color: #334155;
+        }
+        .qa-group-count {
+            font-size: 9px;
+            font-weight: 900;
+            color: #fff;
+            background: #94a3b8;
+            border-radius: 10px;
+            padding: 1px 5px;
+            min-width: 16px;
+            text-align: center;
+        }
+        .qa-group-header.open .qa-group-count { background: #4f46e5; }
+        .qa-chevron-sm {
+            width: 10px;
+            height: 10px;
+            color: #94a3b8;
+            flex-shrink: 0;
+            transition: transform 0.18s ease;
+        }
+        .qa-group-header.open .qa-chevron-sm { transform: rotate(180deg); color: #4f46e5; }
+        .qa-group-body {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.2s ease;
+            background: #f8fafc;
+            border: 1px solid #c7d2fe;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }
+        .qa-group-body.open { max-height: 400px; }
+        .qa-group-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 10px 10px; }
 
         /* ── Example chips ───────────────────────────── */
         .ex-chip {
@@ -304,16 +360,6 @@
         }
 
         /* ── Entity chips ────────────────────────────── */
-        .ent-label {
-            font-size: 8px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .25em;
-            color: #94a3b8;
-            margin-bottom: 5px;
-            margin-top: 10px;
-        }
-        .ent-row { display: flex; flex-wrap: wrap; gap: 5px; }
         .ent-chip {
             font-size: 10px;
             font-weight: 900;
@@ -708,6 +754,21 @@
 
     initNavSections();
 
+    /* ── Quick Access sub-group collapse ─────────── */
+    const QA_STATE_KEY = 'nexus_qa_groups';
+
+    function getQaGroupState() {
+        try { return JSON.parse(localStorage.getItem(QA_STATE_KEY) || '{}'); } catch(_) { return {}; }
+    }
+
+    function toggleQaGroup(typeId, hdrEl, bodyEl) {
+        const isOpen = hdrEl.classList.toggle('open');
+        bodyEl.classList.toggle('open', isOpen);
+        const state = getQaGroupState();
+        state[typeId] = isOpen ? 'open' : 'closed';
+        localStorage.setItem(QA_STATE_KEY, JSON.stringify(state));
+    }
+
     /* ── Auth ─────────────────────────────────── */
     if (!localStorage.getItem('nexus_token')) {
         window.location.href = 'index.html';
@@ -933,20 +994,37 @@
                 cmdContainer.appendChild(row);
             });
 
-            // Build entity index grouped by type
+            // Build entity index as sub-collapsible groups per type
             const indexContainer = document.getElementById('entity-index-container');
             indexContainer.innerHTML = '';
             const typeColors = ['ent-officer','ent-branch','ent-member','ent-group','ent-member'];
+            const qaState = getQaGroupState();
 
             types.forEach((group, gi) => {
-                const label = document.createElement('div');
-                label.className = 'ent-label';
-                label.textContent = prettyType(group.type) + 's';
-                indexContainer.appendChild(label);
-
-                const row = document.createElement('div');
-                row.className = 'ent-row';
+                const typeId     = group.type;
                 const colorClass = typeColors[gi % typeColors.length];
+                const isOpen     = qaState[typeId] === 'open';
+
+                const groupEl = document.createElement('div');
+                groupEl.className = 'qa-group';
+
+                const hdr = document.createElement('div');
+                hdr.className = 'qa-group-header' + (isOpen ? ' open' : '');
+                hdr.innerHTML = `
+                    <div class="qa-group-left">
+                        <span class="qa-group-label">${esc(prettyType(typeId))}s</span>
+                        <span class="qa-group-count">${group.count}</span>
+                    </div>
+                    <svg class="qa-chevron-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                    </svg>`;
+                hdr.onclick = () => toggleQaGroup(typeId, hdr, bodyEl);
+
+                const bodyEl = document.createElement('div');
+                bodyEl.className = 'qa-group-body' + (isOpen ? ' open' : '');
+
+                const chips = document.createElement('div');
+                chips.className = 'qa-group-chips';
 
                 group.sample.forEach(e => {
                     const chip = document.createElement('span');
@@ -956,18 +1034,21 @@
                     chip.dataset.intent = e.name || e.handle;
                     chip.dataset.label  = e.name || e.handle;
                     chip.onclick = () => fire(chip);
-                    row.appendChild(chip);
+                    chips.appendChild(chip);
                 });
 
                 if (group.count > group.sample.length) {
                     const more = document.createElement('span');
                     more.className = 'ent-chip';
-                    more.style.cssText = 'color:#94a3b8;cursor:default;opacity:.6;';
-                    more.textContent = `+${group.count - group.sample.length} more…`;
-                    row.appendChild(more);
+                    more.style.cssText = 'color:#94a3b8;cursor:default;opacity:.6;font-size:9px;';
+                    more.textContent = `+${group.count - group.sample.length} more`;
+                    chips.appendChild(more);
                 }
 
-                indexContainer.appendChild(row);
+                bodyEl.appendChild(chips);
+                groupEl.appendChild(hdr);
+                groupEl.appendChild(bodyEl);
+                indexContainer.appendChild(groupEl);
             });
 
         } catch (e) {
