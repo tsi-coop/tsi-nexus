@@ -13,6 +13,16 @@ public class InterceptingFilter implements Filter {
     private static final String CLIENT_URI = "client";
 
     private static final HashMap<String, String> filterConfig = new HashMap<String, String>();
+
+    private static final Map<String, String> API_KEY_SCOPES = new HashMap<>();
+    static {
+        API_KEY_SCOPES.put("/api/intent",     "intent:read");
+        API_KEY_SCOPES.put("/api/context",    "context:read");
+        API_KEY_SCOPES.put("/api/governance", "governance:read");
+        API_KEY_SCOPES.put("/api/capture",    "capture:write");
+        API_KEY_SCOPES.put("/api/entities",   "context:read");
+        API_KEY_SCOPES.put("/api/graph",      "context:read");
+    }
     @Override
     public void destroy() {
         // Any cleanup of resources
@@ -49,14 +59,10 @@ public class InterceptingFilter implements Filter {
            
             // Check
             try {
-                 /*if(servletPath.contains("api/admin")
-                         && !servletPath.contains("api/admin/login")
-                         && !servletPath.contains("api/admin/resetpass")
-                         && !servletPath.contains("api/admin/setup")) {
-                     validheader = InputProcessor.processAdminHeader(req, res);
-                 }else if(servletPath.contains("api/client")) {
-                     validheader = InputProcessor.processClientHeader(req, res);
-                 }*/
+                 String requiredScope = API_KEY_SCOPES.get(servletPath.trim());
+                 if (requiredScope != null && req.getHeader("X-API-Key") != null) {
+                     validheader = InputProcessor.processClientHeader(req, res, requiredScope);
+                 }
                  if(!validheader) {
                      res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
                  }else{

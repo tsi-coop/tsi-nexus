@@ -9,9 +9,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -51,9 +54,10 @@ public class InputProcessor {
         return validheader;
     }
 
-    public static boolean processClientHeader(HttpServletRequest req, HttpServletResponse res) {
-        String apiKey = req.getHeader("X-API-Key");
-        if (apiKey == null || apiKey.trim().isEmpty()) return false;
+    public static boolean processClientHeader(HttpServletRequest req, HttpServletResponse res, String requiredScope) {
+        String apiKey    = req.getHeader("X-API-Key");
+        String apiSecret = req.getHeader("X-API-Secret");
+        if (apiKey == null || apiKey.isBlank() || apiSecret == null || apiSecret.isBlank()) return false;
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -63,20 +67,31 @@ public class InputProcessor {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
-            // Check both existence and active status in the consolidated api_user table
-            ps = conn.prepareStatement("SELECT active FROM api_user WHERE api_key = ?");
-            ps.setString(1, apiKey);
+            ps = conn.prepareStatement(
+                "SELECT app_id::text, api_secret_hash, authorized_scopes " +
+                "FROM app_access_registry WHERE api_key = ? AND status = 'Active'");
+            ps.setString(1, apiKey.trim());
             rs = ps.executeQuery();
+            if (!rs.next()) return false;
 
-            if (rs.next()) {
-                return rs.getBoolean("active"); // Returns true only if the key is active
-            }
+            if (!SecurityUtil.sha256(apiSecret.trim()).equals(rs.getString("api_secret_hash"))) return false;
+
+            Array scopeArr = rs.getArray("authorized_scopes");
+            if (scopeArr == null) return false;
+            List<String> scopes = Arrays.asList((String[]) scopeArr.getArray());
+            if (!scopes.contains(requiredScope)) return false;
+
+            JSONObject identity = new JSONObject();
+            identity.put("app_id",  rs.getString("app_id"));
+            identity.put("api_key", apiKey.trim());
+            req.setAttribute(AUTH_TOKEN, identity);
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         } finally {
-            pool.cleanup(rs, ps, conn);
+            if (pool != null) pool.cleanup(rs, ps, conn);
         }
-        return false; // Key does not exist
     }
 
     public static String getEmail(HttpServletRequest req){

@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.sql.Array;
 import java.sql.Connection;
@@ -224,24 +223,17 @@ public class ApiKeys implements Action {
     private String generateKey() {
         byte[] bytes = new byte[16];
         RNG.nextBytes(bytes);
-        return "nxs_" + toHex(bytes);
+        return "nxs_" + SecurityUtil.toHex(bytes);
     }
 
     private String generateSecret() {
         byte[] bytes = new byte[32];
         RNG.nextBytes(bytes);
-        return toHex(bytes);
+        return SecurityUtil.toHex(bytes);
     }
 
     private String sha256(String input) throws Exception {
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
-        return toHex(md.digest(input.getBytes("UTF-8")));
-    }
-
-    private String toHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder(bytes.length * 2);
-        for (byte b : bytes) sb.append(String.format("%02x", b & 0xff));
-        return sb.toString();
+        return SecurityUtil.sha256(input);
     }
 
     private String str(JSONObject o, String key) {
