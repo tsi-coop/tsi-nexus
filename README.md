@@ -73,10 +73,17 @@ Once running, the platform is accessible at these URLs (default port `8084`):
 
 ### 3. First-time setup
 
-1. Open `http://localhost:8084/setup` and complete the wizard to create your admin account
-2. Open `http://localhost:8084/admin` to access the admin console
-3. Open `http://localhost:8084/seed` and fill in the four steps: institutional context, entity types, commands, and simulation parameters
-4. The seeder generates entity types, sample data, context cards, forms, policies, and mock service integrations in one pass
+**Step 1 - Create your admin account**
+
+Open `http://localhost:8084/setup` and complete the wizard.
+
+**Step 2 - Explore the admin console**
+
+Open `http://localhost:8084/admin`. This is where you configure entity types, context card templates, input forms, guardrails, and external service integrations.
+
+**Step 3 - Seed your institution**
+
+Open `http://localhost:8084/seed` and fill in the four steps: institutional context, entity types, commands, and simulation parameters. The seeder generates digital twins, interaction history, context cards, forms, policies, and mock service integrations in one pass.
 
 Ready-to-use input values for common domains:
 
@@ -90,7 +97,20 @@ Ready-to-use input values for common domains:
 
 Each guide provides exact copy-paste text for every field in the seed form.
 
-5. Open `http://localhost:8084/liquid` and start exploring your entities
+**Step 4 - Start the mock server**
+
+After seeding, download `mock-data.json` from the seeding page, place it in `mock/`, then run:
+
+```bash
+javac mock/MockServer.java
+java -cp mock MockServer
+```
+
+This starts a PULL server on port 9090 and a background INGEST push thread. Without this step, context cards in Liquid will have empty live-data fields.
+
+**Step 5 - Explore in Liquid**
+
+Open `http://localhost:8084/liquid` and start exploring your entities. Search by name or ID, view context cards with live external data, and submit forms to record actions.
 
 ---
 
@@ -121,14 +141,7 @@ docker compose up -d
 
 ### Mock external services
 
-After seeding, download `mock-data.json` from the Seeding page and run the standalone mock server:
-
-```bash
-javac mock/MockServer.java
-java -cp mock MockServer
-```
-
-This starts a PULL server on port 9090 that serves synthetic data for every registered entity type, and a scheduled INGEST push thread that sends periodic state updates into Nexus - no real external systems needed for a full demo.
+See Step 4 in [First-time setup](#3-first-time-setup). The mock server (`mock/MockServer.java`) serves as a standalone PULL endpoint and INGEST push source - no real external systems needed for a full demo.
 
 ---
 
