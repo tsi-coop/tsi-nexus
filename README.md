@@ -67,9 +67,21 @@ The app is available at `http://localhost:8084` (or whichever port you mapped).
 ### 3. First-time setup
 
 1. Open the app and complete the setup wizard to create your admin account
-2. Go to **Admin → Seeding** and enter a plain-English description of your organisation (e.g. *"microfinance cooperative serving rural farmers"*)
+2. Go to **Admin → Seeding** and fill in the four steps: institutional context, entity types, commands, and simulation parameters
 3. The seeder generates entity types, sample data, context cards, forms, policies, and mock service integrations in one pass
 4. Open the **Liquid** interface and start exploring your entities
+
+Ready-to-use input values for common domains:
+
+| Domain | Guide |
+|---|---|
+| Microfinance (JLG / rural lending) | [`docs/seed/microfinance.md`](docs/seed/microfinance.md) |
+| Healthcare clinic | [`docs/seed/healthcare-clinic.md`](docs/seed/healthcare-clinic.md) |
+| Manufacturing firm | [`docs/seed/manufacturing.md`](docs/seed/manufacturing.md) |
+| EdTech platform | [`docs/seed/edtech.md`](docs/seed/edtech.md) |
+| Professional services | [`docs/seed/services.md`](docs/seed/services.md) |
+
+Each guide provides exact copy-paste text for every field in the seed form.
 
 ---
 
