@@ -77,7 +77,6 @@ Once running, the platform is accessible at these URLs (default port `8084`):
 2. Open `http://localhost:8084/admin` to access the admin console
 3. Open `http://localhost:8084/seed` and fill in the four steps: institutional context, entity types, commands, and simulation parameters
 4. The seeder generates entity types, sample data, context cards, forms, policies, and mock service integrations in one pass
-5. Open `http://localhost:8084/liquid` and start exploring your entities
 
 Ready-to-use input values for common domains:
 
@@ -90,6 +89,8 @@ Ready-to-use input values for common domains:
 | Professional services | [`docs/seed/services.md`](docs/seed/services.md) |
 
 Each guide provides exact copy-paste text for every field in the seed form.
+
+5. Open `http://localhost:8084/liquid` and start exploring your entities
 
 ---
 
