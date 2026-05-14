@@ -46,9 +46,9 @@ Context Cards are HTML templates with Liquid variable substitution:
 ### 4. Guardrails
 `policy_manifest` table: each row is a SQL policy keyed by `action_type` and `execution_mode`.
 
-**GUARDRAIL mode** — a pre-action gate. `query_logic` must return `COUNT(*)`. `Capture.java` runs every GUARDRAIL policy for the `action_type` before committing anything; if COUNT > 0, the action is blocked and `error_message` is returned to the user. Zero hardcoded logic.
+**GUARDRAIL mode** - a pre-action gate. `query_logic` must return `COUNT(*)`. `Capture.java` runs every GUARDRAIL policy for the `action_type` before committing anything; if COUNT > 0, the action is blocked and `error_message` is returned to the user. Zero hardcoded logic.
 
-**ANALYTICS mode** — a query-as-command. `query_logic` returns meaningful rows with named columns (not a COUNT). `Capture.java` ignores ANALYTICS policies entirely; they only fire when `Governance.java` receives a POST for that `action_type`. Instead of blocking or mutating state, `Governance.java` runs the SQL, collects the result rows, and returns them as data. The `error_message` field is repurposed as a display label for the result set. This is how slash commands like `/report @entity` return a data table rather than triggering an action.
+**ANALYTICS mode** - a query-as-command. `query_logic` returns meaningful rows with named columns (not a COUNT). `Capture.java` ignores ANALYTICS policies entirely; they only fire when `Governance.java` receives a POST for that `action_type`. Instead of blocking or mutating state, `Governance.java` runs the SQL, collects the result rows, and returns them as data. The `error_message` field is repurposed as a display label for the result set. This is how slash commands like `/report @entity` return a data table rather than triggering an action.
 
 See **Command Patterns** below for how to wire these into the Liquid interface.
 
@@ -66,11 +66,11 @@ Every Liquid command is a row in `command_manifest`. The `component_type` column
 
 ---
 
-### Pattern 1 — Form Capture
+### Pattern 1 - Form Capture
 
 Opens a schema-driven form. On submit, `Capture.java` validates fields, checks GUARDRAIL policies, patches `current_state`, appends to `interaction_stream`, and fires PUSH services.
 
-**When to use:** collecting structured data that changes entity state — KYC verification, loan application, survey.
+**When to use:** collecting structured data that changes entity state - KYC verification, loan application, survey.
 
 **Wiring:**
 
@@ -80,15 +80,15 @@ Opens a schema-driven form. On submit, `Capture.java` validates fields, checks G
 | `interaction_schema` | `schema_id`, `action_type`, `fields`, `state_patch`, `stream_tmpl` | `KYC_MEMBER_CAPTURE`, fields array, `{"kyc":"Verified"}`, `"KYC completed for {name}"` |
 | `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `KYC_MEMBER_CAPTURE`, `GUARDRAIL`, `SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'='Verified'`, `"Member already verified"` |
 
-`linked_form` in `command_manifest` must match the `schema_id` in `interaction_schema`. The policy `action_type` must match the schema `action_type`. The GUARDRAIL policy is optional — omit it if the form should always be submittable.
+`linked_form` in `command_manifest` must match the `schema_id` in `interaction_schema`. The policy `action_type` must match the schema `action_type`. The GUARDRAIL policy is optional - omit it if the form should always be submittable.
 
 ---
 
-### Pattern 2 — Action Confirmation (GUARDRAIL)
+### Pattern 2 - Action Confirmation (GUARDRAIL)
 
-Shows a confirmation card with the target entity and action details. On confirm, `Governance.java` runs GUARDRAIL policies → executes a state mutation → logs to the audit stream. No form fields — the command itself carries the parameters.
+Shows a confirmation card with the target entity and action details. On confirm, `Governance.java` runs GUARDRAIL policies → executes a state mutation → logs to the audit stream. No form fields - the command itself carries the parameters.
 
-**When to use:** single-step state changes that need a policy gate — disbursing a loan, approving an application, closing an account.
+**When to use:** single-step state changes that need a policy gate - disbursing a loan, approving an application, closing an account.
 
 **Wiring:**
 
@@ -97,15 +97,15 @@ Shows a confirmation card with the target entity and action details. On confirm,
 | `command_manifest` | `command_verb`, `component_type`, `action_type` | `disburse`, `action` (default), `DISBURSE` |
 | `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `DISBURSE`, `GUARDRAIL`, `SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'!='Verified'`, `"KYC must be completed before disbursement"` |
 
-`interaction_schema` is not needed for this pattern. Multiple GUARDRAIL policies can share the same `action_type` — all are checked and any violation blocks the action.
+`interaction_schema` is not needed for this pattern. Multiple GUARDRAIL policies can share the same `action_type` - all are checked and any violation blocks the action.
 
 ---
 
-### Pattern 3 — Analytics Query
+### Pattern 3 - Analytics Query
 
 Shows a confirmation card, but instead of mutating state the command runs a SQL query and returns the results as a data table. No state change, no form, no PUSH.
 
-**When to use:** on-demand reporting within the Liquid interface — loan history, repayment schedule, overdue summary.
+**When to use:** on-demand reporting within the Liquid interface - loan history, repayment schedule, overdue summary.
 
 **Wiring:**
 
@@ -114,7 +114,7 @@ Shows a confirmation card, but instead of mutating state the command runs a SQL 
 | `command_manifest` | `command_verb`, `component_type`, `action_type` | `report`, `action` (default), `LOAN_REPORT` |
 | `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `LOAN_REPORT`, `ANALYTICS`, `SELECT disbursed_on, amount, status FROM loans WHERE member_id=?`, `"Loan History"` |
 
-`execution_mode = 'ANALYTICS'` is the only switch. `Capture.java` skips ANALYTICS rows entirely; `Governance.java` detects the mode and returns rows instead of executing a guard. The `error_message` field becomes the table label in the UI. `query_logic` may return any columns — use named columns for readable output.
+`execution_mode = 'ANALYTICS'` is the only switch. `Capture.java` skips ANALYTICS rows entirely; `Governance.java` detects the mode and returns rows instead of executing a guard. The `error_message` field becomes the table label in the UI. `query_logic` may return any columns - use named columns for readable output.
 
 ---
 
@@ -122,8 +122,8 @@ Shows a confirmation card, but instead of mutating state the command runs a SQL 
 
 | Pattern | `component_type` | `execution_mode` | State change | Form |
 |---|---|---|---|---|
-| Form Capture | `interaction_capture_form` | `GUARDRAIL` (optional) | Yes — via `state_patch` | Yes |
-| Action Confirmation | `action` (default) | `GUARDRAIL` | Yes — via Governance | No |
+| Form Capture | `interaction_capture_form` | `GUARDRAIL` (optional) | Yes - via `state_patch` | Yes |
+| Action Confirmation | `action` (default) | `GUARDRAIL` | Yes - via Governance | No |
 | Analytics Query | `action` (default) | `ANALYTICS` | No | No |
 
 ---

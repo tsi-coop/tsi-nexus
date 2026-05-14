@@ -1084,25 +1084,48 @@ public class Seeding implements Action {
         }
 
         String prompt =
-            "You are configuring commands and guardrail policies for an institutional operations platform.\n\n" +
+            "You are configuring commands and policies for an institutional operations platform.\n\n" +
             "INDUSTRY CONTEXT: " + context + "\n" +
             (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
             "ENTITY TYPES: " + typeList + "\n" +
             commandHint + "\n" +
-            "Generate 3-6 institution-specific command definitions. For each command, include 1-2 GUARDRAIL policies.\n\n" +
-            "Rules:\n" +
+            "Generate 4-6 institution-specific commands. You MUST include all three command patterns below — at least one of each:\n\n" +
+            "PATTERN 1 - Form Capture: component_type='interaction_capture_form'. Used when the command collects data via a form (e.g. onboard, verify, survey).\n" +
+            "  Policies must be GUARDRAIL mode. query_logic returns COUNT(*). If count > 0, action is blocked.\n" +
+            "  query_logic format: SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND ...\n\n" +
+            "PATTERN 2 - Action Confirmation: component_type='universal_action_confirm', policies use execution_mode='GUARDRAIL'.\n" +
+            "  Used for single-step state changes that need a policy gate (e.g. disburse, approve, close).\n" +
+            "  query_logic format: SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND ...\n\n" +
+            "PATTERN 3 - Analytics Query: component_type='universal_action_confirm', exactly one policy with execution_mode='ANALYTICS'.\n" +
+            "  Used for on-demand reporting (e.g. history, status, summary). No state change.\n" +
+            "  query_logic returns named columns — NOT COUNT(*). Format: SELECT col1, col2 FROM digital_twins WHERE external_id=? ...\n" +
+            "  error_message is used as the result table label (e.g. 'Loan History').\n\n" +
+            "Rules for all commands:\n" +
             "- verb: lowercase single word\n" +
             "- action_type: uppercase version of verb\n" +
-            "- entity_type: the primary entity type this command acts on — must be one of the ENTITY TYPES listed above\n" +
-            "- component_type: 'interaction_capture_form' if the command requires data entry, else 'universal_action_confirm'\n" +
-            "- policy query_logic MUST use: SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND ...\n" +
-            "- policy error_message is what the user sees when blocked\n\n" +
+            "- entity_type: must be one of the ENTITY TYPES listed above\n" +
+            "- each policy must include: policy_id, description, query_logic, error_message, execution_mode\n\n" +
             "Return ONLY valid JSON, no markdown:\n" +
-            "{\"commands\":[{\"verb\":\"disburse\",\"label\":\"Disburse Loan\",\"action_type\":\"DISBURSE\"," +
-            "\"entity_type\":\"member\",\"component_type\":\"interaction_capture_form\",\"hint\":\"Release approved loan funds\"," +
-            "\"policies\":[{\"policy_id\":\"BLOCK_INACTIVE_DISBURSE\",\"description\":\"Block inactive members\"," +
-            "\"query_logic\":\"SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'status'='inactive'\"," +
-            "\"error_message\":\"Member is inactive.\"}]},...]}";
+            "{\"commands\":[\n" +
+            "  {\"verb\":\"verify\",\"label\":\"Verify Member\",\"action_type\":\"VERIFY\",\"entity_type\":\"member\"," +
+            "\"component_type\":\"interaction_capture_form\",\"hint\":\"Capture KYC details for member\"," +
+            "\"policies\":[{\"policy_id\":\"BLOCK_ALREADY_VERIFIED\",\"description\":\"Block if already verified\"," +
+            "\"execution_mode\":\"GUARDRAIL\"," +
+            "\"query_logic\":\"SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'='Verified'\"," +
+            "\"error_message\":\"Member is already verified.\"}]},\n" +
+            "  {\"verb\":\"disburse\",\"label\":\"Disburse Loan\",\"action_type\":\"DISBURSE\",\"entity_type\":\"member\"," +
+            "\"component_type\":\"universal_action_confirm\",\"hint\":\"Release approved loan funds\"," +
+            "\"policies\":[{\"policy_id\":\"BLOCK_UNVERIFIED_DISBURSE\",\"description\":\"Block if not verified\"," +
+            "\"execution_mode\":\"GUARDRAIL\"," +
+            "\"query_logic\":\"SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'!='Verified'\"," +
+            "\"error_message\":\"Member must be verified before disbursement.\"}]},\n" +
+            "  {\"verb\":\"report\",\"label\":\"Member Report\",\"action_type\":\"MEMBER_REPORT\",\"entity_type\":\"member\"," +
+            "\"component_type\":\"universal_action_confirm\",\"hint\":\"View member loan and repayment summary\"," +
+            "\"policies\":[{\"policy_id\":\"ANALYTICS_MEMBER_REPORT\",\"description\":\"Member summary report\"," +
+            "\"execution_mode\":\"ANALYTICS\"," +
+            "\"query_logic\":\"SELECT current_state->>'name' AS name, current_state->>'status' AS status, current_state->>'loan_amount' AS loan_amount FROM digital_twins WHERE external_id=?\"," +
+            "\"error_message\":\"Member Summary\"}]}" +
+            ",...]}";
 
         JSONObject generated = extractJson(callAI(prompt));
         JSONArray  commands  = arrOf(generated, "commands");
@@ -1185,14 +1208,17 @@ public class Seeding implements Action {
                 String error  = str(p, "error_message");
                 if (pId == null || pId.isBlank()) continue;
                 pId = pId.toUpperCase().replaceAll("[^A-Z0-9_]", "_");
+                String execMode = str(p, "execution_mode");
+                if (!"ANALYTICS".equals(execMode)) execMode = "GUARDRAIL";
                 try (PreparedStatement ps = conn.prepareStatement(
                         "INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode, is_active) " +
-                        "VALUES (?, ?, ?, ?, ?, 'GUARDRAIL', true) ON CONFLICT (policy_id) DO NOTHING")) {
+                        "VALUES (?, ?, ?, ?, ?, ?, true) ON CONFLICT (policy_id) DO NOTHING")) {
                     ps.setString(1, pId);
                     ps.setString(2, actionType);
                     ps.setString(3, desc != null ? desc : "");
                     ps.setString(4, query);
                     ps.setString(5, error);
+                    ps.setString(6, execMode);
                     ps.executeUpdate();
                 }
             }
