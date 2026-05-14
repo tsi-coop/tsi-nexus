@@ -57,7 +57,8 @@ CREATE TABLE service_registry (
     uptime_percentage NUMERIC DEFAULT 100.00,
     service_type TEXT DEFAULT 'PULL',  -- 'PULL' | 'PUSH' | 'INGEST'
     entity_type TEXT DEFAULT '',       -- PULL: which entity type this enriches
-    trigger_action TEXT DEFAULT ''     -- PUSH: action_type that triggers this service call
+    trigger_action TEXT DEFAULT '',    -- PUSH: action_type that triggers this service call
+    stream_tmpl TEXT DEFAULT ''        -- INGEST: token template for interaction_stream entry
 );
 
 -- 6. APP ACCESS & RBAC (Sovereign Access Keys)

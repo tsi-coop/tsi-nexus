@@ -5,6 +5,7 @@ import java.nio.file.*;
 import java.time.*;
 import java.time.format.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * TSI Nexus - External Mock PULL Service
@@ -45,6 +46,76 @@ public class MockServer {
         System.out.println("[MockServer] Auth header : " + authHdr);
         System.out.println("[MockServer] Entity types: " + String.join(", ", services.keySet()));
         System.out.println("[MockServer] Example     : GET http://localhost:" + port + "/{entityType}/{externalId}");
+
+        // INGEST push — schedule periodic state updates into Nexus for each entity type
+        String nexusIngestUrl = str(config, "nexus_ingest_url", "");
+        if (!nexusIngestUrl.isEmpty()) {
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(services.size());
+            int ingestCount = 0;
+            for (Map.Entry<String,Object> entry : services.entrySet()) {
+                Map<String,Object> svc   = (Map<String,Object>) entry.getValue();
+                List<Object> extIds      = (List<Object>) svc.get("external_ids");
+                if (extIds == null || extIds.isEmpty()) continue;
+                String ingestId          = str(svc, "ingest_identifier",      "");
+                String ingestHdr         = str(svc, "ingest_auth_header",      "X-Ingest-Key");
+                String ingestSec         = str(svc, "ingest_auth_secret",      "ingest-demo");
+                long   interval          = toLong(svc.get("ingest_interval_seconds"), 30L);
+                Map<String,Object> fields = (Map<String,Object>) svc.getOrDefault("fields", new LinkedHashMap<>());
+                if (ingestId.isEmpty()) continue;
+
+                final String fIngestId = ingestId, fIngestHdr = ingestHdr, fIngestSec = ingestSec, fUrl = nexusIngestUrl;
+                final List<Object> fExtIds = extIds;
+                final Map<String,Object> fFields = fields;
+
+                scheduler.scheduleAtFixedRate(() -> {
+                    try {
+                        String externalId = (String) fExtIds.get(new Random().nextInt(fExtIds.size()));
+                        Random rng = new Random((long) externalId.hashCode() ^ System.currentTimeMillis());
+
+                        StringBuilder dataJson = new StringBuilder("{");
+                        boolean first = true;
+                        for (Map.Entry<String,Object> fe : fFields.entrySet()) {
+                            if (!first) dataJson.append(",");
+                            first = false;
+                            Object val = generateValue((Map<String,Object>) fe.getValue(), rng);
+                            dataJson.append("\"").append(fe.getKey()).append("\":");
+                            if (val instanceof String) dataJson.append("\"").append(val).append("\"");
+                            else dataJson.append(val);
+                        }
+                        dataJson.append("}");
+
+                        String body = "{\"identifier\":\"" + fIngestId +
+                                      "\",\"external_id\":\"" + externalId +
+                                      "\",\"data\":" + dataJson + "}";
+
+                        URL url = new URL(fUrl);
+                        HttpURLConnection hc = (HttpURLConnection) url.openConnection();
+                        hc.setRequestMethod("POST");
+                        hc.setRequestProperty("Content-Type", "application/json");
+                        hc.setRequestProperty(fIngestHdr, fIngestSec);
+                        hc.setDoOutput(true);
+                        hc.setConnectTimeout(5000);
+                        hc.setReadTimeout(5000);
+                        byte[] bytes = body.getBytes("UTF-8");
+                        hc.setRequestProperty("Content-Length", String.valueOf(bytes.length));
+                        try (OutputStream os = hc.getOutputStream()) { os.write(bytes); }
+                        int code = hc.getResponseCode();
+                        hc.disconnect();
+                        System.out.println("[INGEST] " + fIngestId + " → " + externalId + " HTTP " + code);
+                    } catch (Exception e) {
+                        System.err.println("[INGEST] Push failed (" + fIngestId + "): " + e.getMessage());
+                    }
+                }, interval, interval, TimeUnit.SECONDS);
+
+                System.out.println("[MockServer] INGEST push : " + ingestId +
+                                   " every " + interval + "s → " + extIds.size() + " entities");
+                ingestCount++;
+            }
+            if (ingestCount == 0) System.out.println("[MockServer] INGEST push : no external_ids found — re-seed to enable");
+        } else {
+            System.out.println("[MockServer] INGEST push : disabled (no nexus_ingest_url in config)");
+        }
+
         System.out.println("[MockServer] Press Ctrl+C to stop.");
     }
 

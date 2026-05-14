@@ -670,12 +670,69 @@ public class Seeding implements Action {
             }
         }
 
+        // Collect seeded external_ids per entity type for INGEST push config
+        JSONObject externalIdsByType = new JSONObject();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT type, external_id FROM digital_twins WHERE external_id LIKE 'SEED_%' ORDER BY external_id")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String t = rs.getString("type");
+                    String e = rs.getString("external_id");
+                    if (!externalIdsByType.containsKey(t)) externalIdsByType.put(t, new JSONArray());
+                    ((JSONArray) externalIdsByType.get(t)).add(e);
+                }
+            }
+        }
+
+        // Register INGEST services and extend each service entry with ingest config
+        for (Object key : services.keySet()) {
+            String entityType      = (String) key;
+            JSONObject svc         = (JSONObject) services.get(key);
+            String svcName         = svc.containsKey("service_name") ? (String) svc.get("service_name") : entityType.toUpperCase() + "_SERVICE";
+            String ingestId        = "MOCK_" + svcName.toUpperCase().replaceAll("[^A-Z0-9_]", "_") + "_INGEST";
+            String ingestAuth      = "{\"header\":\"X-Ingest-Key\",\"secret\":\"ingest-demo\"}";
+
+            // Build stream_tmpl from field names: "Credit Bureau update for {external_id}: credit_score={credit_score}, ..."
+            JSONObject fields = objOf(svc, "fields");
+            StringBuilder tmpl = new StringBuilder(svcName).append(" update for {external_id}");
+            if (!fields.isEmpty()) {
+                tmpl.append(": ");
+                boolean first = true;
+                for (Object fk : fields.keySet()) {
+                    if (!first) tmpl.append(", ");
+                    first = false;
+                    tmpl.append(fk).append("={").append(fk).append("}");
+                }
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO service_registry (identifier, api_base_url, auth_config, service_type, entity_type, stream_tmpl, status) " +
+                    "VALUES (?, '', ?::jsonb, 'INGEST', ?, ?, 'Active') " +
+                    "ON CONFLICT (identifier) DO UPDATE SET " +
+                    "entity_type=EXCLUDED.entity_type, stream_tmpl=EXCLUDED.stream_tmpl, status='Active'")) {
+                ps.setString(1, ingestId);
+                ps.setString(2, ingestAuth);
+                ps.setString(3, entityType);
+                ps.setString(4, tmpl.toString());
+                ps.executeUpdate();
+            }
+
+            // Extend service entry in mock-data.json with ingest push config
+            svc.put("ingest_identifier",       ingestId);
+            svc.put("ingest_auth_header",       "X-Ingest-Key");
+            svc.put("ingest_auth_secret",       "ingest-demo");
+            svc.put("ingest_interval_seconds",  30L);
+            svc.put("external_ids", externalIdsByType.containsKey(entityType)
+                ? externalIdsByType.get(entityType) : new JSONArray());
+        }
+
         // Build full mock-data.json structure
         JSONObject mockConfig = new JSONObject();
-        mockConfig.put("port",        9090L);
-        mockConfig.put("auth_header", "X-Mock-Key");
-        mockConfig.put("auth_secret", "nexus-demo");
-        mockConfig.put("services",    services);
+        mockConfig.put("port",             9090L);
+        mockConfig.put("auth_header",      "X-Mock-Key");
+        mockConfig.put("auth_secret",      "nexus-demo");
+        mockConfig.put("nexus_ingest_url", "http://host.docker.internal:8080/api/ingest");
+        mockConfig.put("services",         services);
         return mockConfig;
     }
 
@@ -802,9 +859,11 @@ public class Seeding implements Action {
                 "Include 3-5 fields. Field types: text, email, number, date, select, textarea, checkbox.\n" +
                 "For select fields, include: \"options\":[{\"value\":\"v\",\"label\":\"Label\"}]\n" +
                 (prefillSection.isEmpty() ? "" : "For applicable fields, add \"prefill\":\"live.FIELD_KEY\".\n") +
+                "The stream_tmpl must use single-brace tokens matching field keys, e.g. \"{field_key} updated to {value}\".\n" +
                 "\nReturn ONLY valid JSON, no markdown:\n" +
                 "{\"forms\":[{\"schema_id\":\"" + type + "_update\",\"label\":\"" + type + " Update Form\"," +
                 "\"applies_to\":\"" + type + "\",\"action_type\":\"" + type.toUpperCase() + "_UPDATE\"," +
+                "\"stream_tmpl\":\"" + type + " record updated: name={name}\"," +
                 "\"fields\":[{\"key\":\"name\",\"label\":\"Full Name\",\"type\":\"text\",\"required\":true}]}]}";
 
             try {
@@ -819,14 +878,27 @@ public class Seeding implements Action {
                     JSONArray fields  = arrOf(f, "fields");
                     if (schemaId == null || schemaId.isBlank()) continue;
                     schemaId = stripSeedPrefix(schemaId).toLowerCase().replaceAll("[^a-z0-9_]", "_");
+
+                    // Build stream_tmpl: use LLM-generated one or derive from action_type + field keys
+                    String streamTmpl = f.containsKey("stream_tmpl") ? str(f, "stream_tmpl") : "";
+                    if (streamTmpl.isEmpty()) {
+                        StringBuilder sb = new StringBuilder(actionType.toLowerCase().replace('_', ' '));
+                        for (Object fo : fields) {
+                            String fk = str((JSONObject) fo, "key");
+                            if (!fk.isEmpty()) { sb.append(": ").append(fk).append("={").append(fk).append("}"); break; }
+                        }
+                        streamTmpl = sb.toString();
+                    }
+
                     try (PreparedStatement ps = conn.prepareStatement(
-                            "INSERT INTO interaction_schema (schema_id, label, applies_to, action_type, fields, is_active) " +
-                            "VALUES (?, ?, ?, ?, ?::jsonb, true) ON CONFLICT (schema_id) DO NOTHING")) {
+                            "INSERT INTO interaction_schema (schema_id, label, applies_to, action_type, fields, stream_tmpl, is_active) " +
+                            "VALUES (?, ?, ?, ?, ?::jsonb, ?, true) ON CONFLICT (schema_id) DO NOTHING")) {
                         ps.setString(1, schemaId);
                         ps.setString(2, label);
                         ps.setString(3, appliesTo);
                         ps.setString(4, actionType.toUpperCase());
                         ps.setString(5, fields.toJSONString());
+                        ps.setString(6, streamTmpl);
                         total += ps.executeUpdate();
                     }
                 }

@@ -1578,7 +1578,11 @@
                 inputEl = document.createElement('select');
                 inputEl.className = 'cap-select';
                 inputEl.innerHTML = `<option value="">Select…</option>` +
-                    (field.options || []).map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+                    (field.options || []).map(o => {
+                        const val = (o && typeof o === 'object') ? (o.value ?? o.label ?? '') : String(o);
+                        const lbl = (o && typeof o === 'object') ? (o.label ?? o.value ?? '') : String(o);
+                        return `<option value="${esc(val)}">${esc(lbl)}</option>`;
+                    }).join('');
             } else if (field.type === 'textarea') {
                 inputEl = document.createElement('textarea');
                 inputEl.className = 'cap-textarea';

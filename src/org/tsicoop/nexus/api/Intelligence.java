@@ -200,7 +200,7 @@ public class Intelligence {
                 "  \"schema_id\": \"UPPER_SNAKE_CASE_ID\",\n" +
                 "  \"label\": \"Human readable form title\",\n" +
                 "  \"action_type\": \"UPPER_SNAKE_CASE_EVENT_TYPE\",\n" +
-                "  \"stream_tmpl\": \"{{ actor }} performed action for {{ entity_id }}\",\n" +
+                "  \"stream_tmpl\": \"action recorded for {entity_id}: {field_key}={field_value}\",\n" +
                 "  \"fields\": [\n" +
                 "    { \"key\": \"field_key\", \"label\": \"Field Label\", \"type\": \"text|number|select|date|textarea|checkbox\", \"required\": true, \"hint\": \"optional hint\", \"options\": [\"only for select type\"], \"state_key\": \"optional_state_attr\" }\n" +
                 "  ],\n" +
