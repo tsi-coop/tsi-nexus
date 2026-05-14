@@ -1,8 +1,8 @@
 # TSI Nexus
 
-A sovereign institutional intelligence platform for small and medium enterprises. It gives any organisation a private "company brain" — a single system that stores every entity, relationship, rule, and interaction, and surfaces them through a natural language interface.
+A sovereign institutional intelligence platform for small and medium enterprises. It gives any organisation a private "company brain" - a single system that stores every entity, relationship, rule, and interaction, and surfaces them through a natural language interface.
 
-Zero sector-specific logic is hardcoded. Every domain concept — entity types, terminology, policies, commands, templates — lives in database rows configured by the deploying institution.
+Zero sector-specific logic is hardcoded. Every domain concept - entity types, terminology, policies, commands, templates - lives in database rows configured by the deploying institution.
 
 ---
 
@@ -103,10 +103,11 @@ docker compose up -d
 After seeding, download `mock-data.json` from the Seeding page and run the standalone mock server:
 
 ```bash
-java mock/MockServer.java
+javac mock/MockServer.java
+java -cp mock MockServer
 ```
 
-This starts a PULL server on port 9090 that serves synthetic data for every registered entity type, and a scheduled INGEST push thread that sends periodic state updates into Nexus — no real external systems needed for a full demo.
+This starts a PULL server on port 9090 that serves synthetic data for every registered entity type, and a scheduled INGEST push thread that sends periodic state updates into Nexus - no real external systems needed for a full demo.
 
 ---
 
@@ -128,9 +129,9 @@ See [`docs/integration-guide.md`](docs/integration-guide.md) for the full API co
 
 ```
 src/          Java source (Jakarta EE, no framework dependencies)
-web/          Frontend — admin UI and Liquid interface (plain HTML/JS)
-db/           init.sql — full schema, applied on first DB start
-mock/         MockServer.java — standalone mock PULL/INGEST server
+web/          Frontend - admin UI and Liquid interface (plain HTML/JS)
+db/           init.sql - full schema, applied on first DB start
+mock/         MockServer.java - standalone mock PULL/INGEST server
 docs/         architecture.md, integration-guide.md
 ```
 

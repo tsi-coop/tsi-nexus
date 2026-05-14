@@ -1,6 +1,6 @@
-# TSI Nexus — Third-Party Integration Guide
+# TSI Nexus - Third-Party Integration Guide
 
-TSI Nexus integrates with external systems through three patterns, each registered via the Admin UI → Service Registry. No provisioning APIs are required — the admin configures the integration, and your system implements the contract below.
+TSI Nexus integrates with external systems through three patterns, each registered via the Admin UI → Service Registry. No provisioning APIs are required, the admin configures the integration, and your system implements the contract below.
 
 ---
 
@@ -14,11 +14,11 @@ Every registered service has an `auth_config` that specifies a header name and s
 
 The header name and secret value are chosen by the admin at registration time. All three patterns use this same model.
 
-> **Security note**: `auth_config` secrets are stored as plain text in the database. For production deployments, restrict database access to the application server only — no direct external access, no shared credentials. Rotate secrets by updating the service registry entry and redeploying the external system simultaneously.
+> **Security note**: `auth_config` secrets are stored as plain text in the database. For production deployments, restrict database access to the application server only, no direct external access, no shared credentials. Rotate secrets by updating the service registry entry and redeploying the external system simultaneously.
 
 ---
 
-## PULL — Enrich entity context at read time
+## PULL - Enrich entity context at read time
 
 **Direction**: Nexus → your system  
 **When**: every time a user opens an entity in the Liquid interface
@@ -48,17 +48,17 @@ These fields become available in Context Card templates as `{{ entity.live.credi
 |---|---|
 | Service Type | `PULL` |
 | Entity Type | the entity type this enriches, e.g. `member` |
-| Base URL | `https://your-api.example.com/member` — Nexus appends `/{externalId}` |
+| Base URL | `https://your-api.example.com/member` - Nexus appends `/{externalId}` |
 | Auth Config | `{"header":"X-API-Key","secret":"your-secret"}` |
 
 **Notes:**
-- 2-second connect + read timeout — respond quickly or Nexus skips live data for that load
+- 2-second connect + read timeout, respond quickly or Nexus skips live data for that load
 - Multiple PULL services can be registered for the same entity type; responses are merged
 - HTTP 4xx/5xx are silently skipped
 
 ---
 
-## PUSH — Receive action notifications
+## PUSH - Receive action notifications
 
 **Direction**: Nexus → your system  
 **When**: after a form submission is committed, in a background thread
@@ -87,13 +87,13 @@ X-Webhook-Secret: your-secret
 | Auth Config | `{"header":"X-Webhook-Secret","secret":"your-secret"}` |
 
 **Notes:**
-- Fired asynchronously — your endpoint does not block the user
-- No retries on failure — make your endpoint idempotent
+- Fired asynchronously, your endpoint does not block the user
+- No retries on failure, make your endpoint idempotent
 - Respond with any 2xx to acknowledge
 
 ---
 
-## INGEST — Push state updates into Nexus
+## INGEST - Push state updates into Nexus
 
 **Direction**: your system → Nexus  
 **When**: whenever your system has fresh data to write into an entity's state
@@ -119,7 +119,7 @@ X-Ingest-Key: your-secret
 | Field | Required | Description |
 |---|---|---|
 | `identifier` | yes | Matches the `Identifier` of your registered INGEST service (uppercase) |
-| `external_id` | yes | The entity to update — must exist in Nexus |
+| `external_id` | yes | The entity to update, must exist in Nexus |
 | `data` | yes | Flat key/value pairs merged into the entity's state (existing keys updated, new keys added, missing keys untouched) |
 
 **Success response:**
@@ -150,9 +150,9 @@ X-Ingest-Key: your-secret
 | Field | Value |
 |---|---|
 | Service Type | `INGEST` |
-| Identifier | your source name, e.g. `CREDIT_BUREAU` — must match `identifier` in your POST body |
+| Identifier | your source name, e.g. `CREDIT_BUREAU` - must match `identifier` in your POST body |
 | Auth Config | `{"header":"X-Ingest-Key","secret":"your-secret"}` |
-| Stream Template | *(optional)* token template for the activity log, e.g. `Credit Bureau update for {external_id}: credit_score={credit_score}` — tokens use `{field_name}` matching keys in `data` |
+| Stream Template | *(optional)* token template for the activity log, e.g. `Credit Bureau update for {external_id}: credit_score={credit_score}`, tokens use `{field_name}` matching keys in `data` |
 
 ### Viewing ingest history
 
@@ -181,15 +181,16 @@ Omit `identifier` to return recent events across all registered INGEST sources.
 
 ## Mock integration for development
 
-The repository includes `mock/MockServer.java` — a standalone server that simulates all three patterns for local development and demos:
+The repository includes `mock/MockServer.java` - a standalone server that simulates all three patterns for local development and demos:
 
 - **PULL**: serves deterministic synthetic data for every registered entity type
 - **INGEST**: periodically pushes synthetic state updates into a running Nexus instance
 
 Download `mock-data.json` from the Seeding page after seeding your instance, place it in `mock/`, and run:
 
-```
-java mock/MockServer.java
+```bash
+javac mock/MockServer.java
+java -cp mock MockServer
 ```
 
 The server logs each INGEST push and its HTTP response code so you can verify the end-to-end flow without a real external system.

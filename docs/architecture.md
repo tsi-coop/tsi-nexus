@@ -1,12 +1,3 @@
----
-name: project-architecture
-description: "Full TSI Nexus architecture — platform philosophy, component design, service registry patterns, seeder pipeline, LLM integration, and core design principles"
-metadata: 
-  node_type: memory
-  type: project
-  originSessionId: fff8411a-5b7e-4354-bbcf-a3844e94c7a0
----
-
 # TSI Nexus - Core Architecture
 
 ## Platform Philosophy
@@ -85,9 +76,9 @@ Three integration types (see detailed section below).
 **History**: `GET /api/ingest?identifier=<SOURCE>&limit=N` returns recent ingest events from `interaction_stream` for that source. Omit `identifier` to return all ingest events across all registered INGEST sources.
 
 **Config**: `service_registry` rows with `service_type='INGEST'`:
-- `identifier` — source name, e.g. `MOCK_CREDIT_BUREAU_INGEST`
-- `auth_config` JSONB `{"header": "X-Ingest-Key", "secret": "..."}` — validated on every POST
-- `stream_tmpl` — token template for the stream entry, e.g. `"Credit Bureau update for {external_id}: credit_score={credit_score}"`. Tokens: `{external_id}` and any `{field_name}` from the data payload. Falls back to ad-hoc `key=value` format if empty.
+- `identifier` - source name, e.g. `MOCK_CREDIT_BUREAU_INGEST`
+- `auth_config` JSONB `{"header": "X-Ingest-Key", "secret": "..."}` - validated on every POST
+- `stream_tmpl` - token template for the stream entry, e.g. `"Credit Bureau update for {external_id}: credit_score={credit_score}"`. Tokens: `{external_id}` and any `{field_name}` from the data payload. Falls back to ad-hoc `key=value` format if empty.
 
 **POST response shape**:
 ```json
@@ -153,18 +144,18 @@ Step 4 produces:
 ### MockServer (external, lives in repo)
 `mock/MockServer.java` - standalone single-file Java app (no WAR dependency):
 - **PULL mode** (always on): Serves `GET /{entityType}/{externalId}` with stable pseudo-random values (`new Random(externalId.hashCode())`)
-- **INGEST push mode** (when `nexus_ingest_url` present): Scheduled thread per entity type — every `ingest_interval_seconds` picks a random `external_id`, generates synthetic field values, POSTs to Nexus `/api/ingest`. Uses varied RNG (`externalId.hashCode() ^ currentTimeMillis`) so each push produces different values.
+- **INGEST push mode** (when `nexus_ingest_url` present): Scheduled thread per entity type, every `ingest_interval_seconds` picks a random `external_id`, generates synthetic field values, POSTs to Nexus `/api/ingest`. Uses varied RNG (`externalId.hashCode() ^ currentTimeMillis`) so each push produces different values.
 - Auth header validation on PULL requests
-- Run: `java mock/MockServer.java` (JDK 11+ source launcher, zero external deps)
+- Compile and run: `javac mock/MockServer.java && java -cp mock MockServer`
 - Startup log shows both PULL routes and INGEST push schedules
 
 ### Admin demo flow after seeding
 1. Run seeding with domain context
 2. Download mock config from seeding page
 3. Place in `mock/`, run `java mock/MockServer.java`
-4. PULL services already registered — Liquid shows `{{ entity.live.* }}` immediately
-5. INGEST push thread starts automatically — every 30s terminal shows `[INGEST] ... HTTP 200`
-6. `GET /api/ingest` — ingest history stream; entity context cards show real-time external updates
+4. PULL services already registered, Liquid shows `{{ entity.live.* }}` immediately
+5. INGEST push thread starts automatically, every 30s terminal shows `[INGEST] ... HTTP 200`
+6. `GET /api/ingest` - ingest history stream; entity context cards show real-time external updates
 
 ---
 
