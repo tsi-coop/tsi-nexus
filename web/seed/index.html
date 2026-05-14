@@ -625,7 +625,7 @@ async function startSeeding() {
             })
         });
         const d = await r.json();
-        if (!d.success) throw new Error(d.error || d.message || 'Generation failed');
+        if (!d.success) throw new Error(d.message || d.error || 'Generation failed');
 
         log.textContent += d.log || '';
         log.textContent += '\n✓ Bootstrap complete.';
