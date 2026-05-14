@@ -1,7 +1,7 @@
-# TSI Nexus — Intelligence API: Client SDK Guide
+# TSI Nexus - Intelligence API: Client SDK Guide
 
 Headless access to the institutional brain. Any application, script, or AI agent
-can query TSI Nexus directly using API key authentication — no browser required.
+can query TSI Nexus directly using API key authentication, no browser required.
 
 ---
 
@@ -33,7 +33,7 @@ Content-Type: application/json
 }
 ```
 
-**Response** — the secret is returned **once and never stored in plaintext**; save it immediately.
+**Response** - the secret is returned **once and never stored in plaintext**; save it immediately.
 ```json
 {
   "success": true,
@@ -57,7 +57,7 @@ Request only the scopes your app needs.
 
 ## Endpoints
 
-### 1. Resolve Intent — `POST /api/intent`
+### 1. Resolve Intent - `POST /api/intent`
 
 **Scope:** `intent:read`
 
@@ -98,7 +98,7 @@ Or with an explicit command:
 }
 ```
 
-**Disambiguation** — when multiple entities match, the engine returns a disambiguation card instead of guessing:
+**Disambiguation** - when multiple entities match, the engine returns a disambiguation card instead of guessing:
 ```json
 {
   "success": true,
@@ -113,7 +113,7 @@ Or with an explicit command:
 
 ---
 
-### 2. Get Entity Context — `POST /api/context`
+### 2. Get Entity Context - `POST /api/context`
 
 **Scope:** `context:read`
 
@@ -128,7 +128,7 @@ merges live data from any registered PULL services for that entity type.
 }
 ```
 
-The `@` prefix is optional — both `"@ramesh_mk_03"` and `"ramesh_mk_03"` are accepted.
+The `@` prefix is optional, both `"@ramesh_mk_03"` and `"ramesh_mk_03"` are accepted.
 
 **Response**
 ```json
@@ -163,7 +163,7 @@ The `@` prefix is optional — both `"@ramesh_mk_03"` and `"ramesh_mk_03"` are a
 
 ---
 
-### 3. Check Governance — `POST /api/governance`
+### 3. Check Governance - `POST /api/governance`
 
 **Scope:** `governance:read`
 
@@ -196,7 +196,7 @@ instead of mutating state.
 }
 ```
 
-**Response — passed**
+**Response - passed**
 ```json
 {
   "success": true,
@@ -204,7 +204,7 @@ instead of mutating state.
 }
 ```
 
-**Response — blocked**
+**Response - blocked**
 ```json
 {
   "success": false,
@@ -232,11 +232,11 @@ instead of mutating state.
 
 ---
 
-### 4. Interaction Capture — `GET /api/capture` and `POST /api/capture`
+### 4. Interaction Capture - `GET /api/capture` and `POST /api/capture`
 
 **Scope:** `capture:write`
 
-#### GET — fetch applicable schemas for an entity
+#### GET - fetch applicable schemas for an entity
 
 Returns all active `interaction_schema` rows that apply to the entity's type.
 Use this to discover what interactions can be recorded before submitting one.
@@ -288,7 +288,7 @@ GET /api/capture?external_id=@ramesh_mk_03&schema_id=kyc_verification
 }
 ```
 
-#### POST — submit a capture form
+#### POST - submit a capture form
 
 **Request**
 ```json
@@ -302,7 +302,7 @@ GET /api/capture?external_id=@ramesh_mk_03&schema_id=kyc_verification
 }
 ```
 
-**Response — success**
+**Response - success**
 ```json
 {
   "success": true,
@@ -311,7 +311,7 @@ GET /api/capture?external_id=@ramesh_mk_03&schema_id=kyc_verification
 }
 ```
 
-**Response — validation or policy failure**
+**Response - validation or policy failure**
 ```json
 {
   "success": false,
@@ -325,7 +325,7 @@ GET /api/capture?external_id=@ramesh_mk_03&schema_id=kyc_verification
 
 ---
 
-### 5. List Entity Types — `GET /api/entities`
+### 5. List Entity Types - `GET /api/entities`
 
 **Scope:** `context:read`
 
@@ -380,7 +380,7 @@ No body, no query parameters.
 
 ---
 
-### 6. Graph — `GET /api/graph`
+### 6. Graph - `GET /api/graph`
 
 **Scope:** `context:read`
 
@@ -513,4 +513,4 @@ Use it to administer registered apps.
 | Delete | `POST` `{ "action":"delete", "app_id":"<uuid>" }` |
 
 Rotating a secret invalidates the previous one immediately. The new secret is
-returned once and never stored in plaintext — same as creation.
+returned once and never stored in plaintext, same as creation.
