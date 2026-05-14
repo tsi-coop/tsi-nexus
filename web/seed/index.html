@@ -24,6 +24,14 @@
         .input-focus:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(99,102,241,0.1); outline: none; }
         input[type=range] { accent-color: var(--accent); }
         #logPanel { background: #0f172a; color: #94a3b8; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+        .phase-row { transition: background .3s, color .3s; border-radius: 10px; }
+        .phase-row.ph-active { background: #eef2ff; }
+        .phase-row.ph-active .phase-lbl { color: #4f46e5; font-weight: 700; }
+        .phase-row.ph-active .phase-dot { background: #818cf8; animation: pulse-dot 1.2s ease-in-out infinite; }
+        .phase-row.ph-done .phase-dot { background: #34d399; }
+        .phase-row.ph-done .phase-lbl { color: #334155; }
+        .phase-row.ph-done .phase-cnt { color: #6366f1; font-weight: 800; }
+        @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(1.4); } }
         .btn-primary { background: #020617; color: white; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
         .btn-primary:hover:not(:disabled) { background: #0f172a; transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(15,23,42,0.3); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -228,6 +236,61 @@
 
         <!-- Terminal log -->
         <div id="logPanel" class="hidden px-6 py-5 min-h-32 max-h-56 overflow-y-auto border-t border-slate-900 text-xs"></div>
+
+        <!-- Pipeline progress (shown during async seeding) -->
+        <div id="progressPanel" class="hidden px-6 py-4 border-t border-slate-100 bg-slate-50">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Building your institution…</p>
+            <div class="space-y-0.5">
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-twins">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">1/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Digital twins</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-relationships">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">2/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Relationships</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-interactions">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">3/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Interaction history</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-mock_services">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">4/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Mock services</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-templates">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">5/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Context cards</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-forms">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">6/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Input manifests</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-commands">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">7/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Commands & guardrails</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+                <div class="phase-row flex items-center gap-3 px-3 py-1.5" id="phase-row-policies">
+                    <span class="text-[9px] font-black text-slate-300 w-7 shrink-0">8/8</span>
+                    <span class="phase-lbl text-[10px] font-medium text-slate-400 flex-1">Policy manifests</span>
+                    <span class="phase-cnt text-[9px] text-slate-300 w-8 text-right">—</span>
+                    <span class="phase-dot w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0"></span>
+                </div>
+            </div>
+        </div>
 
         <!-- Success state -->
         <div id="successPanel" class="hidden px-12 pb-12">
@@ -588,6 +651,18 @@ function collectPayload() {
     return { context, flavor, edgePct, generate, entity_types, entity_counts, commands };
 }
 
+/* ── Seed pipeline phase definitions ───────────────────────────────── */
+const PHASES = [
+    { key: 'twins',         step: '[1/8]', field: 'twins_seeded',         label: 'Digital twins' },
+    { key: 'relationships', step: '[2/8]', field: 'relationships_seeded', label: 'Relationships' },
+    { key: 'interactions',  step: '[3/8]', field: 'interactions_seeded',  label: 'Interaction history' },
+    { key: 'mock_services', step: '[4/8]', field: null,                   label: 'Mock services' },
+    { key: 'templates',     step: '[5/8]', field: 'templates_seeded',     label: 'Context cards' },
+    { key: 'forms',         step: '[6/8]', field: 'forms_seeded',         label: 'Input manifests' },
+    { key: 'commands',      step: '[7/8]', field: 'commands_seeded',      label: 'Commands & guardrails' },
+    { key: 'policies',      step: '[8/8]', field: 'policies_seeded',      label: 'Policy manifests' },
+];
+
 /* ── Start seeding ──────────────────────────────────────────────────── */
 async function startSeeding() {
     const { context, flavor, edgePct, generate, entity_types, entity_counts, commands } = collectPayload();
@@ -598,15 +673,17 @@ async function startSeeding() {
 
     document.getElementById('feedback').classList.add('hidden');
 
-    const btn     = document.getElementById('seedBtn');
-    const log     = document.getElementById('logPanel');
-    const success = document.getElementById('successPanel');
+    const btn      = document.getElementById('seedBtn');
+    const log      = document.getElementById('logPanel');
+    const progress = document.getElementById('progressPanel');
+    const success  = document.getElementById('successPanel');
 
     btn.disabled = true;
     btn.textContent = 'MATERIALISING INSTITUTION…';
     log.classList.remove('hidden');
+    progress.classList.add('hidden');
     success.classList.add('hidden');
-    log.textContent = 'Transmitting institutional DNA to AI engine…\nThis may take 30–90 seconds.\n\n';
+    log.textContent = 'Transmitting institutional DNA to AI engine…\n';
     log.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     try {
@@ -614,47 +691,95 @@ async function startSeeding() {
             method: 'POST',
             headers: hdrs(),
             body: JSON.stringify({
-                action:           'start',
-                industry_context: context,
-                data_flavor:      flavor,
-                entity_types,
-                entity_counts,
-                edge_pct:         edgePct,
-                generate,
-                commands
+                action: 'start', industry_context: context, data_flavor: flavor,
+                entity_types, entity_counts, edge_pct: edgePct, generate, commands
             })
         });
         const d = await r.json();
         if (!d.success) throw new Error(d.message || d.error || 'Generation failed');
 
-        log.textContent += d.log || '';
+        // Show progress panel, hide rows for phases not selected
+        PHASES.forEach(p => {
+            const row = document.getElementById('phase-row-' + p.key);
+            if (row) row.classList.toggle('hidden', !generate.includes(p.key));
+        });
+        progress.classList.remove('hidden');
+        progress.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        const final = await pollUntilDone(d.session_id, log);
+        progress.classList.add('hidden');
+
         log.textContent += '\n✓ Bootstrap complete.';
 
-        document.getElementById('res-twins').textContent         = d.twins_seeded         ?? 0;
-        document.getElementById('res-relationships').textContent = d.relationships_seeded ?? 0;
-        document.getElementById('res-interactions').textContent  = d.interactions_seeded  ?? 0;
-        document.getElementById('res-templates').textContent     = d.templates_seeded     ?? 0;
-        document.getElementById('res-forms').textContent         = d.forms_seeded         ?? 0;
-        document.getElementById('res-policies').textContent      = d.policies_seeded      ?? 0;
-        document.getElementById('res-commands').textContent      = d.commands_seeded      ?? 0;
+        document.getElementById('res-twins').textContent         = final.twins_seeded         ?? 0;
+        document.getElementById('res-relationships').textContent = final.relationships_seeded ?? 0;
+        document.getElementById('res-interactions').textContent  = final.interactions_seeded  ?? 0;
+        document.getElementById('res-templates').textContent     = final.templates_seeded     ?? 0;
+        document.getElementById('res-forms').textContent         = final.forms_seeded         ?? 0;
+        document.getElementById('res-policies').textContent      = final.policies_seeded      ?? 0;
+        document.getElementById('res-commands').textContent      = final.commands_seeded      ?? 0;
 
-        if (d.mock_services > 0 && d.session_id) {
-            document.getElementById('res-services').textContent = d.mock_services;
+        if (final.has_mock_data) {
+            document.getElementById('res-services').textContent = '✓';
             document.getElementById('mockDownloadLink').href = '/api/seeding?format=mock&session_id=' + d.session_id;
             document.getElementById('mockPanel').classList.remove('hidden');
         }
 
         await loadScenarios();
-
         document.getElementById('formSection').classList.add('hidden');
         success.classList.remove('hidden');
         success.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     } catch(e) {
+        document.getElementById('progressPanel').classList.add('hidden');
         log.textContent += '\n[ERROR] ' + e.message;
         showFeedback(e.message, 'error');
         btn.disabled = false;
         btn.textContent = 'BOOTSTRAP INSTITUTION';
+    }
+}
+
+async function pollUntilDone(sessionId, log) {
+    let lastPhase = null;
+
+    while (true) {
+        await new Promise(r => setTimeout(r, 3000));
+        let s;
+        try {
+            const r = await fetch('/api/seeding?session_id=' + sessionId, { headers: hdrs() });
+            s = await r.json();
+        } catch (_) { continue; }
+
+        if (s.current_phase && s.current_phase !== lastPhase) {
+            log.textContent += s.current_phase + '\n';
+            log.scrollTop = log.scrollHeight;
+            lastPhase = s.current_phase;
+        }
+
+        const activeIdx = PHASES.findIndex(p => s.current_phase?.startsWith(p.step));
+
+        PHASES.forEach((p, i) => {
+            const row = document.getElementById('phase-row-' + p.key);
+            if (!row || row.classList.contains('hidden')) return;
+
+            const count   = p.field ? (s[p.field] || 0) : 0;
+            const isActive = i === activeIdx;
+            const isDone   = (p.field && count > 0) || activeIdx > i || s.status === 'complete';
+
+            row.classList.remove('ph-active', 'ph-done');
+            const cnt = row.querySelector('.phase-cnt');
+            if (isDone) {
+                row.classList.add('ph-done');
+                if (p.field && count > 0) cnt.textContent = count;
+                else if (!p.field && isDone) cnt.textContent = '✓';
+            } else if (isActive) {
+                row.classList.add('ph-active');
+                cnt.textContent = '…';
+            }
+        });
+
+        if (s.status === 'complete') return s;
+        if (s.status === 'failed')  throw new Error(s.error_message || 'Seed failed');
     }
 }
 

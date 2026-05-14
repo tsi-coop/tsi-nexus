@@ -151,6 +151,7 @@ CREATE TABLE seeding_sessions (
     entity_types JSONB,
     edge_cases_pct INTEGER DEFAULT 5,
     status TEXT DEFAULT 'running',
+    current_phase TEXT DEFAULT NULL,
     twins_seeded INTEGER DEFAULT 0,
     relationships_seeded INTEGER DEFAULT 0,
     interactions_seeded INTEGER DEFAULT 0,

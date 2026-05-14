@@ -17,10 +17,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * GET  /api/seeding                 → stats, entity types, session history
+ * GET  /api/seeding                            → stats, entity types, session history
+ * GET  /api/seeding?session_id=<uuid>          → lightweight status poll for async seeding
+ * GET  /api/seeding?format=mock[&session_id=]  → download mock-data.json
  * POST /api/seeding { action }
  *   action=suggest_types — AI-suggested entity types from institutional context
- *   action=start         — run full synthesis from institutional DNA
+ *   action=start         — kick off async synthesis; returns session_id immediately
  *   action=clear         — delete seeded twins and generated configuration
  *   action=expand        — natural-language expansion of existing seeded data
  */
@@ -46,6 +48,14 @@ public class Seeding implements Action {
         try {
             pool = new PoolDB();
             conn = pool.getConnection();
+
+            // Lightweight status poll for an in-progress or completed session
+            String format       = req.getParameter("format");
+            String sessionParam = req.getParameter("session_id");
+            if (sessionParam != null && !"mock".equals(format)) {
+                getSessionStatus(conn, sessionParam, res);
+                return;
+            }
 
             // Entity types currently in the graph
             JSONArray entityTypes = new JSONArray();
@@ -97,10 +107,8 @@ public class Seeding implements Action {
             }
 
             // Mock config download: GET /api/seeding?format=mock[&session_id=xxx]
-            String format    = req.getParameter("format");
-            String dlSession = req.getParameter("session_id");
             if ("mock".equals(format)) {
-                downloadMockConfig(conn, req, res, dlSession); // null = latest session
+                downloadMockConfig(conn, req, res, sessionParam);
                 return;
             }
 
@@ -252,97 +260,152 @@ public class Seeding implements Action {
             }
         }
 
-        int twinsSeeded = 0, relationshipsSeeded = 0, interactionsSeeded = 0,
-            templatesSeeded = 0, formsSeeded = 0, commandsSeeded = 0, policiesSeeded = 0;
-        List<String[]> twinList = new ArrayList<>();
-        JSONObject mockConfig = new JSONObject();
-        JSONArray commandsPayload = arrOf(body, "commands");
-        StringBuilder log = new StringBuilder();
+        // Return immediately; the pipeline runs in a background thread
+        JSONObject ack = new JSONObject();
+        ack.put("success",    true);
+        ack.put("session_id", sessionId);
+        ack.put("async",      true);
+        OutputProcessor.send(res, 200, ack);
 
-        try {
-            if (generate.contains("twins")) {
-                log.append("[1/8] Generating digital twins...\n");
-                twinList = generateTwins(conn, context, flavor, types, counts, edgePct);
-                twinsSeeded = twinList.size();
-                log.append("      → ").append(twinsSeeded).append(" twins created\n");
-            }
-            if (generate.contains("relationships") && !twinList.isEmpty()) {
-                log.append("[2/8] Generating context relationships...\n");
-                relationshipsSeeded = generateRelationships(conn, context, flavor, twinList);
-                log.append("      → ").append(relationshipsSeeded).append(" relationships created\n");
-            }
-            if (generate.contains("interactions") && !twinList.isEmpty()) {
-                log.append("[3/8] Generating interaction history...\n");
-                interactionsSeeded = generateInteractions(conn, context, flavor, twinList, edgePct);
-                log.append("      → ").append(interactionsSeeded).append(" interactions created\n");
-            }
-            if (generate.contains("mock_services")) {
-                log.append("[4/8] Generating mock service config...\n");
-                mockConfig = generateMockServices(conn, context, flavor, types);
-                JSONObject svcs = objOf(mockConfig, "services");
-                log.append("      → ").append(svcs.size()).append(" services configured\n");
-            }
-            if (generate.contains("templates")) {
-                log.append("[5/8] Generating context cards...\n");
-                templatesSeeded = generateTemplates(conn, context, flavor, types, mockConfig);
-                log.append("      → ").append(templatesSeeded).append(" templates created\n");
-            }
-            if (generate.contains("forms")) {
-                log.append("[6/8] Generating input manifests...\n");
-                formsSeeded = generateForms(conn, context, flavor, types, mockConfig);
-                log.append("      → ").append(formsSeeded).append(" forms created\n");
-            }
-            if (generate.contains("commands")) {
-                log.append("[7/8] Generating commands & guardrails...\n");
-                commandsSeeded = generateCommands(conn, context, flavor, types, commandsPayload);
-                log.append("      → ").append(commandsSeeded).append(" commands created\n");
-            }
-            if (generate.contains("policies")) {
-                log.append("[8/8] Generating additional policy manifests...\n");
-                policiesSeeded = generatePolicies(conn, context, flavor, types);
-                log.append("      → ").append(policiesSeeded).append(" policies created\n");
-            }
+        // Capture effectively-final values for the thread
+        final String     fContext         = context.trim();
+        final String     fFlavor          = flavor != null ? flavor.trim() : "";
+        final JSONArray  fTypes           = types;
+        final JSONObject fCounts          = counts;
+        final int        fEdgePct         = edgePct;
+        final JSONArray  fGenerate        = generate;
+        final JSONArray  fCommandsPayload = arrOf(body, "commands");
+        final String     fSessionId       = sessionId;
 
-            String mockDataJson = mockConfig.isEmpty() ? null : mockConfig.toJSONString();
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE seeding_sessions SET status='complete', twins_seeded=?, relationships_seeded=?, interactions_seeded=?, " +
-                    "templates_seeded=?, forms_seeded=?, policies_seeded=?, commands_seeded=?, mock_data=?::jsonb, completed_at=now() WHERE session_id=?::uuid")) {
-                ps.setInt(1, twinsSeeded);
-                ps.setInt(2, relationshipsSeeded);
-                ps.setInt(3, interactionsSeeded);
-                ps.setInt(4, templatesSeeded);
-                ps.setInt(5, formsSeeded);
-                ps.setInt(6, policiesSeeded);
-                ps.setInt(7, commandsSeeded);
-                ps.setString(8, mockDataJson);
-                ps.setString(9, sessionId);
-                ps.executeUpdate();
-            }
+        new Thread(() -> {
+            PoolDB bgPool = null;
+            Connection bgConn = null;
+            try {
+                bgPool = new PoolDB();
+                bgConn = bgPool.getConnection();
 
-        } catch (Exception e) {
-            String errorMsg = e.getMessage() != null ? e.getMessage() : e.toString();
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE seeding_sessions SET status='failed', error_message=? WHERE session_id=?::uuid")) {
-                ps.setString(1, errorMsg);
-                ps.setString(2, sessionId);
-                ps.executeUpdate();
+                int twinsSeeded = 0, relationshipsSeeded = 0, interactionsSeeded = 0,
+                    templatesSeeded = 0, formsSeeded = 0, commandsSeeded = 0, policiesSeeded = 0;
+                List<String[]> twinList  = new ArrayList<>();
+                JSONObject     mockConfig = new JSONObject();
+
+                if (fGenerate.contains("twins")) {
+                    setCurrentPhase(bgConn, fSessionId, "[1/8] Generating digital twins...");
+                    twinList    = generateTwins(bgConn, fContext, fFlavor, fTypes, fCounts, fEdgePct);
+                    twinsSeeded = twinList.size();
+                    setCount(bgConn, fSessionId, "twins_seeded", twinsSeeded);
+                }
+                if (fGenerate.contains("relationships") && !twinList.isEmpty()) {
+                    setCurrentPhase(bgConn, fSessionId, "[2/8] Generating relationships...");
+                    relationshipsSeeded = generateRelationships(bgConn, fContext, fFlavor, twinList);
+                    setCount(bgConn, fSessionId, "relationships_seeded", relationshipsSeeded);
+                }
+                if (fGenerate.contains("interactions") && !twinList.isEmpty()) {
+                    setCurrentPhase(bgConn, fSessionId, "[3/8] Generating interaction history...");
+                    interactionsSeeded = generateInteractions(bgConn, fContext, fFlavor, twinList, fEdgePct);
+                    setCount(bgConn, fSessionId, "interactions_seeded", interactionsSeeded);
+                }
+                if (fGenerate.contains("mock_services")) {
+                    setCurrentPhase(bgConn, fSessionId, "[4/8] Generating mock service config...");
+                    mockConfig = generateMockServices(bgConn, fContext, fFlavor, fTypes);
+                }
+                if (fGenerate.contains("templates")) {
+                    setCurrentPhase(bgConn, fSessionId, "[5/8] Generating context cards...");
+                    templatesSeeded = generateTemplates(bgConn, fContext, fFlavor, fTypes, mockConfig);
+                    setCount(bgConn, fSessionId, "templates_seeded", templatesSeeded);
+                }
+                if (fGenerate.contains("forms")) {
+                    setCurrentPhase(bgConn, fSessionId, "[6/8] Generating input manifests...");
+                    formsSeeded = generateForms(bgConn, fContext, fFlavor, fTypes, mockConfig);
+                    setCount(bgConn, fSessionId, "forms_seeded", formsSeeded);
+                }
+                if (fGenerate.contains("commands")) {
+                    setCurrentPhase(bgConn, fSessionId, "[7/8] Generating commands & guardrails...");
+                    commandsSeeded = generateCommands(bgConn, fContext, fFlavor, fTypes, fCommandsPayload);
+                    setCount(bgConn, fSessionId, "commands_seeded", commandsSeeded);
+                }
+                if (fGenerate.contains("policies")) {
+                    setCurrentPhase(bgConn, fSessionId, "[8/8] Generating policy manifests...");
+                    policiesSeeded = generatePolicies(bgConn, fContext, fFlavor, fTypes);
+                    setCount(bgConn, fSessionId, "policies_seeded", policiesSeeded);
+                }
+
+                String mockDataJson = mockConfig.isEmpty() ? null : mockConfig.toJSONString();
+                try (PreparedStatement ps = bgConn.prepareStatement(
+                        "UPDATE seeding_sessions SET status='complete', current_phase=NULL, " +
+                        "mock_data=?::jsonb, completed_at=now() WHERE session_id=?::uuid")) {
+                    ps.setString(1, mockDataJson);
+                    ps.setString(2, fSessionId);
+                    ps.executeUpdate();
+                }
+
+            } catch (Exception e) {
+                String errorMsg = e.getMessage() != null ? e.getMessage() : e.toString();
+                if (bgConn != null) {
+                    try (PreparedStatement ps = bgConn.prepareStatement(
+                            "UPDATE seeding_sessions SET status='failed', error_message=? WHERE session_id=?::uuid")) {
+                        ps.setString(1, errorMsg);
+                        ps.setString(2, fSessionId);
+                        ps.executeUpdate();
+                    } catch (Exception ignored) {}
+                }
+            } finally {
+                if (bgPool != null) bgPool.cleanup(null, null, bgConn);
             }
-            throw e;
+        }).start();
+    }
+
+    /* ── async session helpers ─────────────────────────────────────────────── */
+
+    @SuppressWarnings("unchecked")
+    private void getSessionStatus(Connection conn, String sessionId, HttpServletResponse res) throws Exception {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT session_id::text, status, current_phase, " +
+                "twins_seeded, relationships_seeded, interactions_seeded, " +
+                "templates_seeded, forms_seeded, policies_seeded, commands_seeded, " +
+                "error_message, mock_data IS NOT NULL AS has_mock_data " +
+                "FROM seeding_sessions WHERE session_id = ?::uuid")) {
+            ps.setString(1, sessionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    OutputProcessor.errorResponse(res, 404, "Not found", "Session not found", "/api/seeding");
+                    return;
+                }
+                JSONObject s = new JSONObject();
+                s.put("success",              true);
+                s.put("session_id",           rs.getString("session_id"));
+                s.put("status",               rs.getString("status"));
+                s.put("current_phase",        rs.getString("current_phase"));
+                s.put("twins_seeded",         rs.getInt("twins_seeded"));
+                s.put("relationships_seeded", rs.getInt("relationships_seeded"));
+                s.put("interactions_seeded",  rs.getInt("interactions_seeded"));
+                s.put("templates_seeded",     rs.getInt("templates_seeded"));
+                s.put("forms_seeded",         rs.getInt("forms_seeded"));
+                s.put("policies_seeded",      rs.getInt("policies_seeded"));
+                s.put("commands_seeded",      rs.getInt("commands_seeded"));
+                s.put("error_message",        rs.getString("error_message"));
+                s.put("has_mock_data",        rs.getBoolean("has_mock_data"));
+                OutputProcessor.send(res, 200, s);
+            }
         }
+    }
 
-        JSONObject out = new JSONObject();
-        out.put("success",               true);
-        out.put("session_id",            sessionId);
-        out.put("twins_seeded",          twinsSeeded);
-        out.put("relationships_seeded",  relationshipsSeeded);
-        out.put("interactions_seeded",   interactionsSeeded);
-        out.put("templates_seeded",      templatesSeeded);
-        out.put("forms_seeded",          formsSeeded);
-        out.put("commands_seeded",       commandsSeeded);
-        out.put("policies_seeded",       policiesSeeded);
-        out.put("mock_services",         (long) objOf(mockConfig, "services").size());
-        out.put("log",                   log.toString());
-        OutputProcessor.send(res, 200, out);
+    private void setCurrentPhase(Connection conn, String sessionId, String phase) throws Exception {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE seeding_sessions SET current_phase=? WHERE session_id=?::uuid")) {
+            ps.setString(1, phase);
+            ps.setString(2, sessionId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void setCount(Connection conn, String sessionId, String field, int count) throws Exception {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE seeding_sessions SET " + field + "=? WHERE session_id=?::uuid")) {
+            ps.setInt(1, count);
+            ps.setString(2, sessionId);
+            ps.executeUpdate();
+        }
     }
 
     /* ── clear seeded data ─────────────────────────────────────────────── */
@@ -589,15 +652,21 @@ public class Seeding implements Action {
             (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
             "EDGE CASES: " + edgePct + "% should be problem / complaint / risk interactions\n\n" +
             "ENTITY IDs: " + twinList + "\n\n" +
-            "Generate 20-30 interaction entries. Each must reference one of the entity external_ids above.\n" +
-            "content: realistic text — field visit note, loan inquiry, meeting minute, complaint, or status update (1-3 sentences)\n" +
+            "Generate exactly 10 interaction entries. Each must reference one of the entity external_ids above.\n" +
+            "content: 1 sentence only — field visit note, loan inquiry, complaint, or status update\n" +
             "intent_mapped: snake_case label, e.g. field_visit, loan_inquiry, complaint, payment_made, " +
             "group_meeting, risk_flag, profile_update, kyc_check\n\n" +
-            "Return ONLY valid JSON, no markdown:\n" +
+            "Return ONLY valid JSON, no markdown, no explanation:\n" +
             "{\"interactions\":[{\"owner_external_id\":\"SEED_member_001\"," +
             "\"content\":\"...\",\"intent_mapped\":\"field_visit\"},...]}";
 
-        JSONObject generated = extractJson(callAI(prompt));
+        JSONObject generated;
+        try {
+            generated = extractJson(callAI(prompt));
+        } catch (Exception e) {
+            System.err.println("[Seeding] generateInteractions: AI response invalid, seeding 0 interactions. Cause: " + e.getMessage());
+            return 0;
+        }
         JSONArray  items     = arrOf(generated, "interactions");
 
         int count = 0;
@@ -1161,7 +1230,11 @@ public class Seeding implements Action {
         JSONObject     response = http.sendPost(VLLM_URL + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
         JSONArray      choices  = (JSONArray) response.get("choices");
         if (choices == null || choices.isEmpty()) throw new RuntimeException("AI returned no choices");
-        JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
+        JSONObject choice = (JSONObject) choices.get(0);
+        String finishReason = choice.containsKey("finish_reason") ? (String) choice.get("finish_reason") : null;
+        if ("length".equals(finishReason))
+            throw new RuntimeException("AI response truncated (finish_reason=length) — reduce prompt size or increase max_tokens");
+        JSONObject message = (JSONObject) choice.get("message");
         if (message == null) throw new RuntimeException("AI response missing message");
         String content = (String) message.get("content");
         return content != null ? content.trim() : "";
