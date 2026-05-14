@@ -27,6 +27,9 @@ public class OutputProcessor {
         errorNode.put("message", message);
         errorNode.put("path", path);
         try {
+            res.setContentType(MEDIA_TYPE_JSON);
+            res.setCharacterEncoding("UTF-8");
+            res.setStatus(status);
             out = res.getOutputStream();
             out.print(errorNode.toJSONString());
         } catch (Exception e) {

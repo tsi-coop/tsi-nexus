@@ -64,7 +64,7 @@ public class InterceptingFilter implements Filter {
                      validheader = InputProcessor.processClientHeader(req, res, requiredScope);
                  }
                  if(!validheader) {
-                     res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                     OutputProcessor.errorResponse(res, 401, "Unauthorized", "Invalid or missing API credentials", req.getRequestURI());
                  }else{
                      InputProcessor.processInput(req, res);
                      operation = strTok.nextToken();

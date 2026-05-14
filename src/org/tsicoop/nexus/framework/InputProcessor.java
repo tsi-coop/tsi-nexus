@@ -41,6 +41,11 @@ public class InputProcessor {
         }
     }
 
+    public static boolean isApiKeyRequest(HttpServletRequest req) {
+        JSONObject token = (JSONObject) req.getAttribute(AUTH_TOKEN);
+        return token != null && token.containsKey("app_id");
+    }
+
     public static boolean processAdminHeader(HttpServletRequest request, HttpServletResponse response) {
         boolean validheader = false;
         JSONObject authToken = null;

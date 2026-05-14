@@ -25,12 +25,18 @@ import java.util.UUID;
 public class Context implements Action {
 
     @Override
+    @SuppressWarnings("unchecked")
     public void post(HttpServletRequest req, HttpServletResponse res) {
         try {
             JSONObject input = InputProcessor.getInput(req);
             String externalId = (String) input.get("external_id");
             String cleanId = externalId.startsWith("@") ? externalId.substring(1) : externalId;
-            OutputProcessor.send(res, 200, assembleFullContext(cleanId));
+            JSONObject result = assembleFullContext(cleanId);
+            if (InputProcessor.isApiKeyRequest(req)) {
+                JSONObject ctx = (JSONObject) result.get("context");
+                if (ctx != null) ctx.remove("template_html");
+            }
+            OutputProcessor.send(res, 200, result);
         } catch (Exception e) {
             OutputProcessor.errorResponse(res, 500, "Context Retrieval Failed", e.getMessage(), req.getRequestURI());
         }

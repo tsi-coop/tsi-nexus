@@ -243,12 +243,10 @@
 <script>
 /* ── config ─────────────────────────────────────────────────────────── */
 const SCOPES = [
-    { key: 'DTWIN_READ',  label: 'Read Twins',      desc: 'Query digital twin state' },
-    { key: 'DTWIN_WRITE', label: 'Write Twins',      desc: 'Create & update twins' },
-    { key: 'STREAM_LOG',  label: 'Stream Log',       desc: 'Append interaction events' },
-    { key: 'GRAPH_READ',  label: 'Read Graph',       desc: 'Query relationship graph' },
-    { key: 'GRAPH_WRITE', label: 'Write Graph',      desc: 'Manage relationships' },
-    { key: 'GOVERNANCE',  label: 'Governance',       desc: 'Trigger policy enforcement' },
+    { key: 'intent:read',     label: 'Intent',      desc: 'Resolve natural language and commands' },
+    { key: 'context:read',    label: 'Context',     desc: 'Query entity state, graph, and history' },
+    { key: 'governance:read', label: 'Governance',  desc: 'Validate actions against policy guardrails' },
+    { key: 'capture:write',   label: 'Capture',     desc: 'Submit interaction capture forms' },
 ];
 
 let allApps = [];
