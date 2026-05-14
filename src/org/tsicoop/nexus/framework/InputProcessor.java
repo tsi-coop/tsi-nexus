@@ -135,6 +135,16 @@ public class InputProcessor {
         return role;
     }
 
+    public static String getTwinId(HttpServletRequest req){
+        JSONObject authToken = null;
+        try {
+            authToken = (JSONObject) req.getAttribute(InputProcessor.AUTH_TOKEN);
+            return authToken != null ? (String) authToken.get("twin_id") : null;
+        }catch(Exception e){
+            return null;
+        }
+    }
+
     public static String getAccountType(HttpServletRequest req){
         JSONObject authToken = null;
         String type = null;

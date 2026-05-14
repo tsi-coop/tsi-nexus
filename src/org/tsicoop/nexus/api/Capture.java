@@ -93,6 +93,10 @@ public class Capture implements Action {
             conn = pool.getConnection();
             conn.setAutoCommit(false);
 
+            String actorTwinId = InputProcessor.getTwinId(req);
+            UUID actorId = (actorTwinId != null && !actorTwinId.isBlank())
+                           ? UUID.fromString(actorTwinId) : null;
+
             // 1. Load the schema row
             JSONObject schema = loadSchema(conn, schemaId);
             if (schema == null) {
@@ -130,7 +134,7 @@ public class Capture implements Action {
             patchState(conn, externalId, statePatch);
 
             // 8. Append to interaction_stream
-            appendInteraction(conn, ownerId, streamEntry);
+            appendInteraction(conn, ownerId, actorId, streamEntry);
 
             conn.commit();
 
@@ -307,11 +311,12 @@ public class Capture implements Action {
         }
     }
 
-    private void appendInteraction(Connection conn, UUID ownerId, String content) throws Exception {
-        String sql = "INSERT INTO interaction_stream (owner_id, content, created_at) VALUES (?, ?, NOW())";
+    private void appendInteraction(Connection conn, UUID ownerId, UUID actorId, String content) throws Exception {
+        String sql = "INSERT INTO interaction_stream (owner_id, actor_id, content, created_at) VALUES (?, ?, ?, NOW())";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, ownerId);
-            ps.setString(2, content);
+            ps.setObject(2, actorId);
+            ps.setString(3, content);
             ps.executeUpdate();
         }
     }

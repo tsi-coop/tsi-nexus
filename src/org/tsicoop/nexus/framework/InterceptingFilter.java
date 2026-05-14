@@ -101,6 +101,11 @@ public class InterceptingFilter implements Filter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
+        try {
+            JWTUtil.validate();
+        } catch (IllegalStateException e) {
+            throw new ServletException(e.getMessage(), e);
+        }
         SystemConfig.loadProcessors(filterConfig.getServletContext());
         System.out.println("Loaded TSI Processor Config");
         SystemConfig.loadAppConfig(filterConfig.getServletContext());

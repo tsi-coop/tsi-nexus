@@ -53,7 +53,7 @@ Key variables:
 | `APP_PORT_MAP` | `8084:8080` | Host port mapping |
 | `DB_PORT_MAP` | `5436:5432` | Postgres port mapping |
 | `POSTGRES_PASSWD` | `secure_dev_password` | Change for production |
-| `TSI_NEXUS_JWT_SECRET` | *(dev default)* | Change for production |
+| `TSI_NEXUS_JWT_SECRET` | **Required** | Generate with `openssl rand -hex 32`. Container refuses to start without it. |
 
 ### 2. Build and run
 

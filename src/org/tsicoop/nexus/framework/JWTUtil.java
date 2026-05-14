@@ -20,10 +20,18 @@ public class JWTUtil {
 
     static {
         String envSecret = System.getenv("TSI_NEXUS_JWT_SECRET");
-        JWT_SECRET = (envSecret != null && envSecret.length() >= 32)
-                ? envSecret
-                : "tsi-nexus-default-dev-secret-key-256-bits-minimum!!";
-        SECRET_KEY = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
+        JWT_SECRET = (envSecret != null && !envSecret.isBlank()) ? envSecret : "";
+        SECRET_KEY = JWT_SECRET.length() >= 32
+                ? Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8))
+                : Keys.hmacShaKeyFor(new byte[32]); // placeholder — validate() blocks startup before any request
+    }
+
+    public static void validate() {
+        if (JWT_SECRET.isBlank() || JWT_SECRET.equals("REPLACE_WITH_YOUR_OWN_SECRET") || JWT_SECRET.length() < 32) {
+            throw new IllegalStateException(
+                "TSI_NEXUS_JWT_SECRET is not set or is too short (min 32 chars). " +
+                "Generate one with: openssl rand -hex 32");
+        }
     }
 
     public static String generateAppLoginToken(String email, String type, String username, String role, String state, String city) {

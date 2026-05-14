@@ -87,7 +87,7 @@ public class Context implements Action {
                 context.put("recent_interactions", fetchInteractionStream(conn, internalId));
 
                 String entityType = rs.getString("type");
-                String tplHtml = fetchTemplateForType(conn, entityType);
+                String tplHtml = fetchTemplateForType(conn, entityType, externalId);
                 if (tplHtml != null) context.put("template_html", tplHtml);
 
                 JSONObject live = callPullServices(conn, entityType, externalId);
@@ -127,12 +127,30 @@ public class Context implements Action {
         return logs;
     }
 
-    private String fetchTemplateForType(Connection conn, String entityType) {
-        String sql = "SELECT html_content FROM liquid_templates WHERE entity_type=? AND is_active=TRUE LIMIT 1";
+    private String fetchTemplateForType(Connection conn, String entityType, String externalId) {
+        // Conditioned templates first (most specific), unconditioned fallback last
+        String sql = "SELECT html_content, condition_sql FROM liquid_templates " +
+                     "WHERE entity_type=? AND is_active=TRUE " +
+                     "ORDER BY (condition_sql IS NOT NULL AND condition_sql <> '') DESC";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, entityType);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getString("html_content");
+                String fallback = null;
+                while (rs.next()) {
+                    String html      = rs.getString("html_content");
+                    String condition = rs.getString("condition_sql");
+                    if (condition == null || condition.isBlank()) {
+                        if (fallback == null) fallback = html;
+                        continue;
+                    }
+                    try (PreparedStatement cps = conn.prepareStatement(condition)) {
+                        cps.setString(1, externalId);
+                        try (ResultSet crs = cps.executeQuery()) {
+                            if (crs.next()) return html;
+                        }
+                    } catch (Exception ignore) {} // malformed condition_sql — skip
+                }
+                return fallback;
             }
         } catch (Exception ignore) {}
         return null;
