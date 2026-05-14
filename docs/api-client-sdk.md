@@ -447,8 +447,6 @@ All endpoints return a consistent error envelope.
 
 ## Code Examples
 
-### curl
-
 ```bash
 API_KEY="nxs_a3f9e1c2d4b07852a1f0e3c9d5b6f2a4"
 API_SECRET="9f3a1d8c2e5b047f3a2c1d9e6b4f0a7e3d2c1b9a8f7e6d5c4b3a291e0f8d7c6b"
@@ -468,119 +466,34 @@ curl -s -X POST "$BASE/api/context" \
   -H "Content-Type: application/json" \
   -d '{"external_id": "@ramesh_mk_03"}' | jq .
 
-# List entity types
-curl -s "$BASE/api/entities" \
+# Check a governance action (no new_data = policy check only, no mutation)
+curl -s -X POST "$BASE/api/governance" \
   -H "X-API-Key: $API_KEY" \
-  -H "X-API-Secret: $API_SECRET" | jq .
+  -H "X-API-Secret: $API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"action_type":"DISBURSE_LOAN","intent_raw":"/disburse @ramesh_mk_03 50000","params":{"target_external_id":"@ramesh_mk_03"}}' | jq .
 
 # Fetch capture schemas for an entity
 curl -s "$BASE/api/capture?external_id=@ramesh_mk_03" \
   -H "X-API-Key: $API_KEY" \
   -H "X-API-Secret: $API_SECRET" | jq .
-```
-
-### Python
-
-```python
-import requests
-
-BASE    = "https://nexus.tsi.org"
-HEADERS = {
-    "X-API-Key":    "nxs_a3f9e1c2d4b07852a1f0e3c9d5b6f2a4",
-    "X-API-Secret": "9f3a1d8c2e5b047f3a2c1d9e6b4f0a7e3d2c1b9a8f7e6d5c4b3a291e0f8d7c6b",
-    "Content-Type": "application/json",
-}
-
-# Resolve free-text intent
-r = requests.post(f"{BASE}/api/intent", json={"intent": "show Ramesh Kumar"}, headers=HEADERS)
-components = r.json()["components"]
-
-# Get full entity context
-r = requests.post(f"{BASE}/api/context", json={"external_id": "@ramesh_mk_03"}, headers=HEADERS)
-ctx = r.json()["context"]
-print(ctx["state"])           # current_state JSON string
-print(ctx["recent_interactions"])
-
-# Check a governance action (read-only — no new_data)
-r = requests.post(f"{BASE}/api/governance", json={
-    "action_type": "DISBURSE_LOAN",
-    "intent_raw":  "/disburse @ramesh_mk_03 50000",
-    "params": {"target_external_id": "@ramesh_mk_03"}
-}, headers=HEADERS)
-print(r.json())   # {"success": true/false, "message"/"reason": "..."}
 
 # Submit a capture interaction
-r = requests.post(f"{BASE}/api/capture", json={
-    "schema_id":   "kyc_verification",
-    "external_id": "@ramesh_mk_03",
-    "form_data": {
-        "id_type":   "Aadhaar",
-        "id_number": "987654321012"
-    }
-}, headers=HEADERS)
-print(r.json()["stream_entry"])
-```
+curl -s -X POST "$BASE/api/capture" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Secret: $API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"schema_id":"kyc_verification","external_id":"@ramesh_mk_03","form_data":{"id_type":"Aadhaar","id_number":"987654321012"}}' | jq .
 
-### JavaScript (Node.js / fetch)
+# List entity types
+curl -s "$BASE/api/entities" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Secret: $API_SECRET" | jq .
 
-```js
-const BASE    = "https://nexus.tsi.org";
-const HEADERS = {
-  "X-API-Key":    "nxs_a3f9e1c2d4b07852a1f0e3c9d5b6f2a4",
-  "X-API-Secret": "9f3a1d8c2e5b047f3a2c1d9e6b4f0a7e3d2c1b9a8f7e6d5c4b3a291e0f8d7c6b",
-  "Content-Type": "application/json",
-};
-
-const nexus = {
-  async intent(query) {
-    const r = await fetch(`${BASE}/api/intent`, {
-      method: "POST", headers: HEADERS,
-      body: JSON.stringify({ intent: query })
-    });
-    return r.json();
-  },
-
-  async context(externalId) {
-    const r = await fetch(`${BASE}/api/context`, {
-      method: "POST", headers: HEADERS,
-      body: JSON.stringify({ external_id: externalId })
-    });
-    return r.json();
-  },
-
-  async governance(actionType, params, intentRaw = "") {
-    const r = await fetch(`${BASE}/api/governance`, {
-      method: "POST", headers: HEADERS,
-      body: JSON.stringify({ action_type: actionType, intent_raw: intentRaw, params })
-    });
-    return r.json();
-  },
-
-  async captureSchemas(externalId) {
-    const r = await fetch(`${BASE}/api/capture?external_id=${externalId}`, { headers: HEADERS });
-    return r.json();
-  },
-
-  async capture(schemaId, externalId, formData) {
-    const r = await fetch(`${BASE}/api/capture`, {
-      method: "POST", headers: HEADERS,
-      body: JSON.stringify({ schema_id: schemaId, external_id: externalId, form_data: formData })
-    });
-    return r.json();
-  },
-
-  async entities() {
-    const r = await fetch(`${BASE}/api/entities`, { headers: HEADERS });
-    return r.json();
-  }
-};
-
-// Usage
-const { context } = await nexus.context("@ramesh_mk_03");
-console.log(JSON.parse(context.state));
-
-const check = await nexus.governance("DISBURSE_LOAN", { target_external_id: "@ramesh_mk_03" });
-if (!check.success) console.warn("Blocked:", check.reason);
+# Get graph schema
+curl -s "$BASE/api/graph" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Secret: $API_SECRET" | jq .
 ```
 
 ---

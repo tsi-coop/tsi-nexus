@@ -157,6 +157,8 @@ TSI Nexus integrates via three patterns registered in the Admin UI:
 
 See [`docs/integration-guide.md`](docs/integration-guide.md) for the full API contract, request/response examples, and registration instructions.
 
+For headless access to the intelligence API from external apps or AI agents, see [`docs/api-client-sdk.md`](docs/api-client-sdk.md).
+
 ---
 
 ## Project structure
@@ -166,7 +168,7 @@ src/          Java source (Jakarta EE, no framework dependencies)
 web/          Frontend - admin UI and Liquid interface (plain HTML/JS)
 db/           init.sql - full schema, applied on first DB start
 mock/         MockServer.java - standalone mock PULL/INGEST server
-docs/         architecture.md, integration-guide.md
+docs/         architecture.md, integration-guide.md, api-client-sdk.md
 ```
 
 ---
