@@ -62,14 +62,21 @@ mvn package -q
 docker compose up -d
 ```
 
-The app is available at `http://localhost:8084` (or whichever port you mapped).
+Once running, the platform is accessible at these URLs (default port `8084`):
+
+| Tool | URL | Purpose |
+|---|---|---|
+| Setup wizard | `http://localhost:8084/setup` | First-run account creation |
+| Seed tool | `http://localhost:8084/seed` | Bootstrap a demo institution |
+| Liquid interface | `http://localhost:8084/liquid` | End-user natural language search and forms |
+| Admin UI | `http://localhost:8084/admin` | Configure entities, templates, policies, and services |
 
 ### 3. First-time setup
 
-1. Open the app and complete the setup wizard to create your admin account
-2. Go to **Admin → Seeding** and fill in the four steps: institutional context, entity types, commands, and simulation parameters
+1. Open `http://localhost:8084/setup` and complete the wizard to create your admin account
+2. Open `http://localhost:8084/seed` and fill in the four steps: institutional context, entity types, commands, and simulation parameters
 3. The seeder generates entity types, sample data, context cards, forms, policies, and mock service integrations in one pass
-4. Open the **Liquid** interface and start exploring your entities
+4. Open `http://localhost:8084/liquid` and start exploring your entities
 
 Ready-to-use input values for common domains:
 
