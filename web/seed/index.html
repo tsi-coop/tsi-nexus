@@ -187,22 +187,22 @@
                             <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
                                 <input type="checkbox" id="gen-templates" checked class="w-3.5 h-3.5 accent-indigo-600">
                                 <div>
-                                    <p class="text-xs font-bold text-slate-700">Liquid Templates</p>
+                                    <p class="text-xs font-bold text-slate-700">Context Cards</p>
                                     <p class="text-[9px] text-slate-400">Profile UI cards per type</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-indigo-300 cursor-pointer transition-colors bg-slate-50">
                                 <input type="checkbox" id="gen-forms" checked class="w-3.5 h-3.5 accent-indigo-600">
                                 <div>
-                                    <p class="text-xs font-bold text-slate-700">Form Schemas</p>
+                                    <p class="text-xs font-bold text-slate-700">Input Manifests</p>
                                     <p class="text-[9px] text-slate-400">Data capture forms</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-rose-300 cursor-pointer transition-colors bg-slate-50">
                                 <input type="checkbox" id="gen-policies" checked class="w-3.5 h-3.5 accent-indigo-600">
                                 <div>
-                                    <p class="text-xs font-bold text-slate-700">Policy Manifest</p>
-                                    <p class="text-[9px] text-slate-400">Governance guardrails</p>
+                                    <p class="text-xs font-bold text-slate-700">Guardrails</p>
+                                    <p class="text-[9px] text-slate-400">Governance rules</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-slate-200 hover:border-teal-300 cursor-pointer transition-colors bg-slate-50">
@@ -276,7 +276,7 @@
                 <div>
                     <p class="text-[8px] font-black text-cyan-600 uppercase tracking-widest mb-1">Mock Service Registry</p>
                     <p class="text-xs font-bold text-slate-800"><span id="res-services">0</span> external service(s) registered as PULL sources</p>
-                    <p class="text-[9px] text-slate-400 mt-1">Place <code class="bg-cyan-100 px-1 rounded">mock-data.json</code> in <code class="bg-cyan-100 px-1 rounded">mock/</code> and run <code class="bg-cyan-100 px-1 rounded">java mock/MockServer.java</code></p>
+                    <p class="text-[9px] text-slate-400 mt-1">Place <code class="bg-cyan-100 px-1 rounded">mock-data.json</code> in <code class="bg-cyan-100 px-1 rounded">mock/</code> and run <code class="bg-cyan-100 px-1 rounded">javac mock/MockServer.java &amp;&amp; java -cp mock MockServer</code></p>
                 </div>
                 <a id="mockDownloadLink" href="#" download="mock-data.json"
                    class="shrink-0 flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl transition-colors">
@@ -317,8 +317,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
                     </div>
                     <div>
-                        <p class="text-xs font-bold text-slate-800">Liquid Templates</p>
-                        <p class="text-[9px] text-slate-400">Review generated UI cards</p>
+                        <p class="text-xs font-bold text-slate-800">Context Cards</p>
+                        <p class="text-[9px] text-slate-400">Review generated context cards</p>
                     </div>
                 </a>
                 <a href="admin/form_builder.html" class="flex items-center gap-3 px-5 py-4 rounded-2xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors">
@@ -326,8 +326,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </div>
                     <div>
-                        <p class="text-xs font-bold text-slate-800">Form Builder</p>
-                        <p class="text-[9px] text-slate-400">Edit generated form schemas</p>
+                        <p class="text-xs font-bold text-slate-800">Input Manifests</p>
+                        <p class="text-[9px] text-slate-400">Edit generated input manifests</p>
                     </div>
                 </a>
             </div>

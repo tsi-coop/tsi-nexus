@@ -1024,12 +1024,13 @@ public class Seeding implements Action {
             "Rules:\n" +
             "- verb: lowercase single word\n" +
             "- action_type: uppercase version of verb\n" +
+            "- entity_type: the primary entity type this command acts on — must be one of the ENTITY TYPES listed above\n" +
             "- component_type: 'interaction_capture_form' if the command requires data entry, else 'universal_action_confirm'\n" +
             "- policy query_logic MUST use: SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND ...\n" +
             "- policy error_message is what the user sees when blocked\n\n" +
             "Return ONLY valid JSON, no markdown:\n" +
             "{\"commands\":[{\"verb\":\"disburse\",\"label\":\"Disburse Loan\",\"action_type\":\"DISBURSE\"," +
-            "\"component_type\":\"interaction_capture_form\",\"hint\":\"Release approved loan funds\"," +
+            "\"entity_type\":\"member\",\"component_type\":\"interaction_capture_form\",\"hint\":\"Release approved loan funds\"," +
             "\"policies\":[{\"policy_id\":\"BLOCK_INACTIVE_DISBURSE\",\"description\":\"Block inactive members\"," +
             "\"query_logic\":\"SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'status'='inactive'\"," +
             "\"error_message\":\"Member is inactive.\"}]},...]}";
@@ -1052,7 +1053,10 @@ public class Seeding implements Action {
             actionType = (actionType != null ? actionType : verb.toUpperCase()).toUpperCase();
             if (compType == null || compType.isBlank()) compType = "universal_action_confirm";
 
-            // Derive linked_form from interaction_schema if action_type matches
+            String entityType = str(cmd, "entity_type");
+            if (entityType != null) entityType = entityType.toLowerCase().trim();
+
+            // linked_form: try exact action_type match first, fall back to entity_type match
             String linkedForm = null;
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT schema_id FROM interaction_schema WHERE action_type=? LIMIT 1")) {
@@ -1061,18 +1065,46 @@ public class Seeding implements Action {
                     if (rs.next()) linkedForm = rs.getString("schema_id");
                 }
             }
+            if (linkedForm == null && entityType != null && !entityType.isBlank()) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT schema_id FROM interaction_schema WHERE applies_to=? LIMIT 1")) {
+                    ps.setString(1, entityType);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) linkedForm = rs.getString("schema_id");
+                    }
+                }
+            }
+
+            // linked_template: look up by entity_type
+            String linkedTemplate = null;
+            if (entityType != null && !entityType.isBlank()) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT template_id::text FROM liquid_templates WHERE entity_type=? AND is_active=true LIMIT 1")) {
+                    ps.setString(1, entityType);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) linkedTemplate = rs.getString("template_id");
+                    }
+                }
+            }
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO command_manifest (command_verb, label, action_type, component_type, hint, linked_form) " +
-                    "VALUES (?, ?, ?, ?, ?, ?) " +
+                    "INSERT INTO command_manifest (command_verb, label, action_type, component_type, hint, entity_type, linked_form, linked_template) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?::uuid) " +
                     "ON CONFLICT (command_verb) DO UPDATE SET label=EXCLUDED.label, action_type=EXCLUDED.action_type, " +
-                    "component_type=EXCLUDED.component_type, hint=EXCLUDED.hint, linked_form=EXCLUDED.linked_form")) {
+                    "component_type=EXCLUDED.component_type, hint=EXCLUDED.hint, entity_type=EXCLUDED.entity_type, " +
+                    "linked_form=EXCLUDED.linked_form, linked_template=EXCLUDED.linked_template")) {
                 ps.setString(1, verb);
                 ps.setString(2, label != null ? label : verb);
                 ps.setString(3, actionType);
                 ps.setString(4, compType);
                 ps.setString(5, hint != null ? hint : "");
-                ps.setString(6, linkedForm);
+                ps.setString(6, entityType != null ? entityType : "");
+                ps.setString(7, linkedForm);
+                if (linkedTemplate != null) {
+                    ps.setObject(8, java.util.UUID.fromString(linkedTemplate));
+                } else {
+                    ps.setNull(8, java.sql.Types.OTHER);
+                }
                 count += ps.executeUpdate();
             }
 
