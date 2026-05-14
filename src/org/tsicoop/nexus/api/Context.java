@@ -133,32 +133,58 @@ public class Context implements Action {
     }
 
     @SuppressWarnings("unchecked")
+    // Circuit breaker: long[0]=consecutive failures, long[1]=tripped-until epoch ms
+    private static final java.util.concurrent.ConcurrentHashMap<String, long[]> circuitState =
+        new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int  CIRCUIT_FAIL_THRESHOLD = 3;
+    private static final long CIRCUIT_COOLDOWN_MS    = 30_000;
+
     private JSONObject callPullServices(Connection conn, String entityType, String externalId) {
         JSONObject merged = new JSONObject();
-        String sql = "SELECT api_base_url, auth_config::text FROM service_registry " +
+        String sql = "SELECT api_base_url, auth_config::text, COALESCE(timeout_ms, 2000) AS timeout_ms " +
+                     "FROM service_registry " +
                      "WHERE service_type='PULL' AND entity_type=? AND status='Active'";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, entityType);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
+                    String baseUrl = rs.getString("api_base_url");
+                    String url     = baseUrl + "/" + externalId;
+
+                    // Circuit breaker check
+                    long[] state = circuitState.getOrDefault(baseUrl, new long[]{0, 0});
+                    if (state[1] > System.currentTimeMillis()) {
+                        System.err.println("[PULL] Circuit open: " + baseUrl + " — skipping");
+                        continue;
+                    }
+
                     JSONObject cfg = (JSONObject) new JSONParser().parse(rs.getString("auth_config"));
-                    String url    = rs.getString("api_base_url") + "/" + externalId;
-                    String header = (String) cfg.get("header");
-                    String secret = (String) cfg.get("secret");
+                    String header  = (String) cfg.get("header");
+                    String secret  = (String) cfg.get("secret");
+                    Duration timeout = Duration.ofMillis(rs.getInt("timeout_ms"));
                     try {
                         java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder()
-                            .connectTimeout(Duration.ofSeconds(2)).build();
+                            .connectTimeout(timeout).build();
                         HttpRequest request = HttpRequest.newBuilder()
                             .GET().uri(URI.create(url))
-                            .timeout(Duration.ofSeconds(2))
+                            .timeout(timeout)
                             .setHeader(header, secret).build();
                         HttpResponse<String> resp = http.send(request, HttpResponse.BodyHandlers.ofString());
                         if (resp.statusCode() < 400) {
                             Object parsed = new JSONParser().parse(resp.body());
                             if (parsed instanceof JSONObject) merged.putAll((JSONObject) parsed);
                         }
+                        // Success — reset circuit
+                        circuitState.remove(baseUrl);
                     } catch (Exception e) {
                         System.err.println("[PULL] " + url + ": " + e.getMessage());
+                        long[] s = circuitState.computeIfAbsent(baseUrl, k -> new long[]{0, 0});
+                        s[0]++;
+                        if (s[0] >= CIRCUIT_FAIL_THRESHOLD) {
+                            s[1] = System.currentTimeMillis() + CIRCUIT_COOLDOWN_MS;
+                            System.err.println("[PULL] Circuit tripped: " + baseUrl +
+                                               " after " + s[0] + " failures — cooldown 30s");
+                        }
                     }
                 }
             }

@@ -58,7 +58,8 @@ CREATE TABLE service_registry (
     service_type TEXT DEFAULT 'PULL',  -- 'PULL' | 'PUSH' | 'INGEST'
     entity_type TEXT DEFAULT '',       -- PULL: which entity type this enriches
     trigger_action TEXT DEFAULT '',    -- PUSH: action_type that triggers this service call
-    stream_tmpl TEXT DEFAULT ''        -- INGEST: token template for interaction_stream entry
+    stream_tmpl TEXT DEFAULT '',       -- INGEST: token template for interaction_stream entry
+    timeout_ms INT DEFAULT 2000        -- PULL: per-service connect+read timeout in milliseconds
 );
 
 -- 6. APP ACCESS & RBAC (Sovereign Access Keys)

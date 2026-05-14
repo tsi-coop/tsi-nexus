@@ -134,8 +134,8 @@ public class Capture implements Action {
 
             conn.commit();
 
-            String ft = actionType; String fe = externalId;
-            new Thread(() -> callPushServices(ft, fe)).start();
+            String ft = actionType; String fe = externalId; JSONObject fd = formData;
+            new Thread(() -> callPushServices(ft, fe, fd)).start();
 
             JSONObject ok = new JSONObject();
             ok.put("success", true);
@@ -326,7 +326,7 @@ public class Capture implements Action {
     }
 
     @SuppressWarnings("unchecked")
-    private void callPushServices(String actionType, String externalId) {
+    private void callPushServices(String actionType, String externalId, JSONObject formData) {
         PoolDB pool = null; Connection conn = null;
         try {
             pool = new PoolDB(); conn = pool.getConnection();
@@ -340,6 +340,7 @@ public class Capture implements Action {
                         JSONObject body = new JSONObject();
                         body.put("action_type", actionType);
                         body.put("external_id", externalId);
+                        body.put("form_data",   formData != null ? formData : new JSONObject());
                         body.put("timestamp",   java.time.Instant.now().toString());
                         try {
                             new HttpClient().sendPost(
