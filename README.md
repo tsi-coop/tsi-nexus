@@ -23,6 +23,12 @@ Checkout our [soft launch announcement](https://techadvisory.substack.com/p/tsi-
 - Seed a fully configured demo instance from a plain-English industry description
 
 
+## How organisations use it
+
+**Intent to command.** Field staff type natural language requests. TSI Nexus maps them to exact registered command verbs like `/disburse_loan` or `/verify_kyc`, with no ambiguity and no drift from institutional policy.
+
+**Policy evaluation.** Before any command executes, TSI Nexus checks it against the live context and business rules stored in the knowledge graph. It either approves, blocks, or flags for escalation - keeping every action within the institution's defined guardrails.
+
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for a full breakdown of the six pillars, service registry patterns, seeder pipeline, LLM integration points, and database schema.
