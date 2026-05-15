@@ -328,6 +328,15 @@
 </div>
 
 <script>
+// Auth check
+const _token = localStorage.getItem('nexus_token');
+const _user  = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+if (!_token || _user.role !== 'admin') {
+    localStorage.removeItem('nexus_token');
+    localStorage.removeItem('nexus_user');
+    window.location.href = 'index.html';
+}
+
 /* ── colour palette ─────────────────────────────────────────────────── */
 const PALETTE = ['#6366f1','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#f97316','#14b8a6'];
 const _cmap = {}; let _ci = 0;
@@ -364,7 +373,7 @@ let graphData = null;
 
 async function loadGraph() {
     try {
-        const res  = await fetch('/api/graph');
+        const res  = await fetch('/api/graph', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('nexus_token') } });
         const data = await res.json();
         if (!data.success) throw new Error('Server returned failure');
         graphData = data;
@@ -696,7 +705,7 @@ async function submitDefineRel() {
     try {
         const res  = await fetch('/api/graph', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('nexus_token') },
             body: JSON.stringify({ action: 'define_rel', from_type: from, rel_type: verb, to_type: to })
         });
         const data = await res.json();
@@ -715,7 +724,7 @@ async function submitDefineRel() {
 }
 
 async function reloadAndRender() {
-    const res  = await fetch('/api/graph');
+    const res  = await fetch('/api/graph', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('nexus_token') } });
     const data = await res.json();
     if (data.success) { graphData = data; renderTables(data); }
 }

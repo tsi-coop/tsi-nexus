@@ -334,6 +334,15 @@
 </div>
 
 <script>
+// Auth check
+const _token = localStorage.getItem('nexus_token');
+const _user  = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+if (!_token || _user.role !== 'admin') {
+    localStorage.removeItem('nexus_token');
+    localStorage.removeItem('nexus_user');
+    window.location.href = 'index.html';
+}
+
 /* ── state ──────────────────────────────────────────────────────────── */
 let vocab        = {};
 let commands     = [];

@@ -296,6 +296,15 @@
     <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl opacity-0 translate-y-2 pointer-events-none z-50"></div>
 
 <script>
+// Auth check
+const _token = localStorage.getItem('nexus_token');
+const _user  = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+if (!_token || _user.role !== 'admin') {
+    localStorage.removeItem('nexus_token');
+    localStorage.removeItem('nexus_user');
+    window.location.href = 'index.html';
+}
+
 const token = () => localStorage.getItem('nexus_token') || '';
 const hdrs  = () => ({ 'Authorization': 'Bearer ' + token(), 'Content-Type': 'application/json' });
 

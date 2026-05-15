@@ -224,8 +224,13 @@
     </div>
 
     <script>
-    const TOKEN = localStorage.getItem('nexus_token');
-    if (!TOKEN) window.location.href = 'index.html';
+    const _token = localStorage.getItem('nexus_token');
+    const _user  = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+    if (!_token || _user.role !== 'admin') {
+        localStorage.removeItem('nexus_token');
+        localStorage.removeItem('nexus_user');
+        window.location.href = 'index.html';
+    }
 
     let allUsers = [];
     let currentUserEmail = '';
@@ -233,13 +238,13 @@
     let editingUserId = '';
 
     function authHeaders() {
-        return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+        return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token };
     }
 
     /* ── Boot ──────────────────────────────────────────────────────────── */
     (function init() {
         try {
-            const payload = JSON.parse(atob(TOKEN.split('.')[1]));
+            const payload = JSON.parse(atob(_token.split('.')[1]));
             currentUserEmail = (payload.sub || '').toLowerCase();
             const initials = (payload.name || '--').split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
             document.getElementById('navAvatar').textContent = initials;

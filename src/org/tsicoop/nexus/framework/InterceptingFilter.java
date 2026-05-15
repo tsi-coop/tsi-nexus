@@ -23,6 +23,20 @@ public class InterceptingFilter implements Filter {
         API_KEY_SCOPES.put("/api/entities",   "context:read");
         API_KEY_SCOPES.put("/api/graph",      "context:read");
     }
+
+    private static final Set<String> ADMIN_ONLY_PATHS = new HashSet<>(Arrays.asList(
+        "/api/dashboard",
+        "/api/audit",
+        "/api/users",
+        "/api/apikeys",
+        "/api/tuning",
+        "/api/reports",
+        "/api/policy",
+        "/api/templates",
+        "/api/schema",
+        "/api/registry",
+        "/api/stream"
+    ));
     @Override
     public void destroy() {
         // Any cleanup of resources
@@ -65,6 +79,15 @@ public class InterceptingFilter implements Filter {
                  } else if (req.getHeader("Authorization") != null) {
                      // Try to resolve human user from JWT (don't fail yet, let action decide if mandatory)
                      InputProcessor.processAdminHeader(req, res);
+                     
+                     // Enforce admin-only paths
+                     if (ADMIN_ONLY_PATHS.contains(servletPath.trim())) {
+                         String role = InputProcessor.getRole(req);
+                         if (!"admin".equalsIgnoreCase(role)) {
+                             OutputProcessor.errorResponse(res, 403, "Forbidden", "Admin role required", req.getRequestURI());
+                             return;
+                         }
+                     }
                  }
 
                  if(!validheader) {

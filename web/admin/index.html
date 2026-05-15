@@ -65,9 +65,15 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // Redirect if already authenticated
-        const existingToken = localStorage.getItem('nexus_token');
-        if (existingToken) {
-            window.location.href = 'dashboard.html';
+        const _token = localStorage.getItem('nexus_token');
+        const _user  = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+        
+        if (_token) {
+            if (_user.role === 'admin') {
+                window.location.href = 'dashboard.html';
+            } else {
+                localStorage.clear();
+            }
             return;
         }
 
@@ -94,6 +100,9 @@
                 const data = await res.json();
 
                 if (res.ok && data.success) {
+                    if (data.role !== 'admin') {
+                        throw new Error('Access denied: Admin role required');
+                    }
                     localStorage.setItem('nexus_token', data.token);
                     localStorage.setItem('nexus_user',  JSON.stringify({ name: data.name, role: data.role, email }));
                     btn.innerText = 'AUTHORIZED';

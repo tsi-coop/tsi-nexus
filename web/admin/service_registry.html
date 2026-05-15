@@ -218,7 +218,14 @@ const AUTH = () => ({ 'Content-Type': 'application/json', 'Authorization': local
 
 /* ─── boot ────────────────────────────────────────────────────────── */
 async function boot() {
-    if (!localStorage.getItem('nexus_token')) { window.location.href = 'index.html'; return; }
+    const _token = localStorage.getItem('nexus_token');
+    const _user  = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+    if (!_token || _user.role !== 'admin') {
+        localStorage.removeItem('nexus_token');
+        localStorage.removeItem('nexus_user');
+        window.location.href = 'index.html';
+        return;
+    }
     await load();
 }
 
