@@ -445,7 +445,7 @@ All endpoints return a consistent error envelope.
 
 ---
 
-## Code Examples
+## CURL Examples
 
 ```bash
 API_KEY="nxs_a3f9e1c2d4b07852a1f0e3c9d5b6f2a4"

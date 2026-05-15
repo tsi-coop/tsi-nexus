@@ -51,14 +51,56 @@ public class Capture implements Action {
             }
             String entityType = entityMeta[0];
             String entityName = entityMeta[1]; // may be null
-            String schemaId = req.getParameter("schema_id");
+            String schemaId   = req.getParameter("schema_id");
+            String cmdAction  = req.getParameter("action_type"); // command's action_type from the manifest
             JSONArray schemas;
             if (schemaId != null && !schemaId.isBlank()) {
                 JSONObject s = loadSchema(conn, schemaId);
                 schemas = new JSONArray();
-                if (s != null) schemas.add(s);
+                if (s != null) {
+                    // Prefer the command's action_type for policy lookup; fall back to schema's
+                    String policyKey = (cmdAction != null && !cmdAction.isBlank())
+                                       ? cmdAction : (String) s.get("action_type");
+                    if (policyKey != null) {
+                        String violation = checkPolicies(conn, policyKey, cleanId);
+                        // If no policy found under command action_type, also try schema's own action_type
+                        if (violation == null && cmdAction != null && !cmdAction.equals(s.get("action_type"))) {
+                            violation = checkPolicies(conn, (String) s.get("action_type"), cleanId);
+                        }
+                        if (violation != null) {
+                            respond(res, false, violation, null);
+                            return;
+                        }
+                    }
+                    schemas.add(s);
+                }
             } else {
-                schemas = fetchSchemas(conn, entityType);
+                String policyKey = (cmdAction != null && !cmdAction.isBlank()) ? cmdAction : null;
+                JSONArray all = fetchSchemas(conn, entityType);
+                schemas = new JSONArray();
+                String firstViolation = null;
+                // Check command-level policy first (covers all schemas for this command)
+                if (policyKey != null) {
+                    firstViolation = checkPolicies(conn, policyKey, cleanId);
+                    if (firstViolation != null) {
+                        respond(res, false, firstViolation, null);
+                        return;
+                    }
+                }
+                for (Object o : all) {
+                    JSONObject s = (JSONObject) o;
+                    String at = (String) s.get("action_type");
+                    String violation = (at != null && !at.equals(policyKey)) ? checkPolicies(conn, at, cleanId) : null;
+                    if (violation != null) {
+                        if (firstViolation == null) firstViolation = violation;
+                    } else {
+                        schemas.add(s);
+                    }
+                }
+                if (schemas.isEmpty() && firstViolation != null) {
+                    respond(res, false, firstViolation, null);
+                    return;
+                }
             }
             JSONObject result = new JSONObject();
             result.put("success",     true);

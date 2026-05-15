@@ -1462,9 +1462,10 @@
         appendToStage(placeholder);
 
         try {
+            const atParam = props.action_type ? `&action_type=${encodeURIComponent(props.action_type)}` : '';
             const captureUrl = props.linked_form
-                ? `/api/capture?external_id=${encodeURIComponent(target)}&schema_id=${encodeURIComponent(props.linked_form)}`
-                : `/api/capture?external_id=${encodeURIComponent(target)}`;
+                ? `/api/capture?external_id=${encodeURIComponent(target)}&schema_id=${encodeURIComponent(props.linked_form)}${atParam}`
+                : `/api/capture?external_id=${encodeURIComponent(target)}${atParam}`;
             const res  = await fetch(captureUrl);
             const data = await res.json();
             placeholder.remove();
