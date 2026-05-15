@@ -4,7 +4,7 @@ A sovereign institutional intelligence platform for small and medium enterprises
 
 Zero sector-specific logic is hardcoded. Every domain concept - entity types, terminology, policies, commands, templates - lives in database rows configured by the deploying institution.
 
-Checkout our [Soft launch announcement](https://techadvisory.substack.com/p/tsi-nexus-an-open-source-digital)
+Checkout our [soft launch announcement](https://techadvisory.substack.com/p/tsi-nexus-an-open-source-digital)
 
 ## What it does
 
