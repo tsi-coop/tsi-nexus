@@ -5,8 +5,6 @@ A sovereign institutional intelligence platform for small and medium enterprises
 Zero sector-specific logic is hardcoded. Every domain concept - entity types, terminology, policies, commands, templates - lives in database rows configured by the deploying institution.
 [Soft launch announcement](https://techadvisory.substack.com/p/tsi-nexus-an-open-source-digital)
 
----
-
 ## What it does
 
 **For end users (the Liquid interface)**
@@ -23,13 +21,11 @@ Zero sector-specific logic is hardcoded. Every domain concept - entity types, te
 - Register external service integrations (PULL / PUSH / INGEST)
 - Seed a fully configured demo instance from a plain-English industry description
 
----
 
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for a full breakdown of the six pillars, service registry patterns, seeder pipeline, LLM integration points, and database schema.
 
----
 
 ## Getting started
 
@@ -115,7 +111,6 @@ This starts a PULL server on port 9090 and a background INGEST push thread. With
 
 Open `http://localhost:8084/liquid` and start exploring your entities. Search by name or ID, view context cards with live external data, and submit forms to record actions.
 
----
 
 ## Development
 
@@ -146,7 +141,6 @@ docker compose up -d
 
 See Step 4 in [First-time setup](#3-first-time-setup). The mock server (`mock/MockServer.java`) serves as a standalone PULL endpoint and INGEST push source - no real external systems needed for a full demo.
 
----
 
 ## Integrating external systems
 
@@ -162,7 +156,6 @@ See [`docs/integration-guide.md`](docs/integration-guide.md) for the full API co
 
 For headless access to the intelligence API from external apps or AI agents, see [`docs/api-client-sdk.md`](docs/api-client-sdk.md).
 
----
 
 ## Project structure
 
@@ -174,7 +167,6 @@ mock/         MockServer.java - standalone mock PULL/INGEST server
 docs/         architecture.md, integration-guide.md, api-client-sdk.md
 ```
 
----
 
 ## License
 
