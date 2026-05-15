@@ -135,13 +135,14 @@ public class User implements Action {
             conn = pool.getConnection();
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT name, password_hash, role, twin_id::text FROM nexus_users WHERE email = ? AND is_active = TRUE")) {
+                    "SELECT user_id::text, name, password_hash, role, twin_id::text FROM nexus_users WHERE email = ? AND is_active = TRUE")) {
                 ps.setString(1, email.trim().toLowerCase());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (!rs.next()) {
                         OutputProcessor.errorResponse(res, 401, "Unauthorized", "Invalid credentials", req.getRequestURI());
                         return;
                     }
+                    String userId = rs.getString("user_id");
                     String name   = rs.getString("name");
                     String hash   = rs.getString("password_hash");
                     String role   = rs.getString("role");
@@ -152,12 +153,13 @@ public class User implements Action {
                         return;
                     }
 
-                    String token = JWTUtil.generateToken(email.trim().toLowerCase(), name, role, twinId);
+                    String token = JWTUtil.generateToken(email.trim().toLowerCase(), name, role, twinId, userId);
                     JSONObject result = new JSONObject();
                     result.put("success", true);
                     result.put("token",   token);
                     result.put("name",    name);
                     result.put("role",    role);
+                    result.put("user_id", userId);
                     if (twinId != null) result.put("twin_id", twinId);
                     OutputProcessor.send(res, 200, result);
                 }

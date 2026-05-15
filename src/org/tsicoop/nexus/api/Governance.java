@@ -26,12 +26,13 @@ public class Governance implements Action {
     public void post(HttpServletRequest req, HttpServletResponse res) {
         try {
             JSONObject input = InputProcessor.getInput(req);
-            // Inject actor_id from JWT when caller doesn't supply it explicitly
-            if (input.get("actor_id") == null) {
-                JSONObject caller = InputProcessor.getAdminAuthToken(req, res);
-                if (caller != null && caller.get("twin_id") != null) {
-                    input.put("actor_id", caller.get("twin_id"));
-                }
+            if (input == null) input = new JSONObject();
+
+            // Inject identity from JWT - ALWAYS trust the token over the request body
+            JSONObject caller = InputProcessor.getAdminAuthToken(req, res);
+            if (caller != null) {
+                if (caller.get("twin_id") != null) input.put("actor_id", caller.get("twin_id"));
+                if (caller.get("user_id") != null) input.put("user_id", caller.get("user_id"));
             }
             OutputProcessor.send(res, 200, processGuardedAction(input));
         } catch (Exception e) {
@@ -60,7 +61,8 @@ public class Governance implements Action {
                 : (String) params.getOrDefault("target_external_id", null);
 
             // Resolve actor UUID from the JWT twin_id (null if admin has no twin)
-            UUID actorUuid = resolveActorId(conn, (String) input.get("actor_id"));
+            UUID actorUuid = resolveActorId(conn, input.get("actor_id"));
+            UUID userUuid  = resolveUserId(conn, input.get("user_id"));
 
             // Humanise intent_raw by replacing @handles with entity names
             String intentDisplay = humaniseIntent(conn, intentRaw, targetForStream);
@@ -70,7 +72,8 @@ public class Governance implements Action {
             String executionMode = fetchExecutionMode(conn, actionType);
             if ("ANALYTICS".equals(executionMode)) {
                 JSONObject result = executeAnalysis(conn, actionType, params);
-                logAudit(conn, actorUuid, intentDisplay, actionType, "ANALYTICS", true, null);
+                String tId = params.get("target_1") != null ? (String) params.get("target_1") : (String) params.get("target_external_id");
+                logAudit(conn, actorUuid, userUuid, tId, intentDisplay, actionType, "ANALYTICS", true, null);
                 conn.commit();
                 return result;
             }
@@ -78,7 +81,8 @@ public class Governance implements Action {
             // 1. DYNAMIC POLICY GUARD
             String violation = checkPolicyManifest(conn, actionType, params);
             if (violation != null) {
-                logAudit(conn, actorUuid, intentDisplay, actionType, "GUARDRAIL", false, violation);
+                String tId = params.get("target_1") != null ? (String) params.get("target_1") : (String) params.get("target_external_id");
+                logAudit(conn, actorUuid, userUuid, tId, intentDisplay, actionType, "GUARDRAIL", false, violation);
                 conn.commit();
                 JSONObject fail = new JSONObject();
                 fail.put("success", false);
@@ -92,7 +96,7 @@ public class Governance implements Action {
             // 3. AUDIT LOGGING
             String targetExternalId = params.get("target_external_id") != null
                 ? ((String) params.get("target_external_id")).replaceFirst("^@", "") : "";
-            logAudit(conn, actorUuid, intentDisplay, actionType, "GUARDRAIL", true, null);
+            logAudit(conn, actorUuid, userUuid, targetExternalId, intentDisplay, actionType, "GUARDRAIL", true, null);
 
             conn.commit();
 
@@ -255,29 +259,47 @@ public class Governance implements Action {
     }
 
     @SuppressWarnings("unchecked")
-    private void logAudit(Connection conn, UUID actorId, String intent, String action,
+    private void logAudit(Connection conn, UUID actorId, UUID userId, String targetId, String intent, String action,
                           String mode, boolean success, String reason) throws SQLException {
         JSONObject executed = new JSONObject();
         executed.put("success",     success);
         executed.put("action_type", action);
         executed.put("mode",        mode);
+        executed.put("entity",      targetId);
         if (reason != null) executed.put("reason", reason);
-        // actor_id and policy_id are nullable FKs — pass null to avoid FK violations
-        // when the admin user has no digital twin or no matching policy_id exists
-        String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, created_at) VALUES (?, ?, ?::jsonb, NOW())";
+        
+        String sql = "INSERT INTO action_audit_log (actor_id, user_id, intent_raw, action_executed, created_at) VALUES (?, ?, ?, ?::jsonb, NOW())";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setObject(1, actorId);   // null-safe: null skips FK check
-            pstmt.setString(2, intent);
-            pstmt.setString(3, executed.toJSONString());
+            pstmt.setObject(1, actorId);
+            pstmt.setObject(2, userId);
+            pstmt.setString(3, intent);
+            pstmt.setString(4, executed.toJSONString());
             pstmt.executeUpdate();
         }
     }
 
-    private UUID resolveActorId(Connection conn, String rawTwinId) {
-        if (rawTwinId == null || rawTwinId.isBlank()) return null;
+    private UUID resolveActorId(Connection conn, Object rawTwinId) {
+        if (rawTwinId == null) return null;
+        String sid = String.valueOf(rawTwinId).trim();
+        if (sid.isEmpty() || sid.equalsIgnoreCase("null")) return null;
         try {
-            UUID candidate = UUID.fromString(rawTwinId);
+            UUID candidate = UUID.fromString(sid);
             try (PreparedStatement ps = conn.prepareStatement("SELECT 1 FROM digital_twins WHERE id = ?")) {
+                ps.setObject(1, candidate);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() ? candidate : null;
+                }
+            }
+        } catch (Exception ignored) { return null; }
+    }
+
+    private UUID resolveUserId(Connection conn, Object rawUserId) {
+        if (rawUserId == null) return null;
+        String sid = String.valueOf(rawUserId).trim();
+        if (sid.isEmpty() || sid.equalsIgnoreCase("null")) return null;
+        try {
+            UUID candidate = UUID.fromString(sid);
+            try (PreparedStatement ps = conn.prepareStatement("SELECT 1 FROM nexus_users WHERE user_id = ?")) {
                 ps.setObject(1, candidate);
                 try (ResultSet rs = ps.executeQuery()) {
                     return rs.next() ? candidate : null;

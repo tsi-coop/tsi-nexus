@@ -710,6 +710,8 @@
     const HISTORY_LIMIT = 12;
     const entityLabelByHandle = {};
 
+    const AUTH = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('nexus_token') || '') });
+
     /* ── Nav section collapse ────────────────────── */
     const NAV_STATE_KEY = 'nexus_nav_sections';
 
@@ -923,7 +925,7 @@
     /* ── Sidebar — loaded dynamically from /api/entities ─────────────────── */
     async function loadSidebar() {
         try {
-            const res  = await fetch('/api/entities');
+            const res  = await fetch('/api/entities', { headers: AUTH() });
             const data = await res.json();
             if (!data.success || !data.entity_types) return;
 
@@ -1115,7 +1117,7 @@
         const isNL = !intent.startsWith('/') && !intent.startsWith('@');
         stageLoading(isNL);
         try {
-            const res  = await fetch('/api/intent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({intent}) });
+            const res  = await fetch('/api/intent', { method:'POST', headers: AUTH(), body: JSON.stringify({intent}) });
             const data = await res.json();
             stageResults();
             if (navStack.length) showBackButton();
@@ -1200,7 +1202,7 @@
         card.querySelector('.target-handle').textContent = prettyId(props.target);
 
         try {
-            const res  = await fetch('/api/context', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({external_id: props.target}) });
+            const res  = await fetch('/api/context', { method:'POST', headers: AUTH(), body: JSON.stringify({external_id: props.target}) });
             const data = await res.json();
             const ctx  = data.context;
 
@@ -1390,7 +1392,7 @@
             }
         };
         try {
-            const res    = await fetch('/api/governance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+            const res    = await fetch('/api/governance', { method:'POST', headers: AUTH(), body: JSON.stringify(body) });
             const result = await res.json();
             stageResults();
 
@@ -1466,7 +1468,7 @@
             const captureUrl = props.linked_form
                 ? `/api/capture?external_id=${encodeURIComponent(target)}&schema_id=${encodeURIComponent(props.linked_form)}${atParam}`
                 : `/api/capture?external_id=${encodeURIComponent(target)}${atParam}`;
-            const res  = await fetch(captureUrl);
+            const res  = await fetch(captureUrl, { headers: AUTH() });
             const data = await res.json();
             placeholder.remove();
 
@@ -1647,7 +1649,7 @@
         try {
             const res = await fetch('/api/capture', {
                 method:  'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: AUTH(),
                 body:    JSON.stringify({ schema_id: schema.schema_id, external_id: target, form_data: formData })
             });
             const result = await res.json();

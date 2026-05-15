@@ -308,6 +308,9 @@ public class Capture implements Action {
             String actorTwinId = InputProcessor.getTwinId(req);
             UUID actorId = (actorTwinId != null && !actorTwinId.isBlank()) ? UUID.fromString(actorTwinId) : null;
 
+            String userIdStr = InputProcessor.getUserId(req);
+            UUID userId = (userIdStr != null && !userIdStr.isBlank()) ? UUID.fromString(userIdStr) : null;
+
             // Look up human name to use in intent_raw instead of raw ID
             String entityLabel = externalId;
             try (PreparedStatement ps = conn.prepareStatement(
@@ -323,13 +326,14 @@ public class Capture implements Action {
             executed.put("action_type", actionType);
             executed.put("entity",      externalId);
             executed.put("reason",      reason);
-            String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, policy_id, created_at) " +
-                         "VALUES (?, ?, ?::jsonb, ?, NOW())";
+            String sql = "INSERT INTO action_audit_log (actor_id, user_id, intent_raw, action_executed, policy_id, created_at) " +
+                         "VALUES (?, ?, ?, ?::jsonb, ?, NOW())";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setObject(1, actorId);
-                ps.setString(2, actionType + " — " + entityLabel);
-                ps.setString(3, executed.toJSONString());
-                ps.setString(4, policyId);
+                ps.setObject(2, userId);
+                ps.setString(3, actionType + " — " + entityLabel);
+                ps.setString(4, executed.toJSONString());
+                ps.setString(5, policyId);
                 ps.executeUpdate();
             }
         } catch (Exception ignore) {}

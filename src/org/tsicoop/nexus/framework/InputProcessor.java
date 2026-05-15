@@ -145,6 +145,16 @@ public class InputProcessor {
         }
     }
 
+    public static String getUserId(HttpServletRequest req){
+        JSONObject authToken = null;
+        try {
+            authToken = (JSONObject) req.getAttribute(InputProcessor.AUTH_TOKEN);
+            return authToken != null ? (String) authToken.get("user_id") : null;
+        }catch(Exception e){
+            return null;
+        }
+    }
+
     public static String getAccountType(HttpServletRequest req){
         JSONObject authToken = null;
         String type = null;
@@ -186,21 +196,25 @@ public class InputProcessor {
     public static JSONObject getAdminAuthToken(HttpServletRequest req, HttpServletResponse res) throws Exception{
         JSONObject tokenDetails = null;
         String authorization = null;
-        StringTokenizer strTok = null;
         String token = null;
 
         try {
             authorization = req.getHeader("Authorization");
-            strTok = new StringTokenizer(authorization, " ");
-            strTok.nextToken();
-            token = strTok.nextToken();
-            //System.out.println("token:"+token);
-            if (JWTUtil.isTokenValid(token)) {
-                tokenDetails = new JSONObject();
-                tokenDetails.put("email",   JWTUtil.getEmailFromToken(token));
-                tokenDetails.put("name",    JWTUtil.getNameFromToken(token));
-                tokenDetails.put("role",    JWTUtil.getRoleFromToken(token));
-                tokenDetails.put("twin_id", JWTUtil.getTwinIdFromToken(token));
+            if (authorization != null && !authorization.isBlank()) {
+                if (authorization.toLowerCase().startsWith("bearer ")) {
+                    token = authorization.substring(7).trim();
+                } else {
+                    token = authorization.trim();
+                }
+                
+                if (JWTUtil.isTokenValid(token)) {
+                    tokenDetails = new JSONObject();
+                    tokenDetails.put("email",   JWTUtil.getEmailFromToken(token));
+                    tokenDetails.put("name",    JWTUtil.getNameFromToken(token));
+                    tokenDetails.put("role",    JWTUtil.getRoleFromToken(token));
+                    tokenDetails.put("twin_id", JWTUtil.getTwinIdFromToken(token));
+                    tokenDetails.put("user_id", JWTUtil.getUserIdFromToken(token));
+                }
             }
         }catch (Exception e){
             e.printStackTrace();

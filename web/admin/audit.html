@@ -136,7 +136,7 @@
         <div class="bg-white border-b border-slate-100 px-8 py-3 flex items-center gap-3 shrink-0 flex-wrap">
             <div class="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input id="filterActor" type="text" placeholder="Actor (@handle)"
+                <input id="filterActor" type="text" placeholder="User or @handle"
                     class="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 w-44">
             </div>
             <select id="filterPolicy" class="px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 w-52">
@@ -191,14 +191,29 @@
         </header>
         <div class="flex-1 overflow-y-auto p-6 space-y-6">
 
+            <!-- Initiator -->
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Actor (Initiator)</p>
+                <div class="flex items-center gap-3">
+                    <span id="drawerUserName" class="text-sm font-bold text-slate-800"></span>
+                </div>
+            </div>
+
             <!-- Actor -->
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Actor</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">System Actor</p>
                 <div class="flex items-center gap-3">
                     <span id="drawerTypeBadge" class="inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase"></span>
                     <code id="drawerExternalId" class="text-sm font-bold text-slate-800 mono"></code>
                 </div>
-                <code id="drawerActorId" class="text-[10px] text-slate-400 mono mt-1 block"></code>
+            </div>
+
+            <!-- Target -->
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Target Entity</p>
+                <div class="flex items-center gap-3">
+                    <code id="drawerTargetId" class="text-sm font-bold text-indigo-600 mono"></code>
+                </div>
             </div>
 
             <!-- Intent -->
@@ -252,7 +267,7 @@ let _hasMore  = false;
 let _loading  = false;
 let _selected = null;
 
-const AUTH = () => ({ 'Content-Type': 'application/json', 'Authorization': localStorage.getItem('nexus_token') || '' });
+const AUTH = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('nexus_token') || '') });
 
 /* ─── boot ────────────────────────────────────────────────────────── */
 async function boot() {
@@ -314,7 +329,7 @@ async function loadPage(page, replace) {
 function updateStats(s) {
     document.getElementById('statTotal').textContent  = fmt(s.total);
     document.getElementById('statToday').textContent  = fmt(s.today);
-    document.getElementById('statActors').textContent = fmt(s.actors);
+    document.getElementById('statActors').textContent = fmt(s.users);
 }
 
 function populatePolicyDropdown(policies) {
@@ -347,7 +362,7 @@ function renderRows(entries, replace) {
         tr.dataset.id = e.audit_id;
 
         const typeCls   = typeColor(e.entity_type);
-        const entityLbl = e.actor_name || (e.external_id ? '@' + e.external_id.replace(/^@/, '') : '—');
+        const userLbl   = e.user_name || (e.actor_name || (e.external_id ? '@' + e.external_id.replace(/^@/, '') : 'System'));
         const intentPrv = e.intent_raw ? (e.intent_raw.length > 60 ? e.intent_raw.slice(0, 60) + '…' : e.intent_raw) : '—';
         const { icon: outcomeIcon, cls: outcomeCls } = outcomeStyle(e.outcome);
 
@@ -357,7 +372,7 @@ function renderRows(entries, replace) {
                 <span class="text-[10px] text-slate-400 mono">${esc(e.created_time || '')}</span>
             </td>
             <td class="px-6 py-4">
-                <span class="block text-xs font-bold text-slate-800 mono">${esc(entityLbl)}</span>
+                <span class="block text-xs font-bold text-slate-800 mono">${esc(userLbl)}</span>
                 ${e.entity_type ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase mt-0.5 ${typeCls}">${esc(e.entity_type)}</span>` : ''}
             </td>
             <td class="px-6 py-4 max-w-xs">
@@ -406,10 +421,11 @@ function openDrawer(e, tr) {
     const entityLbl = e.actor_name || (e.external_id ? '@' + e.external_id.replace(/^@/, '') : 'Unknown Actor');
 
     document.getElementById('drawerMeta').textContent         = (e.created_fmt || '') + '  ' + (e.created_time || '');
+    document.getElementById('drawerUserName').textContent     = e.user_name || 'System / Automated';
     document.getElementById('drawerTypeBadge').className      = `inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${typeCls}`;
-    document.getElementById('drawerTypeBadge').textContent    = e.entity_type || 'unknown';
-    document.getElementById('drawerExternalId').textContent   = entityLbl;
-    document.getElementById('drawerActorId').textContent      = e.external_id ? '@' + e.external_id.replace(/^@/, '') : '';
+    document.getElementById('drawerTypeBadge').textContent    = e.entity_type || (e.actor_id ? 'twin' : 'system');
+    document.getElementById('drawerExternalId').textContent   = e.actor_name || (e.actor_id ? '@actor' : 'Governance Node');
+    document.getElementById('drawerTargetId').textContent     = e.external_id ? '@' + e.external_id.replace(/^@/, '') : '—';
     document.getElementById('drawerIntent').textContent       = e.intent_raw || '(no intent recorded)';
     document.getElementById('drawerAuditId').textContent      = e.audit_id || '';
 
@@ -473,9 +489,11 @@ function syntaxHighlight(obj) {
 /* ─── CSV export ──────────────────────────────────────────────────── */
 function exportCsv() {
     if (!_entries.length) { showToast('No records to export', true); return; }
-    const header = ['Timestamp','Actor','Entity Type','Raw Intent','Policy ID','Outcome','Audit ID'];
+    const header = ['Timestamp','Actor (Initiator)','System Actor','Target Entity','Entity Type','Raw Intent','Policy ID','Outcome','Audit ID'];
     const rows = _entries.map(e => [
         (e.created_fmt || '') + ' ' + (e.created_time || ''),
+        e.user_name || 'System',
+        e.actor_name || 'Governance Node',
         e.external_id || '',
         e.entity_type || '',
         (e.intent_raw || '').replace(/"/g,'""'),

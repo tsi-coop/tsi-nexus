@@ -44,6 +44,7 @@ public class Audit implements Action {
             if (limit > 200) limit = 200;
 
             String actorParam    = req.getParameter("actor");
+            String userParam     = req.getParameter("user");
             String policyParam   = req.getParameter("policy_id");
             String fromParam     = req.getParameter("from");
             String toParam       = req.getParameter("to");
@@ -58,8 +59,13 @@ public class Audit implements Action {
             List<Object> params     = new ArrayList<>();
 
             if (actorFilter != null && !actorFilter.isEmpty()) {
-                conditions.add("dt.external_id = ?");
+                conditions.add("(dt.external_id = ? OR u.name ILIKE ?)");
                 params.add(actorFilter);
+                params.add("%" + actorFilter + "%");
+            }
+            if (userParam != null && !userParam.trim().isEmpty()) {
+                conditions.add("u.name ILIKE ?");
+                params.add("%" + userParam.trim() + "%");
             }
             if (policyParam != null && !policyParam.trim().isEmpty()) {
                 conditions.add("aal.policy_id = ?");
@@ -85,17 +91,19 @@ public class Audit implements Action {
             String sql =
                 "SELECT aal.audit_id::text, " +
                 "aal.actor_id::text, " +
+                "aal.user_id::text, " +
+                "u.name AS user_name, " +
                 "COALESCE(dt.external_id, aal.action_executed->>'entity') AS external_id, " +
                 "dt.type AS entity_type, " +
-                "COALESCE(dt.current_state->>'name', dt2.current_state->>'name') AS actor_name, " +
+                "COALESCE(dt.current_state->>'name', 'Governance Node') AS actor_name, " +
                 "aal.intent_raw, " +
                 "COALESCE(aal.action_executed::text, '{}') AS action_executed, " +
                 "aal.policy_id, pm.action_type AS policy_label, " +
                 "to_char(aal.created_at, 'DD Mon YYYY') AS created_fmt, " +
                 "to_char(aal.created_at, 'HH24:MI:SS')  AS created_time " +
                 "FROM action_audit_log aal " +
+                "LEFT JOIN nexus_users u     ON u.user_id = aal.user_id " +
                 "LEFT JOIN digital_twins dt  ON dt.id = aal.actor_id " +
-                "LEFT JOIN digital_twins dt2 ON dt2.external_id = aal.action_executed->>'entity' " +
                 "LEFT JOIN policy_manifest pm ON pm.policy_id = aal.policy_id " +
                 where + " " +
                 "ORDER BY aal.created_at DESC " +
@@ -114,6 +122,8 @@ public class Audit implements Action {
                         JSONObject e = new JSONObject();
                         e.put("audit_id",     rs.getString("audit_id"));
                         e.put("actor_id",     rs.getString("actor_id"));
+                        e.put("user_id",      rs.getString("user_id"));
+                        e.put("user_name",    rs.getString("user_name"));
                         e.put("external_id",  rs.getString("external_id"));
                         e.put("actor_name",   rs.getString("actor_name"));
                         e.put("entity_type",  rs.getString("entity_type"));
@@ -146,13 +156,13 @@ public class Audit implements Action {
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT COUNT(*) AS total, " +
                     "COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS today, " +
-                    "COUNT(DISTINCT actor_id) AS actors " +
+                    "COUNT(DISTINCT user_id) AS users " +
                     "FROM action_audit_log");
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     stats.put("total",  rs.getLong("total"));
                     stats.put("today",  rs.getLong("today"));
-                    stats.put("actors", rs.getLong("actors"));
+                    stats.put("users", rs.getLong("users"));
                 }
             }
 

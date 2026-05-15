@@ -62,7 +62,11 @@ public class InterceptingFilter implements Filter {
                  String requiredScope = API_KEY_SCOPES.get(servletPath.trim());
                  if (requiredScope != null && req.getHeader("X-API-Key") != null) {
                      validheader = InputProcessor.processClientHeader(req, res, requiredScope);
+                 } else if (req.getHeader("Authorization") != null) {
+                     // Try to resolve human user from JWT (don't fail yet, let action decide if mandatory)
+                     InputProcessor.processAdminHeader(req, res);
                  }
+
                  if(!validheader) {
                      OutputProcessor.errorResponse(res, 401, "Unauthorized", "Invalid or missing API credentials", req.getRequestURI());
                  }else{

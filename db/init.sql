@@ -132,18 +132,31 @@ CREATE TABLE policy_manifest (
     is_active BOOLEAN DEFAULT TRUE
 );
 
--- 9. ACTION & AUDIT LOG (Time-Travel Auditing)
+-- 9. NEXUS USERS (Admin & Staff Accounts)
+CREATE TABLE IF NOT EXISTS nexus_users (
+    user_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name          TEXT NOT NULL,
+    email         TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'admin',  -- 'admin', 'staff'
+    is_active     BOOLEAN DEFAULT TRUE,
+    twin_id       UUID UNIQUE REFERENCES digital_twins(id) ON DELETE SET NULL,
+    created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. ACTION & AUDIT LOG (Time-Travel Auditing)
 -- Final ledger of every human intent and result
 CREATE TABLE action_audit_log (
     audit_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     actor_id UUID REFERENCES digital_twins(id),
+    user_id  UUID REFERENCES nexus_users(user_id),
     intent_raw TEXT,                   -- The human's actual words
     action_executed JSONB,             -- The resulting JSON command
     policy_id TEXT REFERENCES policy_manifest(policy_id),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 10. SEEDING SESSIONS (Adaptive Bootstrapping)
+-- 11. SEEDING SESSIONS (Adaptive Bootstrapping)
 -- Tracks institutional DNA materialisation history
 CREATE TABLE seeding_sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -166,7 +179,7 @@ CREATE TABLE seeding_sessions (
     completed_at TIMESTAMPTZ
 );
 
--- 10. SYSTEM TRIGGERS & SEEDS
+-- 12. SYSTEM TRIGGERS & SEEDS
 CREATE TABLE twin_state_history (
     history_id BIGSERIAL PRIMARY KEY,
     twin_id UUID REFERENCES digital_twins(id) ON DELETE CASCADE,
@@ -192,7 +205,7 @@ CREATE TRIGGER trg_nexus_lineage
 BEFORE UPDATE ON digital_twins
 FOR EACH ROW EXECUTE FUNCTION fn_nexus_track_lineage();
 
--- 11. LIQUID TEMPLATE REGISTRY
+-- 13. LIQUID TEMPLATE REGISTRY
 CREATE TABLE liquid_templates (
     template_id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name          TEXT NOT NULL,
@@ -211,18 +224,6 @@ ALTER TABLE command_manifest
 ALTER TABLE command_manifest
     ADD CONSTRAINT fk_command_linked_form
     FOREIGN KEY (linked_form) REFERENCES interaction_schema(schema_id) ON DELETE SET NULL;
-
--- 12. NEXUS USERS (Admin & Staff Accounts)
-CREATE TABLE IF NOT EXISTS nexus_users (
-    user_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name          TEXT NOT NULL,
-    email         TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'admin',  -- 'admin', 'staff'
-    is_active     BOOLEAN DEFAULT TRUE,
-    twin_id       UUID UNIQUE REFERENCES digital_twins(id) ON DELETE SET NULL,
-    created_at    TIMESTAMPTZ DEFAULT NOW()
-);
 
 -- SEED: Root Organisation & System Actor
 INSERT INTO root_organisation (name, config) VALUES (
