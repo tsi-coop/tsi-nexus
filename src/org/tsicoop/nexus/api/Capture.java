@@ -58,17 +58,16 @@ public class Capture implements Action {
                 JSONObject s = loadSchema(conn, schemaId);
                 schemas = new JSONArray();
                 if (s != null) {
-                    // Prefer the command's action_type for policy lookup; fall back to schema's
                     String policyKey = (cmdAction != null && !cmdAction.isBlank())
                                        ? cmdAction : (String) s.get("action_type");
                     if (policyKey != null) {
-                        String violation = checkPolicies(conn, policyKey, cleanId);
-                        // If no policy found under command action_type, also try schema's own action_type
+                        String[] violation = checkPolicies(conn, policyKey, cleanId);
                         if (violation == null && cmdAction != null && !cmdAction.equals(s.get("action_type"))) {
                             violation = checkPolicies(conn, (String) s.get("action_type"), cleanId);
                         }
                         if (violation != null) {
-                            respond(res, false, violation, null);
+                            logBlock(conn, req, policyKey, cleanId, violation[1], violation[0]);
+                            respond(res, false, violation[0], null);
                             return;
                         }
                     }
@@ -78,19 +77,19 @@ public class Capture implements Action {
                 String policyKey = (cmdAction != null && !cmdAction.isBlank()) ? cmdAction : null;
                 JSONArray all = fetchSchemas(conn, entityType);
                 schemas = new JSONArray();
-                String firstViolation = null;
-                // Check command-level policy first (covers all schemas for this command)
+                String[] firstViolation = null;
                 if (policyKey != null) {
                     firstViolation = checkPolicies(conn, policyKey, cleanId);
                     if (firstViolation != null) {
-                        respond(res, false, firstViolation, null);
+                        logBlock(conn, req, policyKey, cleanId, firstViolation[1], firstViolation[0]);
+                        respond(res, false, firstViolation[0], null);
                         return;
                     }
                 }
                 for (Object o : all) {
                     JSONObject s = (JSONObject) o;
                     String at = (String) s.get("action_type");
-                    String violation = (at != null && !at.equals(policyKey)) ? checkPolicies(conn, at, cleanId) : null;
+                    String[] violation = (at != null && !at.equals(policyKey)) ? checkPolicies(conn, at, cleanId) : null;
                     if (violation != null) {
                         if (firstViolation == null) firstViolation = violation;
                     } else {
@@ -98,7 +97,8 @@ public class Capture implements Action {
                     }
                 }
                 if (schemas.isEmpty() && firstViolation != null) {
-                    respond(res, false, firstViolation, null);
+                    logBlock(conn, req, firstViolation[1], cleanId, firstViolation[1], firstViolation[0]);
+                    respond(res, false, firstViolation[0], null);
                     return;
                 }
             }
@@ -156,9 +156,9 @@ public class Capture implements Action {
 
             // 3. Run GUARDRAIL policies for this action_type (db-configured, zero hardcoding)
             String actionType = (String) schema.get("action_type");
-            String violation  = checkPolicies(conn, actionType, externalId);
+            String[] violation = checkPolicies(conn, actionType, externalId);
             if (violation != null) {
-                respond(res, false, violation, null);
+                respond(res, false, violation[0], null);
                 return;
             }
 
@@ -279,25 +279,49 @@ public class Capture implements Action {
         return null;
     }
 
-    private String checkPolicies(Connection conn, String actionType, String externalId) throws Exception {
-        String sql = "SELECT query_logic, error_message FROM policy_manifest " +
+    // Returns [error_message, policy_id] if a policy fires, null if clear
+    private String[] checkPolicies(Connection conn, String actionType, String externalId) throws Exception {
+        String sql = "SELECT policy_id, query_logic, error_message FROM policy_manifest " +
                      "WHERE action_type = ? AND is_active = TRUE AND execution_mode = 'GUARDRAIL'";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, actionType.toUpperCase());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    String query = rs.getString("query_logic");
-                    String error = rs.getString("error_message");
+                    String policyId = rs.getString("policy_id");
+                    String query    = rs.getString("query_logic");
+                    String error    = rs.getString("error_message");
                     try (PreparedStatement gps = conn.prepareStatement(query)) {
                         gps.setString(1, externalId);
                         try (ResultSet grs = gps.executeQuery()) {
-                            if (grs.next() && grs.getInt(1) > 0) return error;
+                            if (grs.next() && grs.getInt(1) > 0) return new String[]{error, policyId};
                         }
                     }
                 }
             }
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void logBlock(Connection conn, HttpServletRequest req, String actionType, String externalId, String policyId, String reason) {
+        try {
+            String actorTwinId = InputProcessor.getTwinId(req);
+            UUID actorId = (actorTwinId != null && !actorTwinId.isBlank()) ? UUID.fromString(actorTwinId) : null;
+            JSONObject executed = new JSONObject();
+            executed.put("success",     false);
+            executed.put("action_type", actionType);
+            executed.put("entity",      externalId);
+            executed.put("reason",      reason);
+            String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, policy_id, created_at) " +
+                         "VALUES (?, ?, ?::jsonb, ?, NOW())";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setObject(1, actorId);
+                ps.setString(2, actionType + " " + externalId);
+                ps.setString(3, executed.toJSONString());
+                ps.setString(4, policyId);
+                ps.executeUpdate();
+            }
+        } catch (Exception ignore) {}
     }
 
     @SuppressWarnings("unchecked")
