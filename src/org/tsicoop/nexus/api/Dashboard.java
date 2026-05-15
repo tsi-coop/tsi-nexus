@@ -90,7 +90,8 @@ public class Dashboard implements Action {
     @SuppressWarnings("unchecked")
     private JSONArray getRecentStream(Connection conn) throws Exception {
         JSONArray arr = new JSONArray();
-        String sql = "SELECT ist.id, dt.external_id, ist.content, ist.intent_mapped, " +
+        String sql = "SELECT ist.id, dt.external_id, dt.current_state->>'name' AS entity_name, " +
+                     "ist.content, ist.intent_mapped, " +
                      "to_char(ist.created_at, 'HH24:MI') AS time_at " +
                      "FROM interaction_stream ist " +
                      "LEFT JOIN digital_twins dt ON dt.id = ist.owner_id " +
@@ -101,6 +102,7 @@ public class Dashboard implements Action {
                 JSONObject o = new JSONObject();
                 o.put("id", rs.getLong("id"));
                 o.put("actor", rs.getString("external_id"));
+                o.put("actor_name", rs.getString("entity_name"));
                 o.put("content", rs.getString("content"));
                 o.put("intent", rs.getString("intent_mapped"));
                 o.put("time", rs.getString("time_at"));
@@ -113,11 +115,15 @@ public class Dashboard implements Action {
     @SuppressWarnings("unchecked")
     private JSONArray getRecentAudit(Connection conn) throws Exception {
         JSONArray arr = new JSONArray();
-        String sql = "SELECT aal.audit_id::text, dt.external_id, aal.intent_raw, aal.policy_id, " +
+        String sql = "SELECT aal.audit_id::text, " +
+                     "COALESCE(dt.external_id, aal.action_executed->>'entity') AS external_id, " +
+                     "COALESCE(dt.current_state->>'name', dt2.current_state->>'name') AS actor_name, " +
+                     "aal.intent_raw, aal.policy_id, " +
                      "(aal.action_executed->>'success')::boolean AS success, " +
                      "to_char(aal.created_at, 'HH24:MI') AS time_at " +
                      "FROM action_audit_log aal " +
-                     "LEFT JOIN digital_twins dt ON dt.id = aal.actor_id " +
+                     "LEFT JOIN digital_twins dt  ON dt.id = aal.actor_id " +
+                     "LEFT JOIN digital_twins dt2 ON dt2.external_id = aal.action_executed->>'entity' " +
                      "ORDER BY aal.created_at DESC LIMIT 5";
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -125,6 +131,7 @@ public class Dashboard implements Action {
                 JSONObject o = new JSONObject();
                 o.put("id", rs.getString("audit_id"));
                 o.put("actor", rs.getString("external_id"));
+                o.put("actor_name", rs.getString("actor_name"));
                 o.put("intent", rs.getString("intent_raw"));
                 o.put("policy", rs.getString("policy_id"));
                 o.put("success", rs.getBoolean("success"));

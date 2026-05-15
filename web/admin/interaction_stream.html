@@ -220,6 +220,9 @@ const AUTH = () => ({ 'Content-Type': 'application/json', 'Authorization': local
 /* ─── boot ───────────────────────────────────────────────────────────── */
 async function boot() {
     if (!localStorage.getItem('nexus_token')) { window.location.href = 'index.html'; return; }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('from')) document.getElementById('filterFrom').value = params.get('from');
+    if (params.get('to'))   document.getElementById('filterTo').value   = params.get('to');
     await loadPage(1, true);
 }
 
@@ -334,7 +337,7 @@ function buildEntryEl(e) {
     wrap.className = 'flex items-start gap-0';
 
     const typeClass = typeColor(e.entity_type);
-    const entityLabel = e.external_id ? '@' + e.external_id.replace(/^@/, '') : '—';
+    const entityLabel = e.entity_name || (e.external_id ? e.external_id.replace(/^@/, '') : '—');
     const preview = e.content ? (e.content.length > 120 ? e.content.slice(0, 120) + '…' : e.content) : '';
 
     wrap.innerHTML = `
@@ -367,7 +370,7 @@ function typeColor(t) {
 /* ─── detail modal ───────────────────────────────────────────────────── */
 function openDetail(e) {
     const typeClass  = typeColor(e.entity_type);
-    const entityLabel = e.external_id ? '@' + e.external_id.replace(/^@/, '') : 'unknown';
+    const entityLabel = e.entity_name || (e.external_id ? e.external_id.replace(/^@/, '') : 'unknown');
 
     document.getElementById('detailMeta').textContent        = (e.created_fmt || '') + '  ' + (e.created_time || '');
     document.getElementById('detailTypeBadge').className     = `inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${typeClass}`;

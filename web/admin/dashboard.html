@@ -106,31 +106,31 @@
         <section class="flex-1 overflow-y-auto p-8">
             
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card">
+                <a href="dtwin_graph.html" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card block hover:border-indigo-300 transition-colors">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Entities</p>
                     <h3 id="stat_twins" class="text-xl font-bold text-slate-900">...</h3>
-                    <p class="text-[9px] text-indigo-500 font-bold mt-1">Digital Twins</p>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card">
+                    <p class="text-[9px] text-indigo-500 font-bold mt-1">Digital Twins ↗</p>
+                </a>
+                <a href="dtwin_graph.html" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card block hover:border-indigo-300 transition-colors">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Relationships</p>
                     <h3 id="stat_relationships" class="text-xl font-bold text-slate-900">...</h3>
-                    <p class="text-[9px] text-blue-500 font-bold mt-1">Graph Edges</p>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card">
+                    <p class="text-[9px] text-blue-500 font-bold mt-1">Graph Edges ↗</p>
+                </a>
+                <a href="policy_manifest.html" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card block hover:border-indigo-300 transition-colors">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Policies</p>
                     <h3 id="stat_policies" class="text-xl font-bold text-slate-900">...</h3>
-                    <p class="text-[9px] text-amber-500 font-bold mt-1">Active Guards</p>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card">
+                    <p class="text-[9px] text-amber-500 font-bold mt-1">Active Guards ↗</p>
+                </a>
+                <a href="#" onclick="drillIntents(event)" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card block hover:border-indigo-300 transition-colors">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Intents Today</p>
                     <h3 id="stat_intents" class="text-xl font-bold text-slate-900">...</h3>
-                    <p class="text-[9px] text-green-500 font-bold mt-1">Stream Volume</p>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card">
+                    <p class="text-[9px] text-green-500 font-bold mt-1">Stream Volume ↗</p>
+                </a>
+                <a href="#" onclick="drillBlocks(event)" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 metric-card block hover:border-indigo-300 transition-colors">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Blocks Today</p>
                     <h3 id="stat_blocks" class="text-xl font-bold text-slate-900">...</h3>
-                    <p class="text-[9px] text-rose-500 font-bold mt-1">Policy Denials</p>
-                </div>
+                    <p class="text-[9px] text-rose-500 font-bold mt-1">Policy Denials ↗</p>
+                </a>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -202,7 +202,7 @@
                                 </div>
                                 <div>
                                     <p class="text-xs font-bold text-slate-800">${item.content}</p>
-                                    <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Actor: @${item.actor || 'system'} | ${item.time}</p>
+                                    <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Actor: ${item.actor_name || item.actor || 'system'} | ${item.time}</p>
                                 </div>
                             </div>
                             <span class="text-[9px] font-black px-2 py-1 bg-slate-100 text-slate-500 rounded-md uppercase">${item.intent || 'general'}</span>
@@ -224,7 +224,7 @@
                                 <span class="text-[9px] text-slate-400 font-medium">${item.time}</span>
                             </div>
                             <p class="text-[10px] text-slate-600 line-clamp-1">${item.intent}</p>
-                            <p class="text-[9px] text-indigo-500 font-bold uppercase mt-1">@${item.actor || 'anon'} → ${item.policy || 'SYSTEM'}</p>
+                            <p class="text-[9px] text-indigo-500 font-bold uppercase mt-1">${item.actor_name || item.actor || 'anon'} → ${item.policy || 'SYSTEM'}</p>
                         </div>
                     `).join('');
                 }
@@ -232,6 +232,18 @@
             } catch (err) {
                 console.error('Failed to load dashboard', err);
             }
+        }
+
+        function drillIntents(e) {
+            e.preventDefault();
+            const today = new Date().toISOString().slice(0, 10);
+            window.location.href = `interaction_stream.html?from=${today}&to=${today}`;
+        }
+
+        function drillBlocks(e) {
+            e.preventDefault();
+            const today = new Date().toISOString().slice(0, 10);
+            window.location.href = `audit.html?from=${today}&to=${today}`;
         }
 
         window.onload = loadDashboard;

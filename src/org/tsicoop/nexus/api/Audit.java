@@ -85,14 +85,17 @@ public class Audit implements Action {
             String sql =
                 "SELECT aal.audit_id::text, " +
                 "aal.actor_id::text, " +
-                "dt.external_id, dt.type AS entity_type, " +
+                "COALESCE(dt.external_id, aal.action_executed->>'entity') AS external_id, " +
+                "dt.type AS entity_type, " +
+                "COALESCE(dt.current_state->>'name', dt2.current_state->>'name') AS actor_name, " +
                 "aal.intent_raw, " +
                 "COALESCE(aal.action_executed::text, '{}') AS action_executed, " +
                 "aal.policy_id, pm.action_type AS policy_label, " +
                 "to_char(aal.created_at, 'DD Mon YYYY') AS created_fmt, " +
                 "to_char(aal.created_at, 'HH24:MI:SS')  AS created_time " +
                 "FROM action_audit_log aal " +
-                "LEFT JOIN digital_twins dt ON dt.id = aal.actor_id " +
+                "LEFT JOIN digital_twins dt  ON dt.id = aal.actor_id " +
+                "LEFT JOIN digital_twins dt2 ON dt2.external_id = aal.action_executed->>'entity' " +
                 "LEFT JOIN policy_manifest pm ON pm.policy_id = aal.policy_id " +
                 where + " " +
                 "ORDER BY aal.created_at DESC " +
@@ -112,6 +115,7 @@ public class Audit implements Action {
                         e.put("audit_id",     rs.getString("audit_id"));
                         e.put("actor_id",     rs.getString("actor_id"));
                         e.put("external_id",  rs.getString("external_id"));
+                        e.put("actor_name",   rs.getString("actor_name"));
                         e.put("entity_type",  rs.getString("entity_type"));
                         e.put("intent_raw",   rs.getString("intent_raw"));
                         e.put("policy_id",    rs.getString("policy_id"));

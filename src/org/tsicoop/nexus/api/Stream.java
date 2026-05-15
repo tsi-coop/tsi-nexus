@@ -87,6 +87,7 @@ public class Stream implements Action {
 
             String sql = "SELECT ist.id, " +
                          "dt.external_id, dt.type AS entity_type, " +
+                         "dt.current_state->>'name' AS entity_name, " +
                          "ist.content, ist.intent_mapped, " +
                          "to_char(ist.created_at, 'DD Mon YYYY') AS created_fmt, " +
                          "to_char(ist.created_at, 'HH24:MI')     AS created_time " +
@@ -110,8 +111,9 @@ public class Stream implements Action {
                     while (rs.next()) {
                         JSONObject entry = new JSONObject();
                         entry.put("id",          rs.getLong("id"));
-                        entry.put("external_id", rs.getString("external_id"));  // may be null for orphaned rows
-                        entry.put("entity_type", rs.getString("entity_type"));  // may be null for orphaned rows
+                        entry.put("external_id",  rs.getString("external_id"));
+                        entry.put("entity_name",  rs.getString("entity_name"));
+                        entry.put("entity_type",  rs.getString("entity_type"));
                         entry.put("content",     rs.getString("content"));
                         String intentMapped = rs.getString("intent_mapped");
                         if (intentMapped != null) {
