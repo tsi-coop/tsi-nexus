@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -54,6 +55,10 @@ public class Intent implements Action {
             JSONObject result = resolveToAdaptiveUI(intentToProcess, commands);
             result.put("intent_captured", rawIntent);
             if (llmCommand != null) result.put("llm_command", llmCommand);
+
+            // Log action intents immediately — analytics/action commands have no other logging point
+            JSONArray comps = (JSONArray) result.get("components");
+            if (comps != null) logActionIntents(conn, comps, rawIntent, InputProcessor.getTwinId(req));
 
             OutputProcessor.send(res, 200, result);
         } catch (Exception e) {
@@ -297,6 +302,52 @@ public class Intent implements Action {
             if (verb.equalsIgnoreCase((String) cmd.get("command_verb"))) return cmd;
         }
         return null;
+    }
+
+    /* ── Stream logging ───────────────────────────────────────────────────── */
+
+    private void logActionIntents(Connection conn, JSONArray components, String rawIntent, String actorTwinId) {
+        for (Object obj : components) {
+            JSONObject comp = (JSONObject) obj;
+            if (!"universal_action_confirm".equals(comp.get("component_type"))) continue;
+            try {
+                JSONObject props = (JSONObject) new JSONParser().parse((String) comp.get("props"));
+                String targetId = (String) props.get("target_external_id");
+                if (targetId == null || targetId.isEmpty() || "unknown".equals(targetId)) continue;
+                String clean = targetId.replaceFirst("^@", "");
+                UUID ownerId;
+                String entityName = null;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT id, current_state->>'name' FROM digital_twins WHERE external_id = ?")) {
+                    ps.setString(1, clean);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) continue;
+                        ownerId = UUID.fromString(rs.getString(1));
+                        entityName = rs.getString(2);
+                    }
+                }
+                UUID actorId = null;
+                if (actorTwinId != null && !actorTwinId.isBlank()) {
+                    try { actorId = UUID.fromString(actorTwinId); } catch (Exception ignored) {}
+                }
+                String actionType = (String) props.get("action_type");
+                // Replace @handle or bare handle in raw intent with the human name
+                String display = rawIntent != null ? rawIntent : actionType;
+                if (entityName != null) {
+                    display = display.replaceAll("(?i)@?" + java.util.regex.Pattern.quote(clean), entityName).trim();
+                }
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO interaction_stream (owner_id, actor_id, content, intent_mapped, created_at) VALUES (?, ?, ?, ?, NOW())")) {
+                    ps.setObject(1, ownerId);
+                    ps.setObject(2, actorId);
+                    ps.setString(3, display);
+                    ps.setString(4, actionType);
+                    ps.executeUpdate();
+                }
+            } catch (Exception e) {
+                System.err.println("[Intent] stream log failed: " + e.getMessage());
+            }
+        }
     }
 
     /* ── DB helpers ───────────────────────────────────────────────────────── */

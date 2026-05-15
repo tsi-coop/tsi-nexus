@@ -56,9 +56,18 @@ public class Governance implements Action {
             conn = pool.getConnection();
             conn.setAutoCommit(false);
 
+            // Always record the intent in the interaction stream before executing
+            UUID actorUuid = null;
+            try { actorUuid = UUID.fromString(actorStr); } catch (Exception ignored) {}
+            String targetForStream = params.get("target_1") != null
+                ? (String) params.get("target_1")
+                : (String) params.getOrDefault("target_external_id", null);
+            appendToStream(conn, targetForStream, actorUuid, intentRaw, actionType);
+
             String executionMode = fetchExecutionMode(conn, actionType);
             if ("ANALYTICS".equals(executionMode)) {
                 JSONObject result = executeAnalysis(conn, actionType, params);
+                logAudit(conn, actorUuid, intentRaw, actionType, "ANALYTICS", true, null);
                 conn.commit();
                 return result;
             }
@@ -66,6 +75,8 @@ public class Governance implements Action {
             // 1. DYNAMIC POLICY GUARD
             String violation = checkPolicyManifest(conn, actionType, params);
             if (violation != null) {
+                logAudit(conn, actorUuid, intentRaw, actionType, "GUARDRAIL", false, violation);
+                conn.commit();
                 JSONObject fail = new JSONObject();
                 fail.put("success", false);
                 fail.put("reason", violation);
@@ -78,7 +89,7 @@ public class Governance implements Action {
             // 3. AUDIT LOGGING
             String targetExternalId = params.get("target_external_id") != null
                 ? ((String) params.get("target_external_id")).replaceFirst("^@", "") : "";
-            logAudit(conn, UUID.fromString(actorStr), intentRaw, actionType, params);
+            logAudit(conn, actorUuid, intentRaw, actionType, "GUARDRAIL", true, null);
 
             conn.commit();
 
@@ -215,12 +226,45 @@ public class Governance implements Action {
         }
     }
 
-    private void logAudit(Connection conn, UUID actorId, String intent, String action, JSONObject params) throws SQLException {
-        String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, created_at) VALUES (?, ?, ?::jsonb, NOW())";
+    private void appendToStream(Connection conn, String externalId, UUID actorId, String content, String intentMapped) {
+        try {
+            if (externalId == null || externalId.isBlank()) return;
+            String clean = externalId.replaceFirst("^@", "");
+            UUID ownerId;
+            try (PreparedStatement ps = conn.prepareStatement("SELECT id FROM digital_twins WHERE external_id = ?")) {
+                ps.setString(1, clean);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) return;
+                    ownerId = UUID.fromString(rs.getString(1));
+                }
+            }
+            String sql = "INSERT INTO interaction_stream (owner_id, actor_id, content, intent_mapped, created_at) VALUES (?, ?, ?, ?, NOW())";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setObject(1, ownerId);
+                ps.setObject(2, actorId);
+                ps.setString(3, content != null ? content : intentMapped);
+                ps.setString(4, intentMapped);
+                ps.executeUpdate();
+            }
+        } catch (Exception e) {
+            System.err.println("[stream] append failed: " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void logAudit(Connection conn, UUID actorId, String intent, String action,
+                          String mode, boolean success, String reason) throws SQLException {
+        JSONObject executed = new JSONObject();
+        executed.put("success",    success);
+        executed.put("action_type", action);
+        executed.put("mode",       mode);
+        if (reason != null) executed.put("reason", reason);
+        String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, policy_id, created_at) VALUES (?, ?, ?::jsonb, ?, NOW())";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setObject(1, actorId);
             pstmt.setString(2, intent);
-            pstmt.setString(3, params.toJSONString());
+            pstmt.setString(3, executed.toJSONString());
+            pstmt.setString(4, action);
             pstmt.executeUpdate();
         }
     }

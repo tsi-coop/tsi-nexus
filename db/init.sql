@@ -79,9 +79,10 @@ CREATE TABLE app_access_registry (
 CREATE TABLE interaction_stream (
     id BIGSERIAL PRIMARY KEY,
     owner_id UUID REFERENCES digital_twins(id) ON DELETE CASCADE,
+    actor_id UUID REFERENCES digital_twins(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
     intent_mapped TEXT,                -- The interpreted command (e.g., /disburse)
-    embedding vector(1536),    
+    embedding vector(1536),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
