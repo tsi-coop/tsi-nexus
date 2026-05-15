@@ -38,6 +38,7 @@ public class Policy implements Action {
         "  - For GUARDRAIL mode: return COUNT(*) — action is blocked when count > 0\n" +
         "  - For ANALYTICS mode: return meaningful rows with named columns\n" +
         "  - Access JSONB fields with ->> operator (e.g. current_state->>'kyc')\n" +
+        "  - When comparing a JSONB field to a number, always cast to numeric: (current_state->>'field')::numeric\n" +
         "  - Join via external_id: SELECT ... FROM digital_twins WHERE external_id = ?\n" +
         "  - Output ONLY the raw SQL. No explanation, no markdown, no code fences.";
 
