@@ -35,7 +35,8 @@ public class InterceptingFilter implements Filter {
         "/api/templates",
         "/api/schema",
         "/api/registry",
-        "/api/stream"
+        "/api/stream",
+        "/api/debug"
     ));
     @Override
     public void destroy() {

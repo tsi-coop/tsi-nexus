@@ -22,4 +22,5 @@
 /api/tuning=org.tsicoop.nexus.api.Tuning
 /api/setup=org.tsicoop.nexus.api.User
 /api/auth=org.tsicoop.nexus.api.User
+/api/debug=org.tsicoop.nexus.api.Debug
 

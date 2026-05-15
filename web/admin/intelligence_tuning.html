@@ -482,6 +482,14 @@ function renderCommands() {
                            title="${esc(p.description || '')}">${esc(p.policy_id)}</a>`).join('') : '<span class="text-slate-300 italic text-[11px]">no guardrails</span>'}
                     <a href="policy_manifest.html?action_type=${esc(cmd.action_type)}" class="ml-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide border border-dashed border-slate-300 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">+ Policy</a>
                 </div>
+                <div class="pt-2 mt-0.5 border-t border-slate-100">
+                    <button id="diag-btn-${esc(cmd.command_verb)}" onclick="runDiagnostics('${esc(cmd.command_verb)}')"
+                        class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors py-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+                        Run Diagnostics
+                    </button>
+                    <div id="diag-${esc(cmd.command_verb)}" class="hidden space-y-1.5 mt-2"></div>
+                </div>
             </div>`;
         list.appendChild(row);
     });
@@ -785,6 +793,99 @@ function showFeedback(id, msg, isError) {
 }
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── diagnostics ────────────────────────────────────────────────────── */
+async function runDiagnostics(verb) {
+    const panel = document.getElementById(`diag-${verb}`);
+    const btn   = document.getElementById(`diag-btn-${verb}`);
+    panel.classList.remove('hidden');
+    panel.innerHTML = '<p class="text-[10px] text-slate-400 animate-pulse py-1">Running checks…</p>';
+    btn.disabled = true;
+
+    try {
+        const res  = await fetch(`/api/debug?command_verb=${encodeURIComponent(verb)}`,
+            { headers: { 'Authorization': 'Bearer ' + _token } });
+        const data = await res.json();
+        if (!data.success) throw new Error('Diagnostics failed');
+        renderDiagnostics(panel, verb, data);
+    } catch (err) {
+        panel.innerHTML = `<p class="text-[10px] text-red-500 font-bold">${esc(err.message)}</p>`;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg> Re-run Diagnostics`;
+    }
+}
+
+function renderDiagnostics(panel, verb, data) {
+    const checks = data.checks || [];
+    if (!checks.length) {
+        panel.innerHTML = `
+            <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span class="text-[10px] font-bold text-emerald-700">No issues found — command is correctly configured</span>
+            </div>`;
+        return;
+    }
+
+    let html = '';
+    for (const check of checks) {
+        const isError  = check.severity === 'error';
+        const colorBg  = isError ? 'bg-red-50 border-red-100'   : 'bg-amber-50 border-amber-100';
+        const badgeCls = isError ? 'bg-red-100 text-red-700'    : 'bg-amber-100 text-amber-700';
+
+        for (const rec of (check.records || [])) {
+            let actionBtn = '';
+            if (check.auto_fixable) {
+                actionBtn = `<button onclick="autoFix('${esc(check.check_id)}','${esc(verb)}')"
+                    class="px-2.5 py-1.5 bg-indigo-600 text-white text-[9px] font-black uppercase rounded-lg hover:bg-indigo-700 transition-colors shrink-0">
+                    Auto Fix</button>`;
+            } else if (check.check_id === 'sql_type_mismatch' || check.check_id === 'orphan_command_action') {
+                actionBtn = `<a href="policy_manifest.html"
+                    class="px-2.5 py-1.5 bg-white border border-slate-200 text-slate-600 text-[9px] font-black uppercase rounded-lg hover:border-indigo-400 hover:text-indigo-600 transition-colors shrink-0">
+                    Open Policy →</a>`;
+            } else if (check.check_id === 'dangling_linked_form' || check.check_id === 'form_component_no_form') {
+                actionBtn = `<a href="form_builder.html"
+                    class="px-2.5 py-1.5 bg-white border border-slate-200 text-slate-600 text-[9px] font-black uppercase rounded-lg hover:border-indigo-400 hover:text-indigo-600 transition-colors shrink-0">
+                    Open Forms →</a>`;
+            }
+
+            const extra = check.check_id === 'sql_type_mismatch'
+                ? `<p class="font-mono text-[9px] text-slate-400 mt-1 break-all">${esc(rec.query_logic || '')}</p>`
+                : check.check_id === 'entity_type_mismatch'
+                ? `<p class="text-[9px] text-slate-400 mt-0.5">Command expects <strong>${esc(rec.command_entity_type)}</strong>, form applies to <strong>${esc(rec.schema_applies_to)}</strong></p>`
+                : '';
+
+            html += `
+                <div class="flex items-start gap-2.5 px-3 py-2.5 ${colorBg} border rounded-xl">
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${badgeCls} shrink-0 mt-0.5">${esc(check.severity)}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[10px] font-black text-slate-700">${esc(check.title)}</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">${esc(check.description)}</p>
+                        ${extra}
+                    </div>
+                    ${actionBtn}
+                </div>`;
+        }
+    }
+    panel.innerHTML = html;
+}
+
+async function autoFix(checkId, verb) {
+    if (checkId !== 'form_linked_wrong_type') return;
+    try {
+        const res  = await fetch('/api/debug', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+            body: JSON.stringify({ action: 'fix_component_type', command_verb: verb })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Fix failed');
+        await reloadCommands();
+        await runDiagnostics(verb);
+    } catch (err) {
+        alert('Fix failed: ' + err.message);
+    }
 }
 
 document.getElementById('termModal').addEventListener('click',    e => { if (e.target === e.currentTarget) closeModal('termModal'); });
