@@ -6,6 +6,11 @@ Zero sector-specific logic is hardcoded. Every domain concept - entity types, te
 
 ---
 
+- [Soft launch announcement](https://techadvisory.substack.com/p/tsi-nexus-an-open-source-digital) — Introduction post on Substack
+- [Video walkthrough](https://youtu.be/vvCECWRBTms) — End-to-end demo on YouTube
+
+---
+
 ## What it does
 
 **For end users (the Liquid interface)**
@@ -31,6 +36,8 @@ See [`docs/architecture.md`](docs/architecture.md) for a full breakdown of the s
 ---
 
 ## Getting started
+
+Watch the [video walkthrough](https://youtu.be/vvCECWRBTms) for a full end-to-end demo before diving in.
 
 ### Prerequisites
 - Docker and Docker Compose
