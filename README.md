@@ -4,7 +4,7 @@ A sovereign institutional intelligence platform for small and medium enterprises
 
 Zero sector-specific logic is hardcoded. Every domain concept - entity types, terminology, policies, commands, templates - lives in database rows configured by the deploying institution.
 
-Checkout our [soft launch announcement](https://techadvisory.substack.com/p/tsi-nexus-an-open-source-digital)
+Checkout our [soft launch announcement](https://techadvisory.substack.com/p/tsi-nexus-an-open-source-digital).
 
 ## What it does
 
@@ -25,9 +25,9 @@ Checkout our [soft launch announcement](https://techadvisory.substack.com/p/tsi-
 
 ## How organisations use it
 
-**Intent to command.** Field staff type natural language requests. TSI Nexus maps them to exact registered command verbs like `/disburse_loan` or `/verify_kyc`, with no ambiguity and no drift from institutional policy.
+**Intent to command:** Field staff type natural language requests. TSI Nexus maps them to exact registered command verbs like `/disburse_loan` or `/verify_kyc`, with no ambiguity and no drift from institutional policy.
 
-**Policy evaluation.** Before any command executes, TSI Nexus checks it against the live context and business rules stored in the knowledge graph. It either approves, blocks, or flags for escalation - keeping every action within the institution's defined guardrails.
+**Policy evaluation:** Before any command executes, TSI Nexus checks it against the live context and business rules stored in the knowledge graph. It either approves, blocks, or flags for escalation - keeping every action within the institution's defined guardrails.
 
 ## Architecture
 
