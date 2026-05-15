@@ -50,24 +50,27 @@ public class Governance implements Action {
         String actionType = (String) input.get("action_type");
         JSONObject params = (JSONObject) input.get("params");
         String intentRaw = (String) input.get("intent_raw");
-        String actorStr = (String) input.getOrDefault("actor_id", "00000000-0000-0000-0000-000000000000");
 
         try {
             conn = pool.getConnection();
             conn.setAutoCommit(false);
 
-            // Always record the intent in the interaction stream before executing
-            UUID actorUuid = null;
-            try { actorUuid = UUID.fromString(actorStr); } catch (Exception ignored) {}
             String targetForStream = params.get("target_1") != null
                 ? (String) params.get("target_1")
                 : (String) params.getOrDefault("target_external_id", null);
-            appendToStream(conn, targetForStream, actorUuid, intentRaw, actionType);
+
+            // Resolve actor UUID from the JWT twin_id (null if admin has no twin)
+            UUID actorUuid = resolveActorId(conn, (String) input.get("actor_id"));
+
+            // Humanise intent_raw by replacing @handles with entity names
+            String intentDisplay = humaniseIntent(conn, intentRaw, targetForStream);
+
+            appendToStream(conn, targetForStream, actorUuid, intentDisplay, actionType);
 
             String executionMode = fetchExecutionMode(conn, actionType);
             if ("ANALYTICS".equals(executionMode)) {
                 JSONObject result = executeAnalysis(conn, actionType, params);
-                logAudit(conn, actorUuid, intentRaw, actionType, "ANALYTICS", true, null);
+                logAudit(conn, actorUuid, intentDisplay, actionType, "ANALYTICS", true, null);
                 conn.commit();
                 return result;
             }
@@ -75,7 +78,7 @@ public class Governance implements Action {
             // 1. DYNAMIC POLICY GUARD
             String violation = checkPolicyManifest(conn, actionType, params);
             if (violation != null) {
-                logAudit(conn, actorUuid, intentRaw, actionType, "GUARDRAIL", false, violation);
+                logAudit(conn, actorUuid, intentDisplay, actionType, "GUARDRAIL", false, violation);
                 conn.commit();
                 JSONObject fail = new JSONObject();
                 fail.put("success", false);
@@ -89,7 +92,7 @@ public class Governance implements Action {
             // 3. AUDIT LOGGING
             String targetExternalId = params.get("target_external_id") != null
                 ? ((String) params.get("target_external_id")).replaceFirst("^@", "") : "";
-            logAudit(conn, actorUuid, intentRaw, actionType, "GUARDRAIL", true, null);
+            logAudit(conn, actorUuid, intentDisplay, actionType, "GUARDRAIL", true, null);
 
             conn.commit();
 
@@ -255,18 +258,50 @@ public class Governance implements Action {
     private void logAudit(Connection conn, UUID actorId, String intent, String action,
                           String mode, boolean success, String reason) throws SQLException {
         JSONObject executed = new JSONObject();
-        executed.put("success",    success);
+        executed.put("success",     success);
         executed.put("action_type", action);
-        executed.put("mode",       mode);
+        executed.put("mode",        mode);
         if (reason != null) executed.put("reason", reason);
-        String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, policy_id, created_at) VALUES (?, ?, ?::jsonb, ?, NOW())";
+        // actor_id and policy_id are nullable FKs — pass null to avoid FK violations
+        // when the admin user has no digital twin or no matching policy_id exists
+        String sql = "INSERT INTO action_audit_log (actor_id, intent_raw, action_executed, created_at) VALUES (?, ?, ?::jsonb, NOW())";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setObject(1, actorId);
+            pstmt.setObject(1, actorId);   // null-safe: null skips FK check
             pstmt.setString(2, intent);
             pstmt.setString(3, executed.toJSONString());
-            pstmt.setString(4, action);
             pstmt.executeUpdate();
         }
+    }
+
+    private UUID resolveActorId(Connection conn, String rawTwinId) {
+        if (rawTwinId == null || rawTwinId.isBlank()) return null;
+        try {
+            UUID candidate = UUID.fromString(rawTwinId);
+            try (PreparedStatement ps = conn.prepareStatement("SELECT 1 FROM digital_twins WHERE id = ?")) {
+                ps.setObject(1, candidate);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() ? candidate : null;
+                }
+            }
+        } catch (Exception ignored) { return null; }
+    }
+
+    private String humaniseIntent(Connection conn, String intentRaw, String targetId) {
+        if (intentRaw == null || targetId == null || targetId.isBlank()) return intentRaw;
+        try {
+            String clean = targetId.replaceFirst("^@", "");
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT current_state->>'name' FROM digital_twins WHERE external_id = ?")) {
+                ps.setString(1, clean);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getString(1) != null) {
+                        String name = rs.getString(1);
+                        return intentRaw.replaceAll("(?i)@?" + java.util.regex.Pattern.quote(clean), name).trim();
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return intentRaw;
     }
 
     @SuppressWarnings("unchecked")

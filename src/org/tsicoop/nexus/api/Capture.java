@@ -307,6 +307,17 @@ public class Capture implements Action {
         try {
             String actorTwinId = InputProcessor.getTwinId(req);
             UUID actorId = (actorTwinId != null && !actorTwinId.isBlank()) ? UUID.fromString(actorTwinId) : null;
+
+            // Look up human name to use in intent_raw instead of raw ID
+            String entityLabel = externalId;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT current_state->>'name' FROM digital_twins WHERE external_id = ?")) {
+                ps.setString(1, externalId);
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getString(1) != null) entityLabel = rs.getString(1);
+                }
+            }
+
             JSONObject executed = new JSONObject();
             executed.put("success",     false);
             executed.put("action_type", actionType);
@@ -316,7 +327,7 @@ public class Capture implements Action {
                          "VALUES (?, ?, ?::jsonb, ?, NOW())";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setObject(1, actorId);
-                ps.setString(2, actionType + " " + externalId);
+                ps.setString(2, actionType + " — " + entityLabel);
                 ps.setString(3, executed.toJSONString());
                 ps.setString(4, policyId);
                 ps.executeUpdate();
