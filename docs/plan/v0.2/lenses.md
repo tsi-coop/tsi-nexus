@@ -1,4 +1,4 @@
-# Lenses — Data Apps Lite
+# Lenses - Data Apps Lite
 
 **Version:** 0.2  
 **Status:** Planning  
@@ -10,23 +10,23 @@
 
 TSI Nexus has a core engine (Context Graph, Guardrails, Service Registry)
 and two front-ends: the Admin (configuration) and Liquid (the adaptive operator
-UI). The gap is purpose-built, workflow-driven micro-apps — a Vendor Portal,
-CRM, Asset Tracker — that non-technical staff can deploy without a developer.
+UI). The gap is purpose-built, workflow-driven micro-apps - a Vendor Portal,
+CRM, Asset Tracker - that non-technical staff can deploy without a developer.
 
 **Lenses** closes that gap. A Lens is a focused application assembled from
 primitives that already exist in TSI Nexus: Input Manifests (forms), Context
 Cards (display templates), and Guardrails (rules). An admin configures a Lens
 in the **Studio** by filling in a visual form. Field users open it in the
-**Canvas** — a lightweight, mobile-ready HTML player that renders the correct
+**Canvas** - a lightweight, mobile-ready HTML player that renders the correct
 form and context for wherever an entity sits in its workflow.
 
 ### Naming Rationale
 
 | Layer | Name | What it does |
 |---|---|---|
-| Foundation | **Nexus** | The digital brain — data, graph, intelligence |
-| Interface | **Liquid** | The adaptive raw interface — flows to any task |
-| Applications | **Lenses** | Focused apps — direct the intelligence at one workflow |
+| Foundation | **Nexus** | The digital brain - data, graph, intelligence |
+| Interface | **Liquid** | The adaptive raw interface - flows to any task |
+| Applications | **Lenses** | Focused apps - direct the intelligence at one workflow |
 
 Within the Lenses module:
 
@@ -53,12 +53,12 @@ under the Experience group.
 
 ---
 
-## Studio — The App Builder Experience
+## Studio - The App Builder Experience
 
 A non-technical ops manager (Priya) wants to build a Vendor Onboarding app.
 She logs into the Admin, clicks **Lenses**, and sees the Studio.
 
-### Step 1 — Identity
+### Step 1 - Identity
 
 She fills in three fields:
 
@@ -68,7 +68,7 @@ She fills in three fields:
 
 The system auto-generates a slug: `vendor-onboarding`.
 
-### Step 2 — Workflow Stages
+### Step 2 - Workflow Stages
 
 This is the heart of the Studio. Priya thinks in pipeline terms:
 
@@ -82,13 +82,13 @@ For each stage she answers three questions using dropdowns and text inputs:
 2. **What should the officer fill in here?** → picks an Input Manifest
 3. **What should they see about the entity?** → picks a Context Card
 
-Then she defines **transition buttons** — what the user can do from this stage
+Then she defines **transition buttons** - what the user can do from this stage
 and where it leads. Example: "Mark Verified → Compliance Check" and
 "Return to Applicant → New Application."
 
 No SQL, no JSON, no code.
 
-### Step 3 — Publish
+### Step 3 - Publish
 
 She clicks **Publish**. The Studio shows a shareable Canvas URL:
 
@@ -100,11 +100,11 @@ She sends it to her field team. The app is live instantly.
 
 ---
 
-## Canvas — The Field User Experience
+## Canvas - The Field User Experience
 
 Ravi is a field officer. He opens the Canvas link on his phone browser.
 
-### Mode 1 — Entity List (landing screen)
+### Mode 1 - Entity List (landing screen)
 
 When no entity is specified in the URL, the Canvas shows a **list of entities**
 of the Lens's type (e.g. all vendors), with:
@@ -119,18 +119,18 @@ waiting for me?"
 
 URL: `canvas/index.html?lens=vendor-onboarding`
 
-### Mode 2 — Entity Detail
+### Mode 2 - Entity Detail
 
 Ravi taps a vendor. The Canvas switches to a two-panel detail view.
 
 **Left panel:**
 - Vendor name + entity ID chip
-- Stage pipeline — all stages listed vertically, current one highlighted in
+- Stage pipeline - all stages listed vertically, current one highlighted in
   indigo, completed ones marked with a check
 - Action buttons for the current stage (the defined transitions)
 - Recent activity feed (last 5 interaction stream entries)
 
-**Right panel — two tabs:**
+**Right panel - two tabs:**
 - **Overview:** The Context Card for this stage, rendered with live entity
   data (state fields, external service data, graph links)
 - **Action:** The Input Manifest form for this stage (shown when an action
@@ -145,10 +145,10 @@ it in and submits. Behind the scenes:
 
 1. `POST /api/capture` validates fields and checks Guardrails
 2. If a Guardrail blocks (e.g. "Tax ID not verified"), Ravi sees the plain
-   English error message — no action taken
+   English error message, no action taken
 3. If clear: entity state is patched, interaction stream is appended, any
    configured PUSH services fire automatically
-4. Stage pipeline updates — the vendor is now in Compliance Check
+4. Stage pipeline updates, the vendor is now in Compliance Check
 
 No Canvas-side guardrail logic. Everything routes through the existing
 `Capture.java` engine.
@@ -262,12 +262,12 @@ assigning specific roles/users as the audience for a given Lens?
   a Lens. Canvas checks the user's role on load.
 
 ### 3. Parallel Stages
-Should a workflow support parallel stages — two reviews that must both
+Should a workflow support parallel stages - two reviews that must both
 complete before advancing?
 
 - **Option A (Lite scope):** Linear + branching only. Covers the vast majority
   of small-scale apps.
-- **Option B:** Parallel stage support — significantly more complex.
+- **Option B:** Parallel stage support - significantly more complex.
 
 ### 4. Stage Filter on Entity List
 On the Canvas list screen, should stage filter tabs be shown only for stages
