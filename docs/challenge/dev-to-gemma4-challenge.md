@@ -26,4 +26,4 @@ It handles two core jobs in TSI Nexus:
 
 **Policy evaluation.** Before any command runs, Gemma 4 checks it against the live context and business rules from the Context Graph. It either approves, blocks, or flags for escalation.
 
-We run Gemma 4 27B locally so data stays fully on-premise, which is non-negotiable for institutional use cases. Gemma 4's instruction-following is what made this practical - earlier models would hallucinate field values or misroute commands. Gemma 4 holds the structure consistently, which matters when commands touch real business operations.
+We run Gemma 4 26B locally so data stays fully on-premise, which is non-negotiable for institutional use cases. Gemma 4's instruction-following is what made this practical - earlier models would hallucinate field values or misroute commands. Gemma 4 holds the structure consistently, which matters when commands touch real business operations.
