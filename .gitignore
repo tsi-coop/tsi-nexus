@@ -6,4 +6,5 @@
 .help2
 /.claude/
 /server/.env
+*.swp
 
