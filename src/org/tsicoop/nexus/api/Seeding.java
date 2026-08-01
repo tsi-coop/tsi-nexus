@@ -12,7 +12,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -582,59 +584,104 @@ public class Seeding implements Action {
         return inserted;
     }
 
+    private static final int REL_BATCH      = 30; // "spoke" entities per relationship AI call
+    private static final int REL_ANCHOR_CAP = 20; // max "hub" entities carried into every batch
+
     private int generateRelationships(Connection conn, String context, String flavor,
                                        List<String[]> twins) throws Exception {
-        List<String[]> sample = twins.size() > 30 ? twins.subList(0, 30) : twins;
-        StringBuilder  twinList = new StringBuilder();
-        for (String[] t : sample) twinList.append(t[0]).append(" (").append(t[1]).append("), ");
+        if (twins.isEmpty()) return 0;
+
         Map<String, String> typeById = new HashMap<>();
         for (String[] t : twins) typeById.put(t[0], t[1] != null ? t[1].toLowerCase() : "");
 
-        String prompt =
-            "You are generating realistic digital twin relationships for an institutional context graph.\n\n" +
-            "INDUSTRY CONTEXT: " + context + "\n" +
-            (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
-            "ENTITY IDs: " + twinList + "\n\n" +
-            "Generate 15-25 relationship links (edges) between the entities above.\n" +
-            "Use relationship types that make sense for the two entity types.\n" +
-            "Valid examples:\n" +
-            "- officer WORKS_AT branch or office, never system\n" +
-            "- member MEMBER_OF group\n" +
-            "- officer MANAGES member/group/branch\n" +
-            "- member GUARANTEES member\n" +
-            "- member APPLIED_FOR product/service/system only if the target is an actual application destination\n" +
-            "Do not create Officer WORKS_AT System, Member WORKS_AT System, or any WORKS_AT edge to a system entity.\n" +
-            "Do not link human actors to systems unless the relationship verb clearly describes usage or access, such as USES_SYSTEM or HAS_SYSTEM_ACCESS.\n" +
-            "relationship_type must be uppercase, e.g. MEMBER_OF, GUARANTEES, WORKS_AT, MANAGES, REFERRED_BY, USES_SYSTEM\n" +
-            "metadata: small JSON object with 1-2 relevant fields (e.g. joined_date, relationship_strength, or shared_resource)\n\n" +
-            "Return ONLY valid JSON, no markdown:\n" +
-            "{\"relationships\":[{\"from_id\":\"SEED_member_001\",\"to_id\":\"SEED_group_001\"," +
-            "\"type\":\"MEMBER_OF\",\"metadata\":{\"role\":\"chairperson\"}},...]}";
+        // Smaller-count types (branches, clients, groups, ...) tend to be the "hub" entities
+        // that many other entities connect to. Carry them into every batch below so an AI call
+        // covering only a slice of a large type (e.g. candidates 31-60) can still see and link
+        // to the hubs — otherwise a plain first-N-twins sample silently drops entire types and
+        // most entities end up with zero relationships once the twin count grows past one batch.
+        Map<String, List<String[]>> byType = new LinkedHashMap<>();
+        for (String[] t : twins) byType.computeIfAbsent(t[1], k -> new ArrayList<>()).add(t);
+        List<List<String[]>> typeGroups = new ArrayList<>(byType.values());
+        typeGroups.sort(Comparator.comparingInt(List::size));
 
-        JSONObject generated = extractJson(callAI(prompt));
-        JSONArray  items     = arrOf(generated, "relationships");
+        List<String[]> anchors   = new ArrayList<>();
+        List<String[]> remainder = new ArrayList<>();
+        for (List<String[]> group : typeGroups) {
+            if (anchors.size() + group.size() <= REL_ANCHOR_CAP) anchors.addAll(group);
+            else remainder.addAll(group);
+        }
+
+        List<List<String[]>> batches = new ArrayList<>();
+        if (remainder.isEmpty()) {
+            batches.add(anchors);
+        } else {
+            for (int i = 0; i < remainder.size(); i += REL_BATCH) {
+                List<String[]> chunk = new ArrayList<>(anchors);
+                chunk.addAll(remainder.subList(i, Math.min(i + REL_BATCH, remainder.size())));
+                batches.add(chunk);
+            }
+        }
 
         int count = 0;
-        for (Object obj : items) {
-            JSONObject item   = (JSONObject) obj;
-            String     from   = str(item, "from_id");
-            String     to     = str(item, "to_id");
-            String     type   = str(item, "type");
-            JSONObject meta   = objOf(item, "metadata");
-            if (from == null || to == null || type == null) continue;
-            type = type.toUpperCase();
-            if (!isPlausibleRelationship(typeById.get(from), type, typeById.get(to))) continue;
+        for (List<String[]> batchTwins : batches) {
+            StringBuilder twinList = new StringBuilder();
+            for (String[] t : batchTwins) twinList.append(t[0]).append(" (").append(t[1]).append("), ");
+            int targetEdges = Math.max(batchTwins.size(), (int) Math.round(batchTwins.size() * 1.4));
 
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type, metadata) " +
-                    "SELECT f.id, t.id, ?, ?::jsonb " +
-                    "FROM digital_twins f, digital_twins t " +
-                    "WHERE f.external_id = ? AND t.external_id = ?")) {
-                ps.setString(1, type);
-                ps.setString(2, meta.toJSONString());
-                ps.setString(3, from);
-                ps.setString(4, to);
-                count += ps.executeUpdate();
+            String prompt =
+                "You are generating realistic digital twin relationships for an institutional context graph.\n\n" +
+                "INDUSTRY CONTEXT: " + context + "\n" +
+                (flavor != null && !flavor.isBlank() ? "DATA FLAVOR: " + flavor + "\n" : "") +
+                "ENTITY IDs: " + twinList + "\n\n" +
+                "Generate about " + targetEdges + " relationship links (edges) between the entities above.\n" +
+                "Spread the connections out — nearly every entity listed should end up with at least one link, " +
+                "not just a handful of them.\n" +
+                "Use relationship types that make sense for the two entity types.\n" +
+                "Valid examples:\n" +
+                "- officer WORKS_AT branch or office, never system\n" +
+                "- member MEMBER_OF group\n" +
+                "- officer MANAGES member/group/branch\n" +
+                "- member GUARANTEES member\n" +
+                "- member APPLIED_FOR product/service/system only if the target is an actual application destination\n" +
+                "Do not create Officer WORKS_AT System, Member WORKS_AT System, or any WORKS_AT edge to a system entity.\n" +
+                "Do not link human actors to systems unless the relationship verb clearly describes usage or access, such as USES_SYSTEM or HAS_SYSTEM_ACCESS.\n" +
+                "relationship_type must be uppercase, e.g. MEMBER_OF, GUARANTEES, WORKS_AT, MANAGES, REFERRED_BY, USES_SYSTEM\n" +
+                "metadata: small JSON object with 1-2 relevant fields (e.g. joined_date, relationship_strength, or shared_resource)\n\n" +
+                "Return ONLY valid JSON, no markdown:\n" +
+                "{\"relationships\":[{\"from_id\":\"SEED_member_001\",\"to_id\":\"SEED_group_001\"," +
+                "\"type\":\"MEMBER_OF\",\"metadata\":{\"role\":\"chairperson\"}},...]}";
+
+            try {
+                JSONObject generated = extractJson(callAI(prompt));
+                JSONArray  items     = arrOf(generated, "relationships");
+
+                for (Object obj : items) {
+                    JSONObject item = (JSONObject) obj;
+                    String     from = str(item, "from_id");
+                    String     to   = str(item, "to_id");
+                    String     type = str(item, "type");
+                    JSONObject meta = objOf(item, "metadata");
+                    if (from == null || to == null || type == null) continue;
+                    type = type.toUpperCase();
+                    if (!isPlausibleRelationship(typeById.get(from), type, typeById.get(to))) continue;
+
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type, metadata) " +
+                            "SELECT f.id, t.id, ?, ?::jsonb " +
+                            "FROM digital_twins f, digital_twins t " +
+                            "WHERE f.external_id = ? AND t.external_id = ? " +
+                            "AND NOT EXISTS (SELECT 1 FROM twin_relationships r WHERE r.from_twin_id = f.id " +
+                            "AND r.to_twin_id = t.id AND r.relationship_type = ?)")) {
+                        ps.setString(1, type);
+                        ps.setString(2, meta.toJSONString());
+                        ps.setString(3, from);
+                        ps.setString(4, to);
+                        ps.setString(5, type);
+                        count += ps.executeUpdate();
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[Seeding] generateRelationships batch failed: " + e.getMessage());
             }
         }
         return count;
