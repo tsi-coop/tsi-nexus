@@ -6,6 +6,8 @@
 /api/capture=org.tsicoop.nexus.api.Capture
 /api/entities=org.tsicoop.nexus.api.Entities
 /api/graph=org.tsicoop.nexus.api.Graph
+/api/analytics=org.tsicoop.nexus.api.Analytics
+/api/commentary=org.tsicoop.nexus.api.Commentary
 
 # Auth & Setup
 /api/apikeys=org.tsicoop.nexus.api.ApiKeys

@@ -358,26 +358,7 @@ public class Policy implements Action {
     }
 
     private String buildSchemaContext(Connection conn) {
-        StringBuilder sb = new StringBuilder();
-        // Entity types
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT type, COUNT(*) AS cnt, array_agg(DISTINCT jsonb_object_keys(current_state)) " +
-                "FROM digital_twins WHERE type != 'system' GROUP BY type ORDER BY type")) {
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    sb.append("  entity type='").append(rs.getString("type"))
-                      .append("' count=").append(rs.getLong("cnt")).append("\n");
-                }
-            }
-        } catch (Exception ignore) {}
-        // Relationship types
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT DISTINCT relationship_type FROM twin_relationships ORDER BY relationship_type")) {
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) sb.append("  relationship_type='").append(rs.getString("relationship_type")).append("'\n");
-            }
-        } catch (Exception ignore) {}
-        return sb.toString();
+        return org.tsicoop.nexus.framework.SchemaIntrospector.buildContext(conn);
     }
 
     private String extractContent(JSONObject llmResponse) {

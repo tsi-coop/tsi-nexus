@@ -101,22 +101,116 @@
             flex-direction: row;
         }
 
-        /* ── Right pane: card viewport ─────────────────── */
-        #stage-viewport {
+        /* ── Right pane: chat viewport ─────────────────── */
+        #chat-viewport {
             flex: 1;
             overflow-y: auto;
             background: #f8fafc;
             background-image: radial-gradient(#dde1e7 0.5px, transparent 0.5px);
             background-size: 22px 22px;
-            display: flex;
-            flex-direction: column;
             min-width: 0;
         }
-        #stage-viewport::-webkit-scrollbar { width: 5px; }
-        #stage-viewport::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        #chat-viewport::-webkit-scrollbar { width: 5px; }
+        #chat-viewport::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* ── Commentary pane ────────────────────────────── */
-        #commentary-pane {
+        #chat-log {
+            max-width: 860px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 28px 32px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100%;
+        }
+
+        .chat-empty-state {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            opacity: .3;
+        }
+
+        .chat-turn { display: flex; flex-direction: column; }
+
+        .chat-bubble-user {
+            align-self: flex-end;
+            max-width: 80%;
+            background: #4f46e5;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 10px 16px;
+            border-radius: 14px 14px 4px 14px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .chat-bubble-assistant {
+            align-self: flex-start;
+            width: 100%;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px 14px 14px 14px;
+            padding: 18px 22px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.04);
+        }
+
+        .chat-annotation {
+            align-items: center;
+            gap: 8px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 11px;
+            margin-bottom: 12px;
+        }
+        .chat-annotation code {
+            color: #3730a3;
+            background: #e0e7ff;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-size: 11px;
+        }
+
+        .chat-structured { font-size: 13px; color: #334155; line-height: 1.6; }
+
+        .chat-prose { font-size: 13px; color: #475569; line-height: 1.7; }
+        .chat-prose:not(:empty) { margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e2e8f0; }
+        .chat-prose p { margin: 0 0 8px; }
+        .chat-prose p:last-child { margin-bottom: 0; }
+        .chat-prose strong { color: #1e293b; }
+
+        .chat-thinking-dots {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .3em;
+            text-transform: uppercase;
+            color: #4f46e5;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .35; }
+        }
+
+        .chat-error {
+            background: #fff;
+            border-left: 6px solid #e11d48;
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: #9f1239;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        /* ── Action pane ────────────────────────────── */
+        #action-pane {
             width: 300px;
             flex-shrink: 0;
             background: #ffffff;
@@ -126,10 +220,10 @@
             overflow: hidden;
             transition: width .2s ease;
         }
-        #commentary-pane.collapsed { width: 44px; }
-        #commentary-pane.collapsed .commentary-header-label,
-        #commentary-pane.collapsed #commentary-body { display: none; }
-        .commentary-header {
+        #action-pane.collapsed { width: 44px; }
+        #action-pane.collapsed .action-pane-header-label,
+        #action-pane.collapsed #action-pane-body { display: none; }
+        .action-pane-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -138,28 +232,28 @@
             cursor: pointer;
             user-select: none;
         }
-        .commentary-header-label {
+        .action-pane-header-label {
             font-size: 9px;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: .3em;
             color: #4f46e5;
         }
-        .commentary-toggle {
+        .action-pane-toggle {
             width: 14px; height: 14px;
             color: #94a3b8;
             flex-shrink: 0;
             transition: transform .2s ease;
         }
-        #commentary-pane.collapsed .commentary-toggle { transform: rotate(180deg); }
-        #commentary-body {
+        #action-pane.collapsed .action-pane-toggle { transform: rotate(180deg); }
+        #action-pane-body {
             flex: 1;
             overflow-y: auto;
-            padding: 0 18px 24px;
+            padding: 4px 18px 24px;
         }
-        #commentary-body::-webkit-scrollbar { width: 3px; }
-        #commentary-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
-        .commentary-empty {
+        #action-pane-body::-webkit-scrollbar { width: 3px; }
+        #action-pane-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        .action-pane-empty {
             font-size: 11px;
             color: #94a3b8;
             background: #f8fafc;
@@ -168,19 +262,6 @@
             padding: 14px;
             line-height: 1.5;
         }
-        .commentary-block { margin-bottom: 18px; }
-        .commentary-title {
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .2em;
-            color: #94a3b8;
-            margin-bottom: 6px;
-        }
-        .commentary-text { font-size: 12px; color: #475569; line-height: 1.65; }
-        .commentary-text p { margin: 0 0 8px; }
-        .commentary-text p:last-child { margin-bottom: 0; }
-        .commentary-text strong { color: #1e293b; }
 
         /* ── Logo blob ───────────────────────────────── */
         .logo-blob {
@@ -463,30 +544,7 @@
         .step-title { font-size: 10px; font-weight: 700; color: #334155; }
         .step-body  { font-size: 9px;  color: #94a3b8; line-height: 1.45; margin-top: 1px; }
 
-        /* ── Right pane: stage states ────────────────── */
-        #stage.is-idle {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #stage.is-loading {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #stage.is-results {
-            padding: 28px 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            max-width: 860px;
-            width: 100%;
-            align-self: flex-start;
-        }
-
-        /* ── Cards (right pane) ──────────────────────── */
+        /* ── Cards (used inside chat bubbles + action pane) ──────────────────── */
         .nexus-card {
             background: #fff;
             border-left: 5px solid var(--blue);
@@ -541,17 +599,6 @@
         button.topo-chip:hover {
             background: #eef2ff; border-color: #a5b4fc; color: #3730a3;
         }
-
-        /* ── Back navigation ─────────────────────── */
-        .nav-back-btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
-            padding: 6px 14px; font-size: 11px; font-weight: 700; color: #64748b;
-            cursor: pointer; font-family: inherit;
-            transition: background .12s, border-color .12s, color .12s;
-            margin-bottom: 4px;
-        }
-        .nav-back-btn:hover { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; }
 
         /* ── Interaction capture form ─────────────────── */
         .cap-field { margin-bottom: 16px; }
@@ -618,7 +665,7 @@
 
             <!-- Input -->
             <div class="search-panel">
-                <input id="cmd" type="text" placeholder="Ask a question, command, or member name" autocomplete="off">
+                <input id="cmd" type="text" placeholder="Ask anything - a name, a command, or a question like 'top 5 ...'" autocomplete="off">
                 <div class="search-help">
                     <span>Press Enter</span>
                     <span>Tap any item below</span>
@@ -659,6 +706,9 @@
             <div class="nav-section-body" id="body-try-asking">
                 <div id="ex-chips-container">
                     <span style="font-size:11px;color:#94a3b8;">Loading…</span>
+                </div>
+                <div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:8px;padding:8px 10px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:7px;">
+                    You can also ask full questions - try "top 5 ..." or "why was ... blocked yesterday".
                 </div>
             </div>
 
@@ -710,23 +760,26 @@
          RIGHT PANE
     ═══════════════════════════════════════════ -->
     <main id="right">
-        <div id="stage-viewport">
-            <div id="stage" class="is-idle">
-                <div style="text-align:center;opacity:.3;">
-                    <div class="logo-blob" style="width:56px;height:56px;margin:0 auto 16px;"></div>
-                    <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#4f46e5;">Ready to help</div>
-                    <div style="font-size:10px;color:#94a3b8;margin-top:6px;font-weight:500;">Ask about any member, officer, or branch</div>
+        <div id="chat-viewport">
+            <div id="chat-log">
+                <div id="chat-empty" class="chat-empty-state">
+                    <div>
+                        <div class="logo-blob" style="width:56px;height:56px;margin:0 auto 16px;"></div>
+                        <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#4f46e5;">Ready to help</div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:6px;font-weight:500;">Ask about any entity, or a question like "top 5 candidates for X" or "why was Y blocked yesterday"</div>
+                    </div>
                 </div>
+                <!-- .chat-turn elements appended here, oldest to newest -->
             </div>
         </div>
 
-        <aside id="commentary-pane">
-            <div class="commentary-header" onclick="toggleCommentaryPane()">
-                <span class="commentary-header-label">Commentary</span>
-                <svg class="commentary-toggle" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        <aside id="action-pane">
+            <div class="action-pane-header" onclick="toggleActionPane()">
+                <span class="action-pane-header-label">Action</span>
+                <svg class="action-pane-toggle" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
             </div>
-            <div id="commentary-body">
-                <div class="commentary-empty">Ask a question or run a command — a plain-English explanation of what's on screen will appear here.</div>
+            <div id="action-pane-body">
+                <div class="action-pane-empty">Confirmations and forms that need your input will appear here.</div>
             </div>
         </aside>
     </main>
@@ -737,31 +790,6 @@
      TEMPLATES
 ───────────────────────────────────────────── -->
 
-<template id="tpl-ctx-card">
-    <div class="nexus-card fade-in">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-            <div>
-                <div class="target-handle" style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-.02em;"></div>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
-                    <span class="twin-type" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#4f46e5;"></span>
-                </div>
-            </div>
-            <div style="width:36px;height:36px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;display:flex;align-items:center;justify-content:center;">
-                <div style="width:8px;height:8px;background:#4f46e5;border-radius:50%;animation:pulse 2s infinite;"></div>
-            </div>
-        </div>
-        <div class="state-grid"></div>
-        <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:4px;">
-            <div class="sec-label" style="margin-bottom:8px;">Connections</div>
-            <div class="graph-links"></div>
-        </div>
-        <div class="stream-wrap" style="display:none;background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:8px;">
-            <div class="sec-label" style="margin-bottom:10px;">Activity History</div>
-            <div class="stream-body"></div>
-        </div>
-    </div>
-</template>
-
 <template id="tpl-action-card">
     <div class="dark-card fade-in">
         <div class="dark-card-bar"></div>
@@ -770,7 +798,7 @@
         <div style="display:flex;align-items:center;gap:20px;">
             <button class="exec-btn" style="background:#ea580c;color:#fff;padding:10px 28px;border-radius:10px;font-size:12px;font-weight:900;border:none;cursor:pointer;transition:background .15s;box-shadow:0 4px 14px rgba(234,88,12,.40);"
                 onmouseover="this.style.background='#f97316'" onmouseout="this.style.background='#ea580c'"></button>
-            <button onclick="resetStage()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;">Dismiss</button>
+            <button onclick="closeActionPane()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;">Dismiss</button>
         </div>
     </div>
 </template>
@@ -786,14 +814,15 @@
         <div class="cap-fields-body"></div>
         <div style="display:flex;align-items:center;gap:16px;margin-top:4px;padding-top:16px;border-top:1px solid #f1f5f9;">
             <button class="cap-submit">Save &amp; Submit</button>
-            <button class="cap-dismiss" onclick="resetStage()" style="background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;cursor:pointer;">Dismiss</button>
+            <button class="cap-dismiss" onclick="closeActionPane()" style="background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;cursor:pointer;">Dismiss</button>
         </div>
     </div>
 </template>
 
 <script>
-    const cmd   = document.getElementById('cmd');
-    const stage = document.getElementById('stage');
+    const cmd      = document.getElementById('cmd');
+    const chatLog  = document.getElementById('chat-log');
+    const chatEmpty = document.getElementById('chat-empty');
     const HISTORY_KEY = 'nexus_liquid_intent_history';
     const HISTORY_LIMIT = 12;
     const entityLabelByHandle = {};
@@ -952,71 +981,144 @@
         userSearch(intent, { remember: false });
     }
 
-    /* ── Commentary pane ──────────────────────── */
-    const COMMENTARY_STATE_KEY = 'nexus_commentary_collapsed';
-    const commentaryPane = document.getElementById('commentary-pane');
-    const commentaryBody = document.getElementById('commentary-body');
+    /* ── Action pane ──────────────────────────── */
+    const ACTION_PANE_STATE_KEY = 'nexus_action_pane_collapsed';
+    const actionPane = document.getElementById('action-pane');
+    const actionPaneBody = document.getElementById('action-pane-body');
 
-    function initCommentaryPane() {
-        const collapsed = localStorage.getItem(COMMENTARY_STATE_KEY) === '1';
-        commentaryPane.classList.toggle('collapsed', collapsed);
+    function initActionPane() {
+        const collapsed = localStorage.getItem(ACTION_PANE_STATE_KEY) === '1';
+        actionPane.classList.toggle('collapsed', collapsed);
     }
 
-    function toggleCommentaryPane() {
-        const collapsed = commentaryPane.classList.toggle('collapsed');
-        localStorage.setItem(COMMENTARY_STATE_KEY, collapsed ? '1' : '0');
+    function toggleActionPane() {
+        const collapsed = actionPane.classList.toggle('collapsed');
+        localStorage.setItem(ACTION_PANE_STATE_KEY, collapsed ? '1' : '0');
     }
 
-    initCommentaryPane();
+    initActionPane();
 
-    function clearCommentary() {
-        commentaryBody.innerHTML = '';
+    // Populates the action pane with an element that needs the user's input (a confirm
+    // card or a capture form) and makes sure the pane is visible even if collapsed.
+    function openActionPane(el) {
+        actionPaneBody.innerHTML = '';
+        actionPaneBody.appendChild(el);
+        actionPane.classList.remove('collapsed');
+        localStorage.setItem(ACTION_PANE_STATE_KEY, '0');
     }
 
-    function commentaryEmptyState() {
-        commentaryBody.innerHTML = `<div class="commentary-empty">Ask a question or run a command — a plain-English explanation of what's on screen will appear here.</div>`;
+    // Restores the action pane to its idle state - called once whatever was pending
+    // (a confirmation or a form) has been resolved, since the outcome lives in chat.
+    function closeActionPane() {
+        actionPaneBody.innerHTML = `<div class="action-pane-empty">Confirmations and forms that need your input will appear here.</div>`;
     }
 
-    function addCommentary(title, bodyHtml) {
-        commentaryBody.insertAdjacentHTML('beforeend', `
-            <div class="commentary-block fade-in">
-                <div class="commentary-title">${esc(title)}</div>
-                <div class="commentary-text">${bodyHtml}</div>
-            </div>`);
+    /* ── Chat transcript ──────────────────────── */
+    function updateChatEmptyState() {
+        chatEmpty.style.display = chatLog.querySelector('.chat-turn') ? 'none' : 'flex';
     }
 
-    /* ── Stage helpers ────────────────────────── */
-    function stageLoading(isNL) {
-        stage.className = 'is-loading';
-        stage.innerHTML = `
-            <div style="text-align:center;">
-                <div style="font-size:10px;font-weight:900;letter-spacing:.45em;text-transform:uppercase;color:#4f46e5;animation:pulse 1.5s infinite;">
-                    ${isNL ? 'Understanding your question…' : 'Looking up…'}
-                </div>
-            </div>`;
+    function scrollChatToBottom() {
+        requestAnimationFrame(() => {
+            const vp = document.getElementById('chat-viewport');
+            vp.scrollTop = vp.scrollHeight;
+        });
     }
 
-    function stageResults() {
-        stage.className = 'is-results';
-        stage.innerHTML = '';
-        clearCommentary();
+    function appendUserMessage(text) {
+        const turn = document.createElement('div');
+        turn.className = 'chat-turn fade-in';
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble-user';
+        bubble.textContent = text;
+        turn.appendChild(bubble);
+        chatLog.appendChild(turn);
+        updateChatEmptyState();
+        scrollChatToBottom();
+        return bubble;
     }
 
-    function resetStage() {
-        navStack  = [];
-        lastIntent = null;
-        stage.className = 'is-idle';
-        stage.innerHTML = `
-            <div style="text-align:center;opacity:.3;">
-                <div class="logo-blob" style="width:56px;height:56px;margin:0 auto 16px;"></div>
-                <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5em;color:#4f46e5;">Ready to help</div>
-                <div style="font-size:10px;color:#94a3b8;margin-top:6px;font-weight:500;">Ask about any member, officer, or branch</div>
-            </div>`;
-        commentaryEmptyState();
+    // Appends an empty assistant turn and returns a handle for progressively filling it:
+    // structured content (table/list/kv data) arrives first and fills fast, the prose
+    // narrative arrives async afterward - never blocking the structured answer.
+    function appendAssistantMessage() {
+        const turn = document.createElement('div');
+        turn.className = 'chat-turn fade-in';
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble-assistant';
+        bubble.innerHTML = `
+            <div class="chat-annotation" style="display:none;"></div>
+            <div class="chat-structured"></div>
+            <div class="chat-prose"></div>`;
+        turn.appendChild(bubble);
+        chatLog.appendChild(turn);
+        updateChatEmptyState();
+        scrollChatToBottom();
+
+        const annotationEl = bubble.querySelector('.chat-annotation');
+        const structuredEl = bubble.querySelector('.chat-structured');
+        const proseEl       = bubble.querySelector('.chat-prose');
+        let proseClaimed = false;
+
+        return {
+            root: bubble,
+            annotationEl, structuredEl, proseEl,
+            setAnnotation(html) {
+                annotationEl.innerHTML = html;
+                annotationEl.style.display = 'flex';
+            },
+            setStructured(html) {
+                structuredEl.innerHTML = html;
+                scrollChatToBottom();
+            },
+            setProseLoading() {
+                proseEl.innerHTML = `<span class="chat-thinking-dots">Thinking…</span>`;
+            },
+            setProse(html) {
+                proseEl.innerHTML = html;
+                scrollChatToBottom();
+            },
+            setProseUnavailable() {
+                proseEl.innerHTML = '';
+            },
+            // Only the first component of a multi-component response (e.g. several
+            // @handles mentioned at once) gets to fill the one prose slot - guards
+            // against two async narrative calls racing on the same element.
+            claimProse() {
+                if (proseClaimed) return false;
+                proseClaimed = true;
+                return true;
+            }
+        };
+    }
+
+    // LLM-narrated insight for a chat reply's structured content - cardType/payload are
+    // whatever data the reply already has in hand, nothing new is fetched. Fired after the
+    // structured content has already rendered, so a slow/unavailable Intelligence Module
+    // never blocks the answer itself; on failure it silently clears rather than showing
+    // "unavailable" noise on every failed call.
+    async function fillProseNarrative(bubble, cardType, payload) {
+        if (!bubble.claimProse()) return;
+        bubble.setProseLoading();
+        try {
+            const res  = await fetch('/api/commentary', {
+                method: 'POST', headers: AUTH(),
+                body: JSON.stringify({ card_type: cardType, payload: payload || {} })
+            });
+            const data = await res.json();
+            if (data.success && data.narrative) {
+                const paragraphs = data.narrative.split(/\n+/).filter(p => p.trim()).map(p => `<p>${esc(p)}</p>`).join('');
+                bubble.setProse(paragraphs || `<p>${esc(data.narrative)}</p>`);
+            } else {
+                bubble.setProseUnavailable();
+            }
+        } catch (e) {
+            bubble.setProseUnavailable();
+        }
     }
 
     /* ── Display helpers ──────────────────────── */
-    // 'name' returns null → hidden (shown as the card heading already).
+    // 'name' returns null → hidden (shown as the reply heading already).
     // Everything else: generic titlecase from snake_case.
     const prettyKey = k => k === 'name' ? null : k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -1038,9 +1140,15 @@
     const prettyId   = id => String(id || '').replace(/^@/,'').replace(/_(\d+)$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
     const prettyType = t => String(t || '').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 
-    function appendToStage(el) {
-        stage.appendChild(el);
-    }
+    // Shared by renderContextCard and the post-action "record updated" refresh, so both
+    // present entity state fields the same way.
+    const buildStateGridItemsHtml = state => Object.entries(state)
+        .filter(([k]) => prettyKey(k) !== null && k !== 'name')
+        .map(([k,v]) => `
+        <div>
+            <div class="state-key">${esc(prettyKey(k))}</div>
+            <div>${prettyVal(k,v)}</div>
+        </div>`).join('');
 
     /* ── Escape HTML ──────────────────────────── */
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1185,6 +1293,7 @@
     }
     loadSidebar();
     renderIntentHistory();
+    updateChatEmptyState();
 
     function commandUsage(command, samples) {
         if (!samples.length) return null;
@@ -1209,78 +1318,67 @@
         };
     }
 
-    /* ── Navigation history ───────────────────── */
-    let navStack  = [];   // [{intent, label}]
-    let lastIntent = null;
-
-    // Fresh user search clears in-card graph navigation but keeps sidebar intent history.
+    // Fresh user search keeps sidebar intent history; the chat transcript itself is now
+    // the only "history" the interaction flow needs, so nothing else to reset here.
     function userSearch(intent, options = {}) {
-        navStack = [];
         if (options.remember !== false) rememberIntent(intent, options.label);
-        resolveIntent(intent);
-    }
-
-    function showBackButton() {
-        const entry = navStack[navStack.length - 1];
-        const btn = document.createElement('button');
-        btn.className = 'nav-back-btn fade-in';
-        btn.innerHTML = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back to ${esc(entry.label)}`;
-        btn.onclick = navBack;
-        stage.insertBefore(btn, stage.firstChild);
-    }
-
-    function navBack() {
-        const entry = navStack.pop();
-        if (entry) resolveIntent(entry.intent);
+        resolveIntent(intent, options.label);
     }
 
     /* ── Resolve intent ───────────────────────── */
-    async function resolveIntent(intent) {
-        lastIntent = intent;
+    async function resolveIntent(intent, displayLabel) {
         const isNL = !intent.startsWith('/') && !intent.startsWith('@');
-        stageLoading(isNL);
+        appendUserMessage(displayLabel || intent);
+        const bubble = appendAssistantMessage();
+        bubble.setStructured(`<span class="chat-thinking-dots">${isNL ? 'Understanding your question…' : 'Looking up…'}</span>`);
+
         try {
             const res  = await fetch('/api/intent', { method:'POST', headers: AUTH(), body: JSON.stringify({intent}) });
             const data = await res.json();
-            stageResults();
-            if (navStack.length) showBackButton();
 
             if (data.llm_command) {
-                const b = document.createElement('div');
-                b.className = 'fade-in';
-                b.style.cssText = 'display:flex;align-items:center;gap:10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:9px 14px;font-size:11px;';
-                b.innerHTML = `
+                bubble.setAnnotation(`
                     <svg width="14" height="14" fill="none" stroke="#4f46e5" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     <span style="color:#4f46e5;font-weight:700;">AI understood:</span>
-                    <code style="color:#3730a3;background:#e0e7ff;font-weight:900;padding:2px 7px;border-radius:5px;font-size:11px;">${esc(data.llm_command)}</code>
-                    <span style="color:#a5b4fc;font-size:10px;margin-left:auto;">from "${esc(data.intent_captured)}"</span>`;
-                appendToStage(b);
+                    <code>${esc(data.llm_command)}</code>
+                    <span style="color:#a5b4fc;font-size:10px;margin-left:auto;">from "${esc(data.intent_captured)}"</span>`);
             }
 
-            await renderComponents(data.components);
+            await renderComponents(data.components, bubble);
         } catch(e) {
-            stageResults();
-            const err = document.createElement('div');
-            err.innerHTML = `<div style="padding:20px 24px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;">Connection failed: ${esc(e.message)}</div>`;
-            appendToStage(err.firstElementChild);
+            bubble.setStructured(`<div class="chat-error">Connection failed: ${esc(e.message)}</div>`);
         }
     }
 
     /* ── Render components ────────────────────── */
-    async function renderComponents(components) {
+    // In practice /api/intent returns exactly one component, EXCEPT when the user mentions
+    // multiple @handles at once (Intent.java emits one universal_context_card per handle) -
+    // that's the only case where more than one info reply shares a single assistant bubble,
+    // handled via the isFirst flag passed into renderContextCard.
+    async function renderComponents(components, bubble) {
+        if (!components || !components.length) {
+            bubble.setStructured('<span style="color:#94a3b8;">No response.</span>');
+            return;
+        }
+        let clearedThinking = false;
         for (const comp of components) {
             const props = JSON.parse(comp.props);
 
             if (comp.component_type === 'universal_context_card') {
-                await renderContextCard(props);
+                await renderContextCard(props, bubble, !clearedThinking);
+                clearedThinking = true;
             } else if (comp.component_type === 'universal_action_confirm') {
-                renderActionCard(props);
+                renderActionCard(props, bubble);
             } else if (comp.component_type === 'nexus_disambiguation_card') {
-                renderDisambiguationCard(props);
+                renderDisambiguationCard(props, bubble);
             } else if (comp.component_type === 'nexus_semantic_results') {
-                renderSemanticResults(props);
+                renderSemanticResults(props, bubble);
             } else if (comp.component_type === 'interaction_capture_form') {
-                await renderCaptureCard(props);
+                await renderCaptureCard(props, bubble);
+            } else if (comp.component_type === 'nexus_analytical_results') {
+                await renderAnalyticalResults(props, bubble);
+            } else if (comp.component_type === 'nexus_audit_narrative') {
+                await renderAuditNarrative(props, bubble);
             }
         }
     }
@@ -1309,20 +1407,42 @@
         return out.replace(/\{\{\s*[\w.]+\s*\}\}/g, '');
     }
 
-    /* ── Context card ─────────────────────────── */
-    async function renderContextCard(props) {
-        const tpl   = document.getElementById('tpl-ctx-card');
-        const clone = tpl.content.cloneNode(true);
-        const card  = clone.querySelector('.nexus-card');
+    /* ── Context reply (chat) ─────────────────── */
+    async function renderContextCard(props, bubble, isFirst) {
+        const container = document.createElement('div');
+        if (!isFirst) container.style.cssText = 'margin-top:18px;padding-top:18px;border-top:1px solid #f1f5f9;';
 
         if (props.auto_resolved) {
             const banner = document.createElement('div');
             banner.style.cssText = 'display:flex;align-items:center;gap:8px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:14px;';
             banner.innerHTML = `<svg width="12" height="12" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><span style="color:#065f46;font-weight:700;">Showing results for &ldquo;<em>${esc(props.query||'')}</em>&rdquo;</span>`;
-            card.insertBefore(banner, card.firstChild);
+            container.appendChild(banner);
         }
 
-        card.querySelector('.target-handle').textContent = prettyId(props.target);
+        const headerRow = document.createElement('div');
+        headerRow.style.cssText = 'margin-bottom:10px;';
+        headerRow.innerHTML = `
+            <div class="target-handle" style="font-size:17px;font-weight:900;color:#0f172a;letter-spacing:-.02em;">${esc(prettyId(props.target))}</div>
+            <span class="twin-type" style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#4f46e5;"></span>`;
+        container.appendChild(headerRow);
+
+        const grid = document.createElement('div');
+        grid.className = 'state-grid';
+        container.appendChild(grid);
+
+        const topoWrap = document.createElement('div');
+        topoWrap.style.cssText = 'background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:4px;';
+        topoWrap.innerHTML = `<div class="sec-label" style="margin-bottom:8px;">Connections</div><div class="graph-links"></div>`;
+        container.appendChild(topoWrap);
+
+        const streamWrap = document.createElement('div');
+        streamWrap.style.cssText = 'display:none;background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;margin-top:8px;';
+        streamWrap.innerHTML = `<div class="sec-label" style="margin-bottom:10px;">Activity History</div><div class="stream-body"></div>`;
+        container.appendChild(streamWrap);
+
+        if (isFirst) bubble.structuredEl.innerHTML = '';
+        bubble.structuredEl.appendChild(container);
+        scrollChatToBottom();
 
         try {
             const res  = await fetch('/api/context', { method:'POST', headers: AUTH(), body: JSON.stringify({external_id: props.target}) });
@@ -1330,24 +1450,16 @@
             const ctx  = data.context;
 
             const state  = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
-            // Show the real name in header if available
-            if (state.name) card.querySelector('.target-handle').textContent = state.name;
-            card.querySelector('.twin-type').textContent = prettyType(ctx.type);
+            if (state.name) container.querySelector('.target-handle').textContent = state.name;
+            container.querySelector('.twin-type').textContent = prettyType(ctx.type);
 
             const live = ctx.live_data || {};
-            const grid = card.querySelector('.state-grid');
             if (ctx.template_html) {
                 const externalId = props.target.replace(/^@/, '');
                 grid.innerHTML = renderLiquid(ctx.template_html, externalId, ctx.type, state, live);
                 grid.style.gridTemplateColumns = '1fr';
             } else {
-                grid.innerHTML = Object.entries(state)
-                    .filter(([k]) => prettyKey(k) !== null && k !== 'name')
-                    .map(([k,v]) => `
-                    <div>
-                        <div class="state-key">${esc(prettyKey(k))}</div>
-                        <div>${prettyVal(k,v)}</div>
-                    </div>`).join('');
+                grid.innerHTML = buildStateGridItemsHtml(state);
                 if (Object.keys(live).length > 0) {
                     const liveWrap = document.createElement('div');
                     liveWrap.style.cssText = 'background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:14px;margin-top:8px;';
@@ -1364,7 +1476,7 @@
             }
 
             const links  = typeof ctx.graph_links === 'string' ? JSON.parse(ctx.graph_links) : ctx.graph_links;
-            const topo   = card.querySelector('.graph-links');
+            const topo   = container.querySelector('.graph-links');
             if (links && links.length) {
                 topo.innerHTML = '';
                 links.forEach(l => {
@@ -1373,10 +1485,9 @@
                     const linkedName = l.to_name || prettyId(l.to);
                     const linkedType = l.to_type ? ` <span style="color:#94a3b8;font-weight:600;">(${esc(prettyType(l.to_type))})</span>` : '';
                     chip.innerHTML = `${esc(prettyRel(l.type))} <span style="color:#4f46e5;margin:0 2px;">·</span> ${esc(linkedName)}${linkedType}`;
-                    chip.onclick = () => {
-                        navStack.push({ intent: lastIntent, label: card.querySelector('.target-handle').textContent });
-                        resolveIntent('@' + l.to.replace(/^@/, ''));
-                    };
+                    // Every graph-link click is a new forward turn - the card that was
+                    // clicked stays visible above in the transcript, nothing to navigate back to.
+                    chip.onclick = () => resolveIntent('@' + l.to.replace(/^@/, ''), linkedName);
                     topo.appendChild(chip);
                 });
             } else {
@@ -1385,86 +1496,45 @@
 
             const istream = ctx.recent_interactions;
             if (istream && istream.length) {
-                const wrap = card.querySelector('.stream-wrap');
-                wrap.style.display = 'block';
-                wrap.querySelector('.stream-body').innerHTML = istream.map(i => `
+                streamWrap.style.display = 'block';
+                streamWrap.querySelector('.stream-body').innerHTML = istream.map(i => `
                     <div class="stream-row">
                         <div class="stream-date">${new Date(i.timestamp).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div>
                         <div class="stream-text">${esc(i.content)}</div>
                     </div>`).join('');
             }
 
-            addCommentary('Context Card', commentaryForContextCard(
-                card.querySelector('.target-handle').textContent, ctx.type, state, live, links, istream));
-        } catch(e) { console.error('Context error', e); }
-
-        appendToStage(card);
+            fillProseNarrative(bubble, 'context', {
+                name: container.querySelector('.target-handle').textContent,
+                type: ctx.type,
+                state, live, links,
+                recent_interactions: istream
+            });
+        } catch(e) {
+            console.error('Context error', e);
+        }
     }
 
-    function commentaryForContextCard(displayName, type, state, live, links, istream) {
-        const stateKeys = Object.keys(state || {}).filter(k => prettyKey(k) !== null);
-        const sample = stateKeys.slice(0, 3).map(prettyKey).join(', ');
-        let html = `<p>This card shows <strong>${esc(displayName)}</strong>, a <strong>${esc(prettyType(type))}</strong> record from the institutional graph.</p>`;
-        if (stateKeys.length) {
-            html += `<p>The state panel lists ${stateKeys.length} tracked field${stateKeys.length !== 1 ? 's' : ''}${sample ? ' — including ' + esc(sample) : ''}.</p>`;
-        }
-        if (live && Object.keys(live).length) {
-            html += `<p>Live Data is fetched in real time from an external service and merged into the card.</p>`;
-        }
-        html += (links && links.length)
-            ? `<p>Connections lists ${links.length} related entit${links.length !== 1 ? 'ies' : 'y'} linked via the graph — click a chip to jump there.</p>`
-            : `<p>No graph connections are recorded for this entity yet.</p>`;
-        if (istream && istream.length) {
-            html += `<p>Activity History shows the ${istream.length} most recent logged interaction${istream.length !== 1 ? 's' : ''}.</p>`;
-        }
-        return html;
+    /* ── Semantic no-match reply (chat) ───────── */
+    function renderSemanticResults(props, bubble) {
+        bubble.setStructured(`
+            <div>No direct match found for &ldquo;<strong>${esc(props.query)}</strong>&rdquo;.</div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0;font-size:12px;color:#94a3b8;">
+                Try a more specific name, or use an <strong>@handle</strong> from Quick Access for a precise lookup.
+            </div>`);
     }
 
-    /* ── Semantic results card ────────────────── */
-    function renderSemanticResults(props) {
-        const card = document.createElement('div');
-        card.className = 'nexus-card fade-in';
-        card.style.borderLeftColor = '#6366f1';
-
-        card.innerHTML = `
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:#6366f1;box-shadow:0 0 6px #6366f199;"></div>
-                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#6366f1;">Semantic Intelligence</div>
-            </div>
-            <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;line-height:1.4;">
-                Results for &ldquo;<span style="color:#4f46e5;">${esc(props.query)}</span>&rdquo;
-            </div>
-            <div style="padding:16px;background:#f8fafc;border:1px solid #f1f5f9;border-radius:12px;font-size:13px;color:#475569;line-height:1.7;">
-                Institutional memory check complete. No direct handle matches found. 
-                <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0;font-size:11px;color:#94a3b8;">
-                    Tip: Try using a specific name or an <strong>@handle</strong> for a precise context drill-down.
-                </div>
-            </div>`;
-
-        addCommentary('No Direct Match', `<p>No handle matched &ldquo;${esc(props.query)}&rdquo; directly. Try a more specific name, or use an <strong>@handle</strong> from Quick Access for a precise lookup.</p>`);
-        appendToStage(card);
-    }
-
-    /* ── Disambiguation card ─────────────────── */
-    function renderDisambiguationCard(props) {
-        const card = document.createElement('div');
-        card.className = 'nexus-card fade-in';
-        card.style.borderLeftColor = '#ea580c';
-
-        const header = document.createElement('div');
-        header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:14px;';
-        header.innerHTML = `
-            <div style="width:8px;height:8px;border-radius:50%;background:#ea580c;box-shadow:0 0 6px #ea580c99;"></div>
-            <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#ea580c;">Multiple matches found</div>`;
-        card.appendChild(header);
+    /* ── Disambiguation reply (chat) ──────────── */
+    function renderDisambiguationCard(props, bubble) {
+        const container = document.createElement('div');
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:16px;font-weight:700;color:#0f172a;margin-bottom:16px;';
+        title.style.cssText = 'font-size:14px;font-weight:700;color:#0f172a;margin-bottom:14px;line-height:1.5;';
         const actionLabel = props.original_command
-            ? `run <code style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:13px;">/${esc(props.original_command)}</code> for`
+            ? `run <code style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:12px;">/${esc(props.original_command)}</code> for`
             : 'look up';
         title.innerHTML = `Who do you mean? ${actionLabel} &ldquo;<span style="color:#4f46e5;">${esc(props.query)}</span>&rdquo;`;
-        card.appendChild(title);
+        container.appendChild(title);
 
         const list = document.createElement('div');
         list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
@@ -1476,7 +1546,7 @@
             btn.onmouseout  = () => { btn.style.background='#f8fafc'; btn.style.borderColor='#e2e8f0'; };
             btn.onclick = () => props.original_command
                 ? userSearch(`/${props.original_command} ${m.handle}`)
-                : resolveIntent(m.handle);
+                : userSearch(m.handle, { label: m.name });
 
             const icon = document.createElement('div');
             icon.style.cssText = 'width:32px;height:32px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
@@ -1502,13 +1572,14 @@
             list.appendChild(btn);
         });
 
-        card.appendChild(list);
-        addCommentary('Disambiguation', `<p>Multiple records matched &ldquo;${esc(props.query)}&rdquo;${props.original_command ? ` for <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">/${esc(props.original_command)}</code>` : ''}. Pick the correct one below to continue.</p>`);
-        appendToStage(card);
+        container.appendChild(list);
+        bubble.structuredEl.innerHTML = '';
+        bubble.structuredEl.appendChild(container);
+        scrollChatToBottom();
     }
 
-    /* ── Action card ──────────────────────────── */
-    function renderActionCard(props) {
+    /* ── Action confirmation (action pane) ────── */
+    function renderActionCard(props, bubble) {
         const tpl   = document.getElementById('tpl-action-card');
         const clone = tpl.content.cloneNode(true);
         const card  = clone.querySelector('.dark-card');
@@ -1521,14 +1592,15 @@
         card.querySelector('.action-desc').textContent = `${props.action_type} · ${targetId}`;
         btn.textContent = 'Confirm & Proceed';
 
-        btn.onclick = () => finalizeAction(props);
-        addCommentary('Confirmation Step', `<p>This is a checkpoint before <strong>${esc(props.action_type)}</strong> runs against <strong>${esc(targetId)}</strong>. Nothing is saved until you click Confirm &amp; Proceed — guardrails are checked at that point.</p>`);
-        appendToStage(card);
+        btn.onclick = () => finalizeAction(props, bubble);
+        openActionPane(card);
+
+        bubble.setStructured(`<span style="color:#475569;">Confirmation needed for <strong>${esc(props.action_type)}</strong> on <strong>${esc(targetId)}</strong> - see the action panel on the right.</span>`);
     }
 
-    /* ── Finalize action ──────────────────────── */
-    async function finalizeAction(props) {
-        stageLoading(false);
+    /* ── Finalize action - updates the same bubble in place ──────────── */
+    async function finalizeAction(props, bubble) {
+        bubble.setStructured(`<span class="chat-thinking-dots">Processing…</span>`);
         const body = {
             action_type: props.action_type,
             intent_raw:  props.intent_raw,
@@ -1542,78 +1614,73 @@
         try {
             const res    = await fetch('/api/governance', { method:'POST', headers: AUTH(), body: JSON.stringify(body) });
             const result = await res.json();
-            stageResults();
+            closeActionPane();
 
             if (result.success) {
-                const wrap = document.createElement('div');
-                wrap.className = 'fade-in';
-                wrap.style.cssText = 'background:#fff;border:1px solid #e0e7ff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(79,70,229,.08);';
-                wrap.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-                        <div style="width:36px;height:36px;background:#eef2ff;border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                            <svg width="18" height="18" fill="none" stroke="#4f46e5" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                bubble.setStructured(`
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                        <div style="width:28px;height:28px;background:#eef2ff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg width="14" height="14" fill="none" stroke="#4f46e5" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                         </div>
-                        <div style="font-size:16px;font-weight:900;color:#3730a3;letter-spacing:-.01em;">
-                            ${result.data ? 'Report Ready' : 'Done'}
-                        </div>
-                        <button onclick="resetStage()" style="margin-left:auto;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← Start over</button>
+                        <div style="font-size:14px;font-weight:900;color:#3730a3;">${result.data ? 'Report Ready' : 'Done'}</div>
                     </div>
                     <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:16px;">
                         ${result.data ? renderTable(result.data) : `<span style="font-size:13px;color:#475569;">${esc(result.reason||result.message||'')}</span>`}
-                    </div>
-                    ${result.narrative ? `
-                    <div style="margin-top:12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:16px;">
-                        <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3em;color:#4f46e5;margin-bottom:8px;">What this means</div>
-                        <div style="font-size:12px;color:#334155;line-height:1.65;white-space:pre-line;">${esc(result.narrative)}</div>
-                    </div>` : ''}`;
-                appendToStage(wrap);
+                    </div>`);
 
-                addCommentary('Result', `<p>${result.data ? 'The table shows the output of the report or query you ran.' : 'The action completed successfully and the record was updated.'}${result.narrative ? ' A plain-English explanation is included under &ldquo;What this means&rdquo;.' : ''}</p>`);
+                fillProseNarrative(bubble, 'action_result', {
+                    action_type: props.action_type,
+                    target: props.target_1 ? `${props.target_1} & ${props.target_2}` : (props.target_external_id || props.target),
+                    data: result.data, reason: result.reason, message: result.message
+                });
 
                 if (!result.data && props.target_external_id) {
-                    setTimeout(() => resolveIntent(`@${props.target_external_id.replace(/^@/,'')}`), 2500);
+                    setTimeout(async () => {
+                        try {
+                            const cres  = await fetch('/api/context', { method:'POST', headers: AUTH(), body: JSON.stringify({external_id: props.target_external_id}) });
+                            const cdata = await cres.json();
+                            const ctx   = cdata.context;
+                            if (ctx) {
+                                const state = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
+                                bubble.structuredEl.insertAdjacentHTML('beforeend', `
+                                    <div style="margin-top:14px;padding-top:14px;border-top:1px dashed #e2e8f0;">
+                                        <div class="sec-label" style="margin-bottom:8px;">Updated Record</div>
+                                        <div class="state-grid">${buildStateGridItemsHtml(state)}</div>
+                                    </div>`);
+                                scrollChatToBottom();
+                            }
+                        } catch (_) {}
+                    }, 2500);
                 }
             } else {
-                const deny = document.createElement('div');
-                deny.className = 'fade-in';
-                deny.style.cssText = 'background:#fff;border-left:6px solid #e11d48;border-radius:14px;padding:24px 28px;box-shadow:0 4px 20px rgba(225,29,72,.08);';
-                deny.innerHTML = `
-                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#e11d48;margin-bottom:10px;">Action Blocked</div>
-                    <div style="font-size:16px;font-weight:700;color:#0f172a;">${esc(result.reason||'')}</div>
-                    <button onclick="resetStage()" style="margin-top:16px;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← Start over</button>`;
-                appendToStage(deny);
+                bubble.setStructured(`
+                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3em;color:#e11d48;margin-bottom:8px;">Action Blocked</div>
+                    <div style="font-size:14px;font-weight:700;color:#0f172a;">${esc(result.reason||'')}</div>`);
 
-                addCommentary('Blocked', `<p>An institutional guardrail stopped this action before it ran: <strong>${esc(result.reason||'')}</strong></p>`);
+                fillProseNarrative(bubble, 'action_blocked', {
+                    action_type: props.action_type,
+                    target: props.target_1 ? `${props.target_1} & ${props.target_2}` : (props.target_external_id || props.target),
+                    reason: result.reason
+                });
             }
         } catch(e) {
-            stageResults();
-            const err = document.createElement('div');
-            err.style.cssText = 'padding:20px 24px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;';
-            err.textContent = 'Nexus Error: ' + e.message;
-            appendToStage(err);
+            closeActionPane();
+            bubble.setStructured(`<div class="chat-error">Nexus Error: ${esc(e.message)}</div>`);
         }
     }
 
-    /* ── Capture form ────────────────────────── */
-    async function renderCaptureCard(props) {
+    /* ── Capture form entry point ─────────────── */
+    async function renderCaptureCard(props, bubble) {
         const target = props.target || '';
         if (!target || target === 'unknown') {
-            const hint = document.createElement('div');
-            hint.className = 'nexus-card fade-in';
-            hint.style.borderLeftColor = '#ea580c';
-            hint.innerHTML = `
-                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#ea580c;margin-bottom:8px;">Target required</div>
+            bubble.setStructured(`
+                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3em;color:#ea580c;margin-bottom:8px;">Target required</div>
                 <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:8px;">Specify who this applies to using an <span style="color:#4f46e5;">@handle</span></div>
-                <div style="font-size:11px;color:#64748b;">For example: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">/${esc(props.action_type?.toLowerCase()||'command')} @member_handle</code></div>`;
-            appendToStage(hint);
+                <div style="font-size:11px;color:#64748b;">For example: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">/${esc(props.action_type?.toLowerCase()||'command')} @member_handle</code></div>`);
             return;
         }
 
-        const placeholder = document.createElement('div');
-        placeholder.className = 'nexus-card fade-in';
-        placeholder.style.borderLeftColor = '#059669';
-        placeholder.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:.4em;text-transform:uppercase;color:#059669;animation:pulse 1.5s infinite;">Loading form…</div>`;
-        appendToStage(placeholder);
+        bubble.setStructured(`<span class="chat-thinking-dots">Loading form…</span>`);
 
         try {
             const atParam = props.action_type ? `&action_type=${encodeURIComponent(props.action_type)}` : '';
@@ -1622,56 +1689,40 @@
                 : `/api/capture?external_id=${encodeURIComponent(target)}${atParam}`;
             const res  = await fetch(captureUrl, { headers: AUTH() });
             const data = await res.json();
-            placeholder.remove();
 
             if (!data.success) {
-                const msg = document.createElement('div');
-                msg.className = 'nexus-card fade-in';
-                msg.style.borderLeftColor = '#e11d48';
                 const reason = data.error || data.message || data.reason || 'Unknown error';
                 const isNotFound = res.status === 404 || reason.toLowerCase().includes('not found');
-                msg.innerHTML = isNotFound
-                    ? `<div style="color:#9f1239;font-weight:700;font-size:13px;">Entity <code style="background:#fee2e2;padding:1px 5px;border-radius:4px;">${esc(target)}</code> not found. Check the @handle and try again.</div>`
-                    : `<div style="color:#9f1239;font-weight:700;font-size:13px;">Could not load form: ${esc(reason)}</div>`;
-                appendToStage(msg);
+                bubble.setStructured(isNotFound
+                    ? `<div class="chat-error">Entity <code>${esc(target)}</code> not found. Check the @handle and try again.</div>`
+                    : `<div class="chat-error">Could not load form: ${esc(reason)}</div>`);
                 return;
             }
 
             if (!data.schemas || !data.schemas.length) {
-                const msg = document.createElement('div');
-                msg.className = 'nexus-card fade-in';
-                msg.style.borderLeftColor = '#e11d48';
                 const entityLabel = data.entity_type ? `<strong>${esc(data.entity_type)}</strong>` : 'this entity';
-                msg.innerHTML = props.linked_form
-                    ? `<div style="color:#9f1239;font-weight:700;font-size:13px;">The linked form is not available. It may be inactive — check the Input Manifests.</div>`
-                    : `<div style="color:#9f1239;font-weight:700;font-size:13px;">No active forms are configured for ${entityLabel}. Add one in Input Manifests.</div>`;
-                appendToStage(msg);
+                bubble.setStructured(props.linked_form
+                    ? `<div class="chat-error">The linked form is not available. It may be inactive - check the Input Manifests.</div>`
+                    : `<div class="chat-error">No active forms are configured for ${entityLabel}. Add one in Input Manifests.</div>`);
                 return;
             }
 
-            if (props.auto_resolved_name) {
-                const banner = document.createElement('div');
-                banner.style.cssText = 'display:flex;align-items:center;gap:8px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 12px;font-size:11px;margin-bottom:4px;';
-                banner.innerHTML = `<svg width="12" height="12" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><span style="color:#065f46;font-weight:700;">Matched <em>${esc(props.auto_resolved_name)}</em></span>`;
-                appendToStage(banner);
-            }
-
             const displayName = data.entity_name || prettyId(props.target);
+            const matchedNote = props.auto_resolved_name ? ` (matched &ldquo;${esc(props.auto_resolved_name)}&rdquo;)` : '';
+            bubble.setStructured(`<span style="color:#475569;">Opening the <strong>${esc(displayName)}</strong> interaction form${matchedNote} in the action panel on the right.</span>`);
+
             if (data.schemas.length === 1) {
-                renderSchemaForm(data.schemas[0], props.target, displayName);
+                renderSchemaForm(data.schemas[0], props.target, displayName, bubble);
             } else {
-                renderSchemaPicker(data.schemas, props.target, displayName);
+                renderSchemaPicker(data.schemas, props.target, displayName, bubble);
             }
         } catch(e) {
-            placeholder.remove();
-            const err = document.createElement('div');
-            err.style.cssText = 'padding:20px;background:#fff;border-left:6px solid #e11d48;border-radius:12px;color:#9f1239;font-weight:700;font-size:13px;';
-            err.textContent = 'Capture load failed: ' + e.message;
-            appendToStage(err);
+            bubble.setStructured(`<div class="chat-error">Capture load failed: ${esc(e.message)}</div>`);
         }
     }
 
-    function renderSchemaPicker(schemas, target, displayName) {
+    /* ── Schema picker (action pane) ──────────── */
+    function renderSchemaPicker(schemas, target, displayName, bubble) {
         const card = document.createElement('div');
         card.className = 'nexus-card fade-in';
         card.style.borderLeftColor = '#059669';
@@ -1702,15 +1753,15 @@
             btn.addEventListener('mouseleave', () => { btn.style.borderColor = '#e2e8f0'; btn.style.background = '#f8fafc'; });
             btn.addEventListener('click', () => {
                 const schema = schemas.find(s => s.schema_id === btn.dataset.schemaId);
-                if (schema) { card.remove(); clearCommentary(); renderSchemaForm(schema, target); }
+                if (schema) renderSchemaForm(schema, target, displayName, bubble);
             });
         });
 
-        addCommentary('Choose Interaction Type', `<p>${esc(displayName || prettyId(target))} has ${schemas.length} available interaction forms. Pick one to see its fields.</p>`);
-        appendToStage(card);
+        openActionPane(card);
     }
 
-    function renderSchemaForm(schema, target, displayName) {
+    /* ── Capture field form (action pane) ─────── */
+    function renderSchemaForm(schema, target, displayName, bubble) {
         const tpl   = document.getElementById('tpl-capture-card');
         const clone = tpl.content.cloneNode(true);
         const card  = clone.querySelector('.nexus-card');
@@ -1767,15 +1818,13 @@
         }
 
         card.querySelector('.cap-submit').addEventListener('click', () => {
-            submitCapture(schema, target, fieldMap, card);
+            submitCapture(schema, target, fieldMap, card, bubble);
         });
 
-        const requiredCount = schema.fields.filter(f => f.required).length;
-        addCommentary('Capture Form', `<p>This form records a new <strong>${esc(schema.label)}</strong> interaction for <strong>${esc(displayName || prettyId(target))}</strong>.</p><p>${schema.fields.length} field${schema.fields.length !== 1 ? 's' : ''} total${requiredCount ? `, ${requiredCount} required (marked *)` : ''}. Submitting runs guardrail checks before saving.</p>`);
-        appendToStage(card);
+        openActionPane(card);
     }
 
-    async function submitCapture(schema, target, fieldMap, card) {
+    async function submitCapture(schema, target, fieldMap, card, bubble) {
         let valid = true;
         const formData = {};
 
@@ -1810,28 +1859,36 @@
             const result = await res.json();
 
             if (result.success) {
-                card.style.opacity        = '.4';
-                card.style.pointerEvents  = 'none';
-
-                const wrap = document.createElement('div');
-                wrap.className = 'fade-in';
-                wrap.style.cssText = 'background:#fff;border:1px solid #a7f3d0;border-left:6px solid #059669;border-radius:14px;padding:24px 28px;box-shadow:0 4px 20px rgba(5,150,105,.08);';
-                wrap.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                        <div style="width:34px;height:34px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <svg width="16" height="16" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                closeActionPane();
+                bubble.setStructured(`
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                        <div style="width:28px;height:28px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg width="14" height="14" fill="none" stroke="#059669" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                         </div>
-                        <div style="font-size:15px;font-weight:900;color:#065f46;letter-spacing:-.01em;">Saved successfully</div>
-                        <button onclick="resetStage()" style="margin-left:auto;background:none;border:none;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#94a3b8;cursor:pointer;">← Start over</button>
+                        <div style="font-size:14px;font-weight:900;color:#065f46;">Saved successfully</div>
                     </div>
                     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:12px 16px;font-size:12px;color:#166534;line-height:1.6;">
                         ${esc(result.stream_entry || '')}
-                    </div>
-                    <div style="font-size:10px;color:#94a3b8;margin-top:10px;">Activity logged · Record updated · Refreshing…</div>`;
-                appendToStage(wrap);
-                clearCommentary();
-                addCommentary('Saved', `<p>The interaction was recorded and appended to this entity's Activity History. The card is refreshing to show the updated state.</p>`);
-                setTimeout(() => resolveIntent(target), 2200);
+                    </div>`);
+
+                fillProseNarrative(bubble, 'capture_saved', { entity: target, schema_label: schema.label, stream_entry: result.stream_entry });
+
+                setTimeout(async () => {
+                    try {
+                        const cres  = await fetch('/api/context', { method:'POST', headers: AUTH(), body: JSON.stringify({external_id: target}) });
+                        const cdata = await cres.json();
+                        const ctx   = cdata.context;
+                        if (ctx) {
+                            const state = typeof ctx.state === 'string' ? JSON.parse(ctx.state) : ctx.state;
+                            bubble.structuredEl.insertAdjacentHTML('beforeend', `
+                                <div style="margin-top:14px;padding-top:14px;border-top:1px dashed #e2e8f0;">
+                                    <div class="sec-label" style="margin-bottom:8px;">Updated Record</div>
+                                    <div class="state-grid">${buildStateGridItemsHtml(state)}</div>
+                                </div>`);
+                            scrollChatToBottom();
+                        }
+                    } catch (_) {}
+                }, 2200);
             } else {
                 btn.disabled    = false;
                 btn.textContent = 'Save & Submit';
@@ -1840,8 +1897,6 @@
                 errEl.style.cssText = 'margin-top:12px;padding:16px;background:#fff5f5;border-left:4px solid #e11d48;border-radius:10px;color:#9f1239;font-weight:700;font-size:13px;';
                 errEl.textContent = result.reason || 'Action blocked by policy.';
                 card.appendChild(errEl);
-                clearCommentary();
-                addCommentary('Blocked', `<p>A guardrail rejected this submission: <strong>${esc(result.reason || 'Action blocked by policy.')}</strong></p>`);
             }
         } catch(e) {
             btn.disabled    = false;
@@ -1886,6 +1941,86 @@
                     ${displayCols.map(c=>`<td style="padding:10px 0;text-align:right;font-weight:900;color:#0f172a;font-size:16px;">${esc(String(row[c]??'—'))}${c.includes('rate')?'%':''}</td>`).join('')}
                 </tr>`).join('')}
             </tbody></table>`;
+    }
+
+    /* ── Analytical / similarity reply (chat) ─── */
+    async function renderAnalyticalResults(props, bubble) {
+        const isSimilarity = props.mode === 'SIMILARITY';
+        bubble.setStructured(`<span class="chat-thinking-dots">${isSimilarity ? 'Finding similar matches…' : 'Running analysis…'}</span>`);
+
+        try {
+            const res  = await fetch('/api/analytics', {
+                method: 'POST', headers: AUTH(),
+                body: JSON.stringify({ question: props.question, mode: props.mode || 'ANALYTICS' })
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                bubble.setStructured(`
+                    <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3em;color:#e11d48;margin-bottom:8px;">Query blocked</div>
+                    <div style="font-size:13px;font-weight:700;color:#0f172a;">${esc(data.error || 'The query could not be run.')}</div>`);
+                fillProseNarrative(bubble, 'analytics_blocked', { question: props.question, error: data.error });
+                return;
+            }
+
+            bubble.setStructured(`
+                <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:14px;">${esc(data.recap || '')}</div>
+                <div class="analytics-table-wrap" style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:14px;overflow-x:auto;"></div>
+                ${data.truncated ? `<div style="font-size:10px;color:#94a3b8;margin-top:8px;">Showing the first ${esc(String(data.row_count))} results.</div>` : ''}
+                <details style="margin-top:12px;">
+                    <summary style="cursor:pointer;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;">View generated SQL</summary>
+                    <pre style="margin-top:8px;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;font-size:11px;overflow-x:auto;white-space:pre-wrap;">${esc(data.sql_generated || '')}</pre>
+                </details>`);
+            bubble.structuredEl.querySelector('.analytics-table-wrap').innerHTML = renderTable(data.rows);
+
+            fillProseNarrative(bubble, 'analytics', { question: props.question, recap: data.recap, columns: data.columns, rows: data.rows, row_count: data.row_count });
+        } catch (e) {
+            bubble.setStructured(`<div class="chat-error">Analytics request failed: ${esc(e.message)}</div>`);
+        }
+    }
+
+    /* ── Audit-explain reply (chat) ───────────── */
+    async function renderAuditNarrative(props, bubble) {
+        bubble.setStructured(`<span class="chat-thinking-dots">Checking audit trail…</span>`);
+
+        try {
+            const params = new URLSearchParams();
+            if (props.actor_handle) params.set('actor', String(props.actor_handle).replace(/^@/, ''));
+            if (props.date_from)    params.set('from', props.date_from);
+            if (props.date_to)      params.set('to', props.date_to);
+            params.set('limit', '20');
+
+            const res     = await fetch('/api/audit?' + params.toString(), { headers: AUTH() });
+            const data    = await res.json();
+            const entries = data.entries || [];
+
+            let bodyHtml;
+            if (!entries.length) {
+                const range = props.date_from ? ` between ${esc(props.date_from)} and ${esc(props.date_to || props.date_from)}` : '';
+                bodyHtml = `<span style="color:#94a3b8;">No audit history found${props.actor_handle ? ` for ${esc(props.actor_handle)}` : ''}${range}.</span>`;
+            } else {
+                const denied = entries.filter(e => e.outcome === 'denied');
+                const list   = (denied.length ? denied : entries).slice(0, 5);
+                bodyHtml = list.map(e => {
+                    const exec   = e.action_executed || {};
+                    const when   = `${e.created_fmt || ''} ${e.created_time || ''}`.trim();
+                    const reason = exec.reason || '';
+                    const action = e.policy_label || exec.action_type || 'Action';
+                    const who    = e.actor_name || props.actor_handle || 'This entity';
+                    const status = e.outcome === 'denied' ? 'was blocked' : 'was recorded';
+                    return `<p style="margin-bottom:10px;"><strong>${esc(who)}'s ${esc(action)}</strong> ${status}${when ? ` on ${esc(when)}` : ''}${reason ? ` - ${esc(reason)}` : ''}.</p>`;
+                }).join('');
+            }
+
+            bubble.setStructured(bodyHtml);
+
+            fillProseNarrative(bubble, 'audit', {
+                question: props.question, actor_handle: props.actor_handle,
+                date_from: props.date_from, date_to: props.date_to, entries: entries.slice(0, 20)
+            });
+        } catch (e) {
+            bubble.setStructured(`<div class="chat-error">Audit lookup failed: ${esc(e.message)}</div>`);
+        }
     }
 </script>
 </body>

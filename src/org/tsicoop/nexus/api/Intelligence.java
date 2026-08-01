@@ -28,46 +28,63 @@ public class Intelligence {
         VLLM_MODEL = (model != null && !model.isEmpty()) ? model : null;
     }
 
-    private static final String SYSTEM_PROMPT =
-        "You are an institutional intelligence engine for TSI Nexus, a microfinance cooperative platform. " +
-        "You analyze portfolio metrics, member loan history, and field interaction logs to generate concise, " +
-        "actionable narrative insights for field officers and branch managers. " +
-        "Tone: professional and direct. Length: under 200 words. " +
-        "Structure: one paragraph identifying the root cause, one sentence with a concrete recommendation. " +
-        "Cite specific member IDs (e.g., @anita_02) and interaction events as evidence where relevant.";
+    // Conversational Intelligence v0.2 - generic, institution-agnostic narrator used by
+    // Commentary.java to explain any rendered Liquid card in plain English. Deliberately
+    // carries no sector-specific language; institutional vocabulary (if configured) is the
+    // only per-deployment customization, injected the same way as everywhere else in Nexus.
+    private static final String CARD_NARRATIVE_PROMPT =
+        "You are the institutional intelligence engine for TSI Nexus. You analyze entity " +
+        "records, relationships, and interaction history to generate concise, actionable " +
+        "narrative insights for the people using this platform. " +
+        "Tone: professional and direct. Length: under 120 words. " +
+        "Structure: one to two sentences identifying what matters most in the data, followed " +
+        "by one sentence with a concrete takeaway or recommendation if the data supports one. " +
+        "Cite specific entity IDs and evidence from the data provided where relevant. " +
+        "Do not invent facts that are not present in the data provided.";
 
+    /**
+     * Generates a short plain-English narrative for a single rendered Liquid card
+     * (context card, action confirmation, capture form, disambiguation, analytics
+     * results, or audit narrative). cardType and payload are whatever the client
+     * already has for that card - no additional data is fetched here.
+     */
     @SuppressWarnings("unchecked")
-    public static String generateNarrative(String actionType, JSONArray metrics, JSONArray memberContexts) {
+    public static String generateCardNarrative(String cardType, JSONObject payload) {
         if (VLLM_URL == null || VLLM_MODEL == null) return "";
         try {
+            String vocab = loadVocabSection();
+            String systemPrompt = CARD_NARRATIVE_PROMPT +
+                (vocab.isEmpty() ? "" : "\n\nInstitutional vocabulary:\n" + vocab);
+
             JSONArray messages = new JSONArray();
 
             JSONObject sysMsg = new JSONObject();
             sysMsg.put("role", "system");
-            sysMsg.put("content", SYSTEM_PROMPT);
+            sysMsg.put("content", systemPrompt);
             messages.add(sysMsg);
 
             JSONObject userMsg = new JSONObject();
             userMsg.put("role", "user");
-            userMsg.put("content", buildPrompt(actionType, metrics, memberContexts));
+            userMsg.put("content", "Card type: " + cardType + "\n\nData:\n" +
+                (payload != null ? payload.toJSONString() : "{}"));
             messages.add(userMsg);
 
             JSONObject body = new JSONObject();
             body.put("model", VLLM_MODEL);
             body.put("messages", messages);
-            body.put("max_tokens", 1024);
-            body.put("temperature", 0.7);
+            // Reasoning models can spend much of the budget on reasoning_content before ever
+            // emitting the narrative itself - keep this generous.
+            body.put("max_tokens", 900);
+            body.put("temperature", 0.4);
 
-            System.out.println("[Intelligence] POST " + VLLM_URL + "/v1/chat/completions model=" + VLLM_MODEL);
+            System.out.println("[Intelligence] generateCardNarrative POST " + VLLM_URL + "/v1/chat/completions model=" + VLLM_MODEL + " cardType=" + cardType);
             HttpClient http = new HttpClient();
             JSONObject response = http.sendPost(
                 VLLM_URL + "/v1/chat/completions",
                 body,
                 "Authorization", "Bearer dummy"
             );
-            System.out.println("[Intelligence] response keys=" + response.keySet());
 
-            // OpenAI-compatible response: choices[0].message.content
             JSONArray choices = (JSONArray) response.get("choices");
             if (choices != null && !choices.isEmpty()) {
                 JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
@@ -78,55 +95,9 @@ public class Intelligence {
             }
             return "";
         } catch (Exception e) {
-            System.err.println("[Intelligence] ERROR calling vLLM: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("[Intelligence] generateCardNarrative ERROR calling vLLM: " + e.getMessage());
             return "";
         }
-    }
-
-    private static String buildPrompt(String actionType, JSONArray metrics, JSONArray memberContexts) {
-        StringBuilder sb = new StringBuilder();
-
-        if ("COMPARE".equalsIgnoreCase(actionType)) {
-            sb.append("COMPARATIVE PERFORMANCE ANALYSIS\n\n");
-            sb.append("Aggregated portfolio metrics per entity:\n");
-        } else {
-            sb.append("ENTITY PERFORMANCE ANALYSIS\n\n");
-            sb.append("Portfolio metrics:\n");
-        }
-
-        for (Object m : metrics) {
-            sb.append(m.toString()).append("\n");
-        }
-
-        if (memberContexts != null && !memberContexts.isEmpty()) {
-            sb.append("\nMember-level data (state + recent interaction stream):\n");
-            for (Object mc : memberContexts) {
-                JSONObject member = (JSONObject) mc;
-                sb.append("\n--- ").append(member.get("external_id")).append(" ---\n");
-                sb.append("State: ").append(member.get("state")).append("\n");
-                JSONArray interactions = (JSONArray) member.get("recent_interactions");
-                if (interactions != null && !interactions.isEmpty()) {
-                    sb.append("Recent interactions:\n");
-                    for (Object i : interactions) {
-                        JSONObject entry = (JSONObject) i;
-                        sb.append("  [").append(entry.get("timestamp")).append("] ")
-                          .append(entry.get("content")).append("\n");
-                    }
-                }
-            }
-        }
-
-        if ("COMPARE".equalsIgnoreCase(actionType)) {
-            sb.append("\nExplain WHY these entities show different performance figures. " +
-                      "Cite specific member cases and interaction events as evidence. " +
-                      "End with one concrete recommendation for the underperforming entity.");
-        } else {
-            sb.append("\nProvide a performance assessment. Highlight any risks or opportunities " +
-                      "visible in the member data and interaction history.");
-        }
-
-        return sb.toString();
     }
 
     @SuppressWarnings("unchecked")
@@ -135,7 +106,7 @@ public class Intelligence {
         try {
             String vocab = loadVocabSection();
             String systemPrompt =
-                "You are an expert UI developer for TSI Nexus, a microfinance platform. " +
+                "You are an expert UI developer for TSI Nexus, an institutional intelligence platform. " +
                 "Generate a Liquid template with Tailwind CSS based on the user's description.\n\n" +
                 "CONTEXT:\n" +
                 "- Entity Type: " + entityType + "\n" +
@@ -189,7 +160,7 @@ public class Intelligence {
         try {
             String vocab = loadVocabSection();
             String systemPrompt =
-                "You are an expert form designer for TSI Nexus, a microfinance cooperative platform. " +
+                "You are an expert form designer for TSI Nexus, an institutional intelligence platform. " +
                 "Generate an interaction form schema based on the user's description.\n\n" +
                 "CONTEXT:\n" +
                 "- Entity Type: " + entityType + "\n" +

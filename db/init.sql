@@ -250,3 +250,22 @@ INSERT INTO root_organisation (name, config) VALUES (
 INSERT INTO digital_twins (id, type, external_id, current_state)
 VALUES ('00000000-0000-0000-0000-000000000000', 'system', 'governance_node', '{"role":"governance_core"}')
 ON CONFLICT DO NOTHING;
+
+-- 14. READ-ONLY ROLE for LLM-generated ad-hoc analytical queries (Conversational Intelligence v0.2)
+-- Explicit table allowlist - deliberately excludes nexus_users (password hashes),
+-- app_access_registry (API secrets), service_registry (auth configs), and action_audit_log.
+-- The real password is set post-boot by Analytics.java from POSTGRES_RO_PASSWD; this is a
+-- dev-only placeholder so the role is always creatable on a fresh volume.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nexus_readonly') THEN
+    CREATE ROLE nexus_readonly LOGIN PASSWORD 'changeme_ro';
+  END IF;
+END $$;
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO nexus_readonly', current_database());
+END $$;
+GRANT USAGE ON SCHEMA public TO nexus_readonly;
+GRANT SELECT ON digital_twins, twin_relationships, interaction_stream, twin_state_history TO nexus_readonly;
+ALTER ROLE nexus_readonly SET statement_timeout = '3000ms';

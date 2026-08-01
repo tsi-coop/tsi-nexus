@@ -42,6 +42,8 @@ public class SystemConfig {
         appConfig.setProperty("framework.db.user",System.getenv("POSTGRES_USER"));
         appConfig.setProperty("framework.db.password",System.getenv("POSTGRES_PASSWD"));
         appConfig.setProperty("framework.db.host",System.getenv("POSTGRES_HOST"));
+        appConfig.setProperty("framework.db.ro.user",System.getenv("POSTGRES_RO_USER") != null ? System.getenv("POSTGRES_RO_USER") : "nexus_readonly");
+        appConfig.setProperty("framework.db.ro.password",System.getenv("POSTGRES_RO_PASSWD") != null ? System.getenv("POSTGRES_RO_PASSWD") : "changeme_ro");
 
     }
 

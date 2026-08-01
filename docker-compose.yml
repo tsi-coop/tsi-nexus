@@ -48,6 +48,11 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:-tsi_nexus}"
       POSTGRES_USER: "${POSTGRES_USER:-tsi_admin}"
       POSTGRES_PASSWD: "${POSTGRES_PASSWD:-secure_dev_password}"
+      # Read-only DB role for LLM-generated ad-hoc analytical queries (Conversational
+      # Intelligence v0.2, db/init.sql). Dev-only default below - production MUST override
+      # POSTGRES_RO_PASSWD, same as POSTGRES_PASSWD above.
+      POSTGRES_RO_USER: "${POSTGRES_RO_USER:-nexus_readonly}"
+      POSTGRES_RO_PASSWD: "${POSTGRES_RO_PASSWD:-changeme_ro}"
       TSI_NEXUS_JWT_SECRET: "${TSI_NEXUS_JWT_SECRET:-tsi-nexus-preview-default-secret-change-in-production}"
       TSI_EXPORT_PATH: "${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}"
       VLLM_URL: "${VLLM_URL:-http://192.168.1.77:8001}"

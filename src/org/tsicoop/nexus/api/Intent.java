@@ -36,6 +36,30 @@ public class Intent implements Action {
         VLLM_MODEL = (model != null && !model.isEmpty()) ? model : null;
     }
 
+    // Conversational Intelligence v0.2 - routes questions that fit neither a /command nor a
+    // plain-name lookup (see classifyIntelligenceQuery, called only from the existing
+    // no-command/no-handle fallback branch in resolveToAdaptiveUI).
+    private static final String INTELLIGENCE_ROUTE_PROMPT =
+        "You are the query router for TSI Nexus. Classify the user's question into exactly one route " +
+        "and extract structured parameters. Today's date is {TODAY_ISO}.\n\n" +
+        "Known entities:\n{ENTITY_LIST}\n\n" +
+        "Routes:\n" +
+        "  AUDIT      - why/when/whether an action was blocked, approved, or executed (a specific past\n" +
+        "               decision, optionally time-boxed). Extract actor_handle + date_from/date_to.\n" +
+        "  ANALYTICS  - filter, rank, count, or aggregate entities by concrete criteria (skills, status,\n" +
+        "               scores, relationships, time windows).\n" +
+        "  SIMILARITY - find entities \"similar to\"/\"like\"/\"resembling\" a named entity, based on\n" +
+        "               free-text/profile characteristics rather than exact filters.\n" +
+        "  NONE       - anything else (greetings, unresolvable, out of scope).\n\n" +
+        "Rules:\n" +
+        "  1. Output ONLY a single JSON object, no markdown, no explanation.\n" +
+        "  2. actor_handle must be an exact @handle from the entity list above, or null.\n" +
+        "  3. date_from/date_to are YYYY-MM-DD or null. \"yesterday\" = TODAY-1. \"this week\" = Monday of\n" +
+        "     the current week through TODAY.\n" +
+        "  4. cleaned_question is the user's question verbatim, for ANALYTICS/SIMILARITY routes.\n\n" +
+        "Output shape:\n" +
+        "{\"route\":\"AUDIT|ANALYTICS|SIMILARITY|NONE\",\"actor_handle\":null,\"date_from\":null,\"date_to\":null,\"cleaned_question\":null}";
+
     @Override
     public void post(HttpServletRequest req, HttpServletResponse res) {
         PoolDB pool = null;
@@ -124,7 +148,10 @@ public class Intent implements Action {
             JSONObject body = new JSONObject();
             body.put("model", VLLM_MODEL);
             body.put("messages", messages);
-            body.put("max_tokens", 64);
+            // Generous headroom: the configured model may be a reasoning model that emits a
+            // separate reasoning_content field before content - a small max_tokens can be
+            // exhausted mid-reasoning, leaving content empty even though the call "succeeded".
+            body.put("max_tokens", 300);
             body.put("temperature", 0.1);
 
             System.out.println("[Intent] LLM parsing: \"" + rawInput + "\"");
@@ -153,6 +180,86 @@ public class Intent implements Action {
             System.err.println("[Intent] LLM parse failed: " + e.getMessage());
         }
         return null;
+    }
+
+    /* ── LLM: unresolved question → AUDIT / ANALYTICS / SIMILARITY / NONE ───── */
+
+    @SuppressWarnings("unchecked")
+    private JSONObject classifyIntelligenceQuery(String rawInput, String entityList) {
+        if (VLLM_URL == null || VLLM_MODEL == null || rawInput == null) return null;
+
+        try {
+            String todayIso = java.time.LocalDate.now().toString();
+            String systemPrompt = INTELLIGENCE_ROUTE_PROMPT
+                .replace("{TODAY_ISO}", todayIso)
+                .replace("{ENTITY_LIST}", entityList != null ? entityList : "");
+
+            JSONArray messages = new JSONArray();
+            JSONObject sysMsg = new JSONObject();
+            sysMsg.put("role", "system");
+            sysMsg.put("content", systemPrompt);
+            messages.add(sysMsg);
+            JSONObject userMsg = new JSONObject();
+            userMsg.put("role", "user");
+            userMsg.put("content", rawInput);
+            messages.add(userMsg);
+
+            JSONObject body = new JSONObject();
+            body.put("model", VLLM_MODEL);
+            body.put("messages", messages);
+            // See llmParseIntent above - same reasoning-model headroom concern, and this prompt
+            // carries the full entity list, so it needs a lot more room to reason through it.
+            // (Observed: 1024 was still not enough on a ~180-entity deployment - the model
+            // burned most of the budget on reasoning_content and the JSON got cut off mid-value.)
+            body.put("max_tokens", 3072);
+            body.put("temperature", 0.1);
+
+            System.out.println("[Intent] classifying intelligence query: \"" + rawInput + "\"");
+            HttpClient http = new HttpClient();
+            JSONObject response = http.sendPost(
+                VLLM_URL + "/v1/chat/completions",
+                body,
+                "Authorization", "Bearer dummy"
+            );
+
+            JSONArray choices = (JSONArray) response.get("choices");
+            if (choices == null || choices.isEmpty()) {
+                System.err.println("[Intent] classifyIntelligenceQuery: no choices in response: " + response.toJSONString());
+                return null;
+            }
+            JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
+            if (message == null) {
+                System.err.println("[Intent] classifyIntelligenceQuery: null message in first choice");
+                return null;
+            }
+            String content = (String) message.get("content");
+            if (content == null) {
+                System.err.println("[Intent] classifyIntelligenceQuery: null content in message");
+                return null;
+            }
+
+            String stripped = stripMarkdownFences(content).trim();
+            int start = stripped.indexOf('{');
+            int end   = stripped.lastIndexOf('}');
+            if (start < 0 || end < 0 || end < start) {
+                System.err.println("[Intent] classifyIntelligenceQuery: no JSON object found in content: " + content);
+                return null;
+            }
+
+            Object parsed = new JSONParser().parse(stripped.substring(start, end + 1));
+            JSONObject routed = parsed instanceof JSONObject ? (JSONObject) parsed : null;
+            if (routed != null) System.out.println("[Intent] classified route: " + routed.get("route"));
+            else System.err.println("[Intent] classifyIntelligenceQuery: parsed content was not a JSON object: " + content);
+            return routed;
+        } catch (Exception e) {
+            System.err.println("[Intent] classifyIntelligenceQuery failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String stripMarkdownFences(String text) {
+        Matcher m = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE).matcher(text.trim());
+        return m.find() ? m.group(1).trim() : text.trim();
     }
 
     private String buildSystemPrompt(List<JSONObject> commands, String vocabSection) {
@@ -286,9 +393,30 @@ public class Intent implements Action {
                 props.put("matches", matchArray);
                 components.add(createComponent("nexus_disambiguation_card", props.toJSONString()));
             } else {
-                JSONObject props = new JSONObject();
-                props.put("query", cleanIntent);
-                components.add(createComponent("nexus_semantic_results", props.toJSONString()));
+                // Neither a matched command nor a name lookup - try routing to one of the
+                // Conversational Intelligence paths (AUDIT / ANALYTICS / SIMILARITY) before
+                // falling back to the semantic-results dead end.
+                JSONObject routed = classifyIntelligenceQuery(cleanIntent, fetchEntityList());
+                String route = routed != null ? (String) routed.get("route") : null;
+
+                if ("AUDIT".equals(route)) {
+                    JSONObject props = new JSONObject();
+                    props.put("actor_handle", routed.get("actor_handle"));
+                    props.put("date_from",    routed.get("date_from"));
+                    props.put("date_to",      routed.get("date_to"));
+                    props.put("question",     cleanIntent);
+                    components.add(createComponent("nexus_audit_narrative", props.toJSONString()));
+                } else if ("ANALYTICS".equals(route) || "SIMILARITY".equals(route)) {
+                    JSONObject props = new JSONObject();
+                    Object cleaned = routed.get("cleaned_question");
+                    props.put("question", cleaned != null ? cleaned : cleanIntent);
+                    props.put("mode", route);
+                    components.add(createComponent("nexus_analytical_results", props.toJSONString()));
+                } else {
+                    JSONObject props = new JSONObject();
+                    props.put("query", cleanIntent);
+                    components.add(createComponent("nexus_semantic_results", props.toJSONString()));
+                }
             }
         }
 
