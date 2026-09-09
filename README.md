@@ -6,10 +6,34 @@ Zero sector-specific logic is hardcoded. Every domain concept - entity types, te
 
 Checkout our [soft launch announcement](https://techadvisory.substack.com/p/tsi-nexus-an-open-source-digital).
 
+## Why TSI Nexus
+
+AI is changing how people use software. We are moving away from menus and forms to just asking by voice and getting things done. This shift is happening fast, and it goes beyond building a chat window on top of existing software. If users are going to ask in plain language, the system underneath has to understand the business and enforce business rules. Our current systems are not built to do that.
+
+So what does the system actually need?
+
+1. **Connected View** - Every person, asset, branch, and relationship between them needs to be organised in one place.
+2. **Tunable Intelligence** - Every organisation has its own terms & slang, job titles, and shorthand. The system needs to understand that vocabulary.
+3. **Adaptable Interface** - Instead of menu-driven form interfaces, the users should be able to say or type what they need.
+4. **Memory Layer** - Every daily update needs to be recorded automatically.
+5. **Reasoning Engine** - To connect the dots, compare options, and explain why it happened.
+6. **Integration Gateway** - To plug in and pull data in from / push actions out to LLMs, CRMs, HR systems, industrial automation gateways, whatever an organisation already runs.
+7. **Control & Audit Layer** - Every action taken by the agent should be checked against organisation rules. If the rules are not met, the system should be able to bring in a Human-in-the-Loop (HITL) for action approval. If you are RBI/SEBI regulated, you should be able to furnish reports as per their AI governance guidelines.
+
+### Example use cases
+
+- An agricultural broker sends a WhatsApp voice message in Hindi, stating the quantity and price they want. The system understands it, checks with the suppliers, and replies in the same chat with the offer price. When the broker initiates the purchase order, it confirms that the supplier has actually responded.
+- A credit operator says, "Disburse the loan for customer ID 4521," instead of clicking through six screens. The system checks whether that customer has cleared KYC verification, underwriting and documentation before initiating the disbursement action.
+- A homeowner says "good night" once. The system checks if the doors are locked before dimming the lights and turning the AC to sleep mode.
+
+Different industries, but the same seven requirements underneath. It perfectly aligns with our philosophy of sovereign composable data infrastructure, and we have created an open-source tool. It's called TSI Nexus, an Apache 2.0 licensed institutional intelligence platform for small & medium organisations that enables an AI operator to listen, understand, and act.
+
+These seven requirements map directly onto the platform's [six architectural pillars](docs/architecture.md#six-pillars) - Connected View is the Context Graph, Tunable Intelligence and the Reasoning Engine are handled by Intelligence Tuning, Adaptable Interface is Liquid, Memory Layer is the Interaction Stream, Integration Gateway is the Service Registry, and Control & Audit Layer is Guardrails (extended with HITL escalation and regulatory reporting).
+
 ## What it does
 
 **For end users (the Liquid interface)**
-- Search for any entity by name or ID using plain English
+- Search for any entity by name, ID, or voice, using plain English
 - View a live context card showing the entity's current state, graph relationships, and external data
 - Submit structured forms (Input Manifests) to record actions and update state
 - All actions are logged to an append-only interaction stream
@@ -25,7 +49,7 @@ Checkout our [soft launch announcement](https://techadvisory.substack.com/p/tsi-
 
 ## How organisations use it
 
-**Intent to command:** Field staff type natural language requests. TSI Nexus maps them to exact registered command verbs like `/disburse_loan` or `/verify_kyc`, with no ambiguity and no drift from institutional policy.
+**Intent to command:** Field staff type or speak natural language requests. TSI Nexus maps them to exact registered command verbs like `/disburse_loan` or `/verify_kyc`, with no ambiguity and no drift from institutional policy.
 
 **Policy evaluation:** Before any command executes, TSI Nexus checks it against the live context and business rules stored in the knowledge graph. It either approves, blocks, or flags for escalation - keeping every action within the institution's defined guardrails.
 
