@@ -1,6 +1,8 @@
 # TSI Nexus
 
-A sovereign institutional intelligence platform for small and medium enterprises. It provides a private "company brain" - a single system that stores every entity, relationship, rule, and interaction, and surfaces them through a natural language interface.
+A sovereign institutional intelligence platform for small and medium enterprises enabling an AI Assistant to listen, understand, and act. 
+
+It provides a private "company brain" - a single system that stores every entity, relationship, rule, and interaction, and surfaces them through a natural language interface.
 
 Zero sector-specific logic is hardcoded. Every domain concept - entity types, terminology, policies, commands, templates - lives in database rows configured by the deploying institution.
 
