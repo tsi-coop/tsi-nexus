@@ -190,7 +190,7 @@
                             <div class="w-6 h-6 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">2</div>
                             <div class="pb-4 border-l border-dashed border-slate-200 flex-1" style="margin-left:-1.125rem; padding-left:calc(1.125rem + 0.75rem)">
                                 <p class="text-[11px] font-bold text-slate-700">AI Assist generates SQL</p>
-                                <p class="text-[10px] text-slate-400 mt-0.5 leading-relaxed">The vLLM module translates your intent into a parameterised SQL query against the data model. You can review and edit before saving.</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5 leading-relaxed">The configured LLM translates your intent into a parameterised SQL query against the data model. You can review and edit before saving.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
@@ -868,7 +868,7 @@ async function checkIntelligenceStatus() {
     try {
         const res  = await fetch('/api/tuning');
         const data = await res.json();
-        intelligenceOnline = data.success && data.vllm_online;
+        intelligenceOnline = data.success && (data.llm_online || data.vllm_online);
     } catch (_) { intelligenceOnline = false; }
 }
 

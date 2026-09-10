@@ -30,16 +30,6 @@ import java.util.Map;
  */
 public class Seeding implements Action {
 
-    private static final String VLLM_URL;
-    private static final String VLLM_MODEL;
-
-    static {
-        String u = System.getenv("VLLM_URL");
-        String m = System.getenv("VLLM_MODEL");
-        VLLM_URL   = (u != null && !u.isEmpty()) ? u.replaceAll("/$", "") : null;
-        VLLM_MODEL = (m != null && !m.isEmpty()) ? m : null;
-    }
-
     /* ── GET ───────────────────────────────────────────────────────────── */
 
     @Override
@@ -147,7 +137,7 @@ public class Seeding implements Action {
             out.put("entity_types", entityTypes);
             out.put("stats",        stats);
             out.put("sessions",     sessions);
-            out.put("ai_available", VLLM_URL != null && VLLM_MODEL != null);
+            out.put("ai_available", LLMClient.isConfigured());
             OutputProcessor.send(res, 200, out);
 
         } catch (Exception e) {
@@ -203,8 +193,7 @@ public class Seeding implements Action {
         String typeHint = str(body, "type_hint");
         if ((context == null || context.isBlank()) && (typeHint == null || typeHint.isBlank()))
             throw new IllegalArgumentException("industry_context or type_hint is required");
-        if (VLLM_URL == null || VLLM_MODEL == null)
-            throw new IllegalStateException("AI engine not configured — set VLLM_URL and VLLM_MODEL");
+        requireLLMConfigured();
 
         String prompt =
             "Given the following institutional context, suggest 3-6 entity types that should be modeled as digital twins.\n\n" +
@@ -244,8 +233,7 @@ public class Seeding implements Action {
             throw new IllegalArgumentException("industry_context is required");
         if (types.isEmpty())
             throw new IllegalArgumentException("At least one entity type is required");
-        if (VLLM_URL == null || VLLM_MODEL == null)
-            throw new IllegalStateException("AI engine not configured — set VLLM_URL and VLLM_MODEL");
+        requireLLMConfigured();
 
         // Create session record
         String sessionId;
@@ -469,8 +457,7 @@ public class Seeding implements Action {
         String context     = str(body, "industry_context");
         if (instruction == null || instruction.isBlank())
             throw new IllegalArgumentException("instruction is required");
-        if (VLLM_URL == null || VLLM_MODEL == null)
-            throw new IllegalStateException("AI engine not configured");
+        requireLLMConfigured();
 
         StringBuilder currentState = new StringBuilder();
         try (PreparedStatement ps = conn.prepareStatement(
@@ -1084,8 +1071,7 @@ public class Seeding implements Action {
                                   HttpServletRequest req, HttpServletResponse res) throws Exception {
         String context = str(body, "industry_context");
         JSONArray types = arrOf(body, "entity_types");
-        if (VLLM_URL == null || VLLM_MODEL == null)
-            throw new IllegalStateException("AI engine not configured — set VLLM_URL and VLLM_MODEL");
+        requireLLMConfigured();
 
         StringBuilder typeList = new StringBuilder();
         for (Object t : types) typeList.append(t).append(", ");
@@ -1278,7 +1264,6 @@ public class Seeding implements Action {
     @SuppressWarnings("unchecked")
     private String callAI(String prompt) throws Exception {
         JSONObject body = new JSONObject();
-        body.put("model",       VLLM_MODEL);
         body.put("temperature", 0.7);
         body.put("max_tokens",  8192);
 
@@ -1298,19 +1283,16 @@ public class Seeding implements Action {
 
         body.put("messages", messages);
 
-        System.out.println("[Seeding] POST " + VLLM_URL + "/v1/chat/completions");
-        HttpClient     http     = new HttpClient();
-        JSONObject     response = http.sendPost(VLLM_URL + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
-        JSONArray      choices  = (JSONArray) response.get("choices");
-        if (choices == null || choices.isEmpty()) throw new RuntimeException("AI returned no choices");
-        JSONObject choice = (JSONObject) choices.get(0);
-        String finishReason = choice.containsKey("finish_reason") ? (String) choice.get("finish_reason") : null;
-        if ("length".equals(finishReason))
-            throw new RuntimeException("AI response truncated (finish_reason=length) — reduce prompt size or increase max_tokens");
-        JSONObject message = (JSONObject) choice.get("message");
-        if (message == null) throw new RuntimeException("AI response missing message");
-        String content = (String) message.get("content");
+        System.out.println("[Seeding] LLM provider=" + LLMClient.provider() + " model=" + LLMClient.model());
+        JSONObject response = LLMClient.chat(body);
+        String content = LLMClient.extractContent(response);
         return content != null ? content.trim() : "";
+    }
+
+    private void requireLLMConfigured() {
+        if (!LLMClient.isConfigured()) {
+            throw new IllegalStateException("AI engine not configured - set LLM_PROVIDER, LLM_BASE_URL, and LLM_MODEL");
+        }
     }
 
     @SuppressWarnings("unchecked")

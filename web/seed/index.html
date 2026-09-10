@@ -339,7 +339,7 @@
                 <div>
                     <p class="text-[8px] font-black text-cyan-600 uppercase tracking-widest mb-1">Mock Service Registry</p>
                     <p class="text-xs font-bold text-slate-800"><span id="res-services">0</span> external service(s) registered as PULL sources</p>
-                    <p class="text-[9px] text-slate-400 mt-1">Place <code class="bg-cyan-100 px-1 rounded">mock-data.json</code> in <code class="bg-cyan-100 px-1 rounded">mock/</code> and run <code class="bg-cyan-100 px-1 rounded">javac mock/MockServer.java &amp;&amp; java -cp mock MockServer</code></p>
+                    <p class="text-[9px] text-slate-400 mt-1">Place <code class="bg-cyan-100 px-1 rounded">mock-data.json</code> in <code class="bg-cyan-100 px-1 rounded">examples/integrations/</code> and run <code class="bg-cyan-100 px-1 rounded">javac examples/integrations/MockServer.java &amp;&amp; java -cp examples/integrations MockServer</code></p>
                 </div>
                 <a id="mockDownloadLink" href="#" download="mock-data.json"
                    class="shrink-0 flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl transition-colors">
@@ -492,7 +492,7 @@ function renderAiStatus(available) {
         label.className   = 'text-[10px] font-black uppercase tracking-widest text-emerald-600';
     } else {
         dot.className     = 'w-2 h-2 rounded-full bg-red-400';
-        label.textContent = 'AI Engine Offline — configure VLLM_URL';
+        label.textContent = 'AI Engine Offline - configure LLM_*';
         label.className   = 'text-[10px] font-black uppercase tracking-widest text-red-500';
     }
 }

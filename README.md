@@ -67,7 +67,7 @@ Watch the [video walkthrough](https://youtu.be/vvCECWRBTms) for a full end-to-en
 
 ### Prerequisites
 - Docker and Docker Compose
-- A running LLM endpoint (vLLM or compatible OpenAI API)
+- An LLM endpoint - a self-hosted model (e.g. vLLM serving Gemma) or a hosted provider (OpenAI, Anthropic Claude, Google Gemini, Sarvam)
 
 ### 1. Configure environment
 
@@ -81,12 +81,61 @@ Key variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `VLLM_URL` | `http://192.168.1.77:8001` | Your LLM endpoint |
-| `VLLM_MODEL` | `gemma-4-26B-A4B-it` | Model name |
+| `LLM_PROVIDER` | `openai-compatible` | Which provider adapter to use - see [LLM providers](#llm-providers) below |
+| `LLM_BASE_URL` | `http://192.168.1.77:8001` | Base URL of your LLM endpoint |
+| `LLM_MODEL` | `gemma-4-26B-A4B-it` | Model name |
+| `LLM_API_KEY` | *(empty)* | API key, if the provider requires one |
 | `APP_PORT_MAP` | `8084:8080` | Host port mapping |
 | `DB_PORT_MAP` | `5436:5432` | Postgres port mapping |
 | `POSTGRES_PASSWD` | `secure_dev_password` | Change for production |
 | `TSI_NEXUS_JWT_SECRET` | **Required** | Generate with `openssl rand -hex 32`. Container refuses to start without it. |
+
+#### LLM providers
+
+TSI Nexus is built sovereignty-first: it defaults to open-weight models you self-host and actively supports home-grown models such as Sarvam AI. Nexus talks to LLMs through a provider-neutral client (`LLMClient.java`) - set `LLM_PROVIDER` to pick the adapter, then supply the matching variables. The choice of model is entirely at the deploying institution's discretion:
+
+| `LLM_PROVIDER` | Use for | Required vars | Notes |
+|---|---|---|---|
+| `openai-compatible` (default) | Self-hosted, open-weight models via vLLM or any `/v1/chat/completions` server - **including Gemma** | `LLM_BASE_URL`, `LLM_MODEL` | `LLM_API_KEY` optional (send `dummy` if your server ignores it) |
+| `sarvam` | Sarvam - Indian, multilingual-first hosted models | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | Optional `LLM_AUTH_HEADER` (default `api-subscription-key`) |
+| `openai` | OpenAI hosted models | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | Same request shape as `openai-compatible`, sent with a real `Authorization: Bearer` key |
+| `claude` (or `anthropic`) | Anthropic Claude | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | Maps to the Messages API; optional `LLM_API_VERSION` (default `2023-06-01`) |
+| `gemini` (or `google`) | Google Gemini | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | Maps to `generateContent`; optional `LLM_AUTH_HEADER` (default `x-goog-api-key`) |
+
+Optional overrides for any provider: `LLM_CHAT_PATH` (custom completion path/endpoint).
+
+**Env examples**
+
+```bash
+# Self-hosted, open-weight - e.g. Gemma via vLLM (default)
+LLM_PROVIDER=openai-compatible
+LLM_BASE_URL=http://192.168.1.77:8001
+LLM_MODEL=gemma-4-26B-A4B-it
+
+# Sarvam (India)
+LLM_PROVIDER=sarvam
+LLM_BASE_URL=https://api.sarvam.ai
+LLM_MODEL=sarvam-m
+LLM_API_KEY=sk_...
+
+# OpenAI
+LLM_PROVIDER=openai
+LLM_BASE_URL=https://api.openai.com
+LLM_MODEL=gpt-4o
+LLM_API_KEY=sk-...
+
+# Anthropic Claude
+LLM_PROVIDER=claude
+LLM_BASE_URL=https://api.anthropic.com
+LLM_MODEL=claude-sonnet-5
+LLM_API_KEY=sk-ant-...
+
+# Google Gemini
+LLM_PROVIDER=gemini
+LLM_BASE_URL=https://generativelanguage.googleapis.com
+LLM_MODEL=gemini-2.5-flash
+LLM_API_KEY=AIza...
+```
 
 ### 2. Build and run
 
@@ -130,13 +179,13 @@ Ready-to-use input values for common domains:
 
 Each guide provides exact copy-paste text for every field in the seed form.
 
-**Step 4 - Start the mock server**
+**Step 4 - Start the mock integration server**
 
-After seeding, download `mock-data.json` from the seeding page, place it in `mock/`, then run:
+After seeding, download `mock-data.json` from the seeding page, place it in `examples/integrations/`, then run:
 
 ```bash
-javac mock/MockServer.java
-java -cp mock MockServer
+javac examples/integrations/MockServer.java
+java -cp examples/integrations MockServer
 ```
 
 This starts a PULL server on port 9090 and a background INGEST push thread. Without this step, context cards in Liquid will have empty live-data fields.
@@ -204,7 +253,7 @@ docker compose up -d
 
 ### Mock external services
 
-See Step 4 in [First-time setup](#3-first-time-setup). The mock server (`mock/MockServer.java`) serves as a standalone PULL endpoint and INGEST push source - no real external systems needed for a full demo.
+See Step 4 in [First-time setup](#3-first-time-setup). The mock integration server (`examples/integrations/MockServer.java`) serves as a standalone PULL endpoint and INGEST push source - no real external systems needed for a full demo.
 
 
 ## Integrating external systems
@@ -228,7 +277,7 @@ For headless access to the intelligence API from external apps or AI agents, see
 src/          Java source (Jakarta EE, no framework dependencies)
 web/          Frontend - admin UI and Liquid interface (plain HTML/JS)
 db/           init.sql - full schema, applied on first DB start
-mock/         MockServer.java - standalone mock PULL/INGEST server
+examples/     Python domain agents (examples/agents/) and the mock integration server (examples/integrations/)
 docs/         Documentation, integration guides, seed guides, and diagrams
 ```
 

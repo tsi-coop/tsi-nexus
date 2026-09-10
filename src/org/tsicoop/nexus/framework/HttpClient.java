@@ -7,6 +7,7 @@ import org.json.simple.parser.JSONParser;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Map;
 
 public class HttpClient {
 
@@ -84,5 +85,24 @@ public class HttpClient {
         resstring = response.body();
         res = (JSONObject) parser.parse(resstring);
         return res;
+    }
+
+    public JSONObject sendPost(String url, JSONObject data, Map<String, String> headers) throws Exception {
+        JSONParser parser = new JSONParser();
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .POST(HttpRequest.BodyPublishers.ofString(data.toString()))
+                .uri(URI.create(url))
+                .setHeader("Content-Type", "application/json");
+
+        if (headers != null) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    builder.setHeader(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        return (JSONObject) parser.parse(response.body());
     }
 }

@@ -113,7 +113,7 @@
     <!-- Offline banner -->
     <div id="offlineBanner" class="hidden bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-        <p class="text-xs font-semibold text-amber-800">Intelligence module is offline — set <code class="font-mono bg-amber-100 px-1 rounded">VLLM_URL</code> and <code class="font-mono bg-amber-100 px-1 rounded">VLLM_MODEL</code> in docker-compose.yml and rebuild. Vocabulary can still be managed.</p>
+        <p class="text-xs font-semibold text-amber-800">Intelligence module is offline - set <code class="font-mono bg-amber-100 px-1 rounded">LLM_PROVIDER</code>, <code class="font-mono bg-amber-100 px-1 rounded">LLM_BASE_URL</code>, and <code class="font-mono bg-amber-100 px-1 rounded">LLM_MODEL</code> in docker-compose.yml and rebuild. Vocabulary can still be managed.</p>
     </div>
 
     <!-- Loading -->
@@ -138,11 +138,15 @@
             <div class="flex items-center gap-10 flex-wrap">
                 <div>
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Endpoint</p>
-                    <p id="vllmEndpoint" class="font-mono text-sm font-semibold text-slate-700">—</p>
+                    <p id="llmEndpoint" class="font-mono text-sm font-semibold text-slate-700">—</p>
                 </div>
                 <div>
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Active Model</p>
-                    <p id="vllmModel" class="font-mono text-sm font-semibold text-slate-700">—</p>
+                    <p id="llmModel" class="font-mono text-sm font-semibold text-slate-700">—</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Provider</p>
+                    <p id="llmProvider" class="font-mono text-sm font-semibold text-slate-700">—</p>
                 </div>
                 <p class="text-xs text-slate-400 ml-auto self-center">Configured in <code class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">docker-compose.yml</code></p>
             </div>
@@ -382,7 +386,7 @@ function renderStatus(data) {
     const banner = document.getElementById('offlineBanner');
     chip.classList.remove('hidden');
 
-    if (data.vllm_online) {
+    if (data.llm_online || data.vllm_online) {
         chip.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-50 text-emerald-700';
         chip.innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online`;
         banner.classList.add('hidden');
@@ -392,8 +396,9 @@ function renderStatus(data) {
         banner.classList.remove('hidden');
     }
 
-    document.getElementById('vllmEndpoint').textContent = data.vllm_url  || 'Not configured';
-    document.getElementById('vllmModel').textContent    = data.vllm_model || 'Not configured';
+    document.getElementById('llmEndpoint').textContent = data.llm_url || data.vllm_url || 'Not configured';
+    document.getElementById('llmModel').textContent    = data.llm_model || data.vllm_model || 'Not configured';
+    document.getElementById('llmProvider').textContent = data.llm_provider || 'Not configured';
 }
 
 /* ── render vocab ───────────────────────────────────────────────────── */

@@ -275,19 +275,12 @@ public class Policy implements Action {
             OutputProcessor.errorResponse(res, 400, "Bad request", "description is required", req.getRequestURI()); return;
         }
 
-        String vllmUrl = System.getenv("VLLM_URL");
-        if (vllmUrl == null || vllmUrl.isBlank()) {
+        if (!LLMClient.isConfigured()) {
             OutputProcessor.errorResponse(res, 503, "Not available",
-                "VLLM_URL is not configured — Intelligence Module is offline", req.getRequestURI()); return;
+                "LLM is not configured - set LLM_PROVIDER, LLM_BASE_URL, and LLM_MODEL", req.getRequestURI()); return;
         }
-        vllmUrl = vllmUrl.replaceAll("/$", "");
 
         String systemPrompt = POLICY_SQL_PROMPT;
-        String model        = System.getenv("VLLM_MODEL");
-        if (model == null || model.isBlank()) {
-            OutputProcessor.errorResponse(res, 503, "Not available",
-                "VLLM_MODEL is not configured — set it in docker-compose.yml", req.getRequestURI()); return;
-        }
 
         // Enrich prompt with live schema context and institutional vocabulary
         String schemaContext = buildSchemaContext(conn);
@@ -311,13 +304,11 @@ public class Policy implements Action {
         JSONObject usr = new JSONObject(); usr.put("role", "user");   usr.put("content", userMsg.toString()); messages.add(usr);
 
         JSONObject body = new JSONObject();
-        body.put("model", model);
         body.put("messages", messages);
         body.put("max_tokens", 512);
         body.put("temperature", 0.1);
 
-        HttpClient http = new HttpClient();
-        JSONObject llmResponse = http.sendPost(vllmUrl + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
+        JSONObject llmResponse = LLMClient.chat(body);
 
         String rawSql = extractContent(llmResponse);
         if (rawSql == null || rawSql.isBlank()) {
@@ -362,14 +353,7 @@ public class Policy implements Action {
     }
 
     private String extractContent(JSONObject llmResponse) {
-        try {
-            JSONArray choices = (JSONArray) llmResponse.get("choices");
-            if (choices != null && !choices.isEmpty()) {
-                JSONObject msg = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-                if (msg != null) return (String) msg.get("content");
-            }
-        } catch (Exception ignore) {}
-        return null;
+        return LLMClient.extractContent(llmResponse);
     }
 
     private String stripMarkdownFences(String text) {

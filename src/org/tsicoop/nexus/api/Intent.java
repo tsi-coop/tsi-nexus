@@ -26,16 +26,6 @@ import java.util.stream.Collectors;
  */
 public class Intent implements Action {
 
-    private static final String VLLM_URL;
-    private static final String VLLM_MODEL;
-
-    static {
-        String url   = System.getenv("VLLM_URL");
-        String model = System.getenv("VLLM_MODEL");
-        VLLM_URL   = (url   != null && !url.isEmpty())   ? url.replaceAll("/$", "") : null;
-        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : null;
-    }
-
     // Conversational Intelligence v0.2 - routes questions that fit neither a /command nor a
     // plain-name lookup (see classifyIntelligenceQuery, called only from the existing
     // no-command/no-handle fallback branch in resolveToAdaptiveUI).
@@ -127,7 +117,7 @@ public class Intent implements Action {
 
     @SuppressWarnings("unchecked")
     private String llmParseIntent(String rawInput, List<JSONObject> commands, String vocabSection) {
-        if (VLLM_URL == null || VLLM_MODEL == null || rawInput == null) return null;
+        if (!LLMClient.isConfigured() || rawInput == null) return null;
         if (rawInput.trim().startsWith("/")) return null;
 
         try {
@@ -146,7 +136,6 @@ public class Intent implements Action {
             messages.add(userMsg);
 
             JSONObject body = new JSONObject();
-            body.put("model", VLLM_MODEL);
             body.put("messages", messages);
             // Generous headroom: the configured model may be a reasoning model that emits a
             // separate reasoning_content field before content - a small max_tokens can be
@@ -155,25 +144,13 @@ public class Intent implements Action {
             body.put("temperature", 0.1);
 
             System.out.println("[Intent] LLM parsing: \"" + rawInput + "\"");
-            HttpClient http = new HttpClient();
-            JSONObject response = http.sendPost(
-                VLLM_URL + "/v1/chat/completions",
-                body,
-                "Authorization", "Bearer dummy"
-            );
-
-            JSONArray choices = (JSONArray) response.get("choices");
-            if (choices != null && !choices.isEmpty()) {
-                JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-                if (message != null) {
-                    String content = (String) message.get("content");
-                    if (content != null) {
-                        String parsed = content.trim().split("\\n")[0].trim();
-                        System.out.println("[Intent] LLM resolved to: " + parsed);
-                        if (parsed.startsWith("/") && !parsed.startsWith("/unknown")) {
-                            return parsed;
-                        }
-                    }
+            JSONObject response = LLMClient.chat(body);
+            String content = LLMClient.extractContent(response);
+            if (content != null) {
+                String parsed = content.trim().split("\\n")[0].trim();
+                System.out.println("[Intent] LLM resolved to: " + parsed);
+                if (parsed.startsWith("/") && !parsed.startsWith("/unknown")) {
+                    return parsed;
                 }
             }
         } catch (Exception e) {
@@ -186,7 +163,7 @@ public class Intent implements Action {
 
     @SuppressWarnings("unchecked")
     private JSONObject classifyIntelligenceQuery(String rawInput, String entityList) {
-        if (VLLM_URL == null || VLLM_MODEL == null || rawInput == null) return null;
+        if (!LLMClient.isConfigured() || rawInput == null) return null;
 
         try {
             String todayIso = java.time.LocalDate.now().toString();
@@ -205,7 +182,6 @@ public class Intent implements Action {
             messages.add(userMsg);
 
             JSONObject body = new JSONObject();
-            body.put("model", VLLM_MODEL);
             body.put("messages", messages);
             // See llmParseIntent above - same reasoning-model headroom concern, and this prompt
             // carries the full entity list, so it needs a lot more room to reason through it.
@@ -215,24 +191,8 @@ public class Intent implements Action {
             body.put("temperature", 0.1);
 
             System.out.println("[Intent] classifying intelligence query: \"" + rawInput + "\"");
-            HttpClient http = new HttpClient();
-            JSONObject response = http.sendPost(
-                VLLM_URL + "/v1/chat/completions",
-                body,
-                "Authorization", "Bearer dummy"
-            );
-
-            JSONArray choices = (JSONArray) response.get("choices");
-            if (choices == null || choices.isEmpty()) {
-                System.err.println("[Intent] classifyIntelligenceQuery: no choices in response: " + response.toJSONString());
-                return null;
-            }
-            JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-            if (message == null) {
-                System.err.println("[Intent] classifyIntelligenceQuery: null message in first choice");
-                return null;
-            }
-            String content = (String) message.get("content");
+            JSONObject response = LLMClient.chat(body);
+            String content = LLMClient.extractContent(response);
             if (content == null) {
                 System.err.println("[Intent] classifyIntelligenceQuery: null content in message");
                 return null;

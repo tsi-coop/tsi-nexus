@@ -7,16 +7,12 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.time.Duration;
 
 /**
- * GET  /api/tuning  → vLLM connectivity status + institutional vocabulary
+ * GET  /api/tuning  → LLM connectivity status + institutional vocabulary
  * POST /api/tuning  { action:"add_term",    term, definition }
  * POST /api/tuning  { action:"delete_term", term }
  */
@@ -33,12 +29,8 @@ public class Tuning implements Action {
             pool = new PoolDB();
             conn = pool.getConnection();
 
-            String vllmUrl   = System.getenv("VLLM_URL");
-            String vllmModel = System.getenv("VLLM_MODEL");
-            boolean online   = false;
-            if (vllmUrl != null && !vllmUrl.isBlank()) {
-                online = pingVllm(vllmUrl.replaceAll("/$", ""));
-            }
+            JSONObject llmStatus = LLMClient.ping();
+            boolean online = Boolean.TRUE.equals(llmStatus.get("success"));
 
             JSONObject out = new JSONObject();
             out.put("success",      true);
@@ -47,9 +39,15 @@ public class Tuning implements Action {
             out.put("templates",    loadTemplates(conn));
             out.put("schemas",      loadSchemas(conn));
             out.put("entity_types", loadEntityTypes(conn));
+            out.put("llm_online",   online);
+            out.put("llm_provider", LLMClient.provider());
+            out.put("llm_url",      LLMClient.baseUrl());
+            out.put("llm_model",    LLMClient.model());
+            out.put("llm_api_key_configured", LLMClient.apiKeyConfigured());
+            // Backward-compatible fields for existing admin UI code.
             out.put("vllm_online", online);
-            out.put("vllm_url",    vllmUrl   != null ? vllmUrl   : "");
-            out.put("vllm_model",  vllmModel != null ? vllmModel : "");
+            out.put("vllm_url",    LLMClient.baseUrl());
+            out.put("vllm_model",  LLMClient.model());
             OutputProcessor.send(res, 200, out);
 
         } catch (Exception e) {
@@ -419,23 +417,6 @@ public class Tuning implements Action {
     }
 
     /* ── helpers ─────────────────────────────────────────────────────────── */
-
-    private boolean pingVllm(String baseUrl) {
-        try {
-            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(2))
-                .build();
-            HttpRequest request = HttpRequest.newBuilder()
-                .GET()
-                .uri(URI.create(baseUrl + "/v1/models"))
-                .timeout(Duration.ofSeconds(2))
-                .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() < 500;
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     private String str(JSONObject o, String key) {
         Object v = o.get(key);

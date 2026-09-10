@@ -181,16 +181,16 @@ Omit `identifier` to return recent events across all registered INGEST sources.
 
 ## Mock integration for development
 
-The repository includes `mock/MockServer.java` - a standalone server that simulates all three patterns for local development and demos:
+The repository includes `examples/integrations/MockServer.java` - a standalone mock integration server that simulates all three patterns for local development and demos:
 
 - **PULL**: serves deterministic synthetic data for every registered entity type
 - **INGEST**: periodically pushes synthetic state updates into a running Nexus instance
 
-Download `mock-data.json` from the Seeding page after seeding your instance, place it in `mock/`, and run:
+Download `mock-data.json` from the Seeding page after seeding your instance, place it in `examples/integrations/`, and run:
 
 ```bash
-javac mock/MockServer.java
-java -cp mock MockServer
+javac examples/integrations/MockServer.java
+java -cp examples/integrations MockServer
 ```
 
 The server logs each INGEST push and its HTTP response code so you can verify the end-to-end flow without a real external system.

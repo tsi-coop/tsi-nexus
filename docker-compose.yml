@@ -55,8 +55,16 @@ services:
       POSTGRES_RO_PASSWD: "${POSTGRES_RO_PASSWD:-changeme_ro}"
       TSI_NEXUS_JWT_SECRET: "${TSI_NEXUS_JWT_SECRET:-tsi-nexus-preview-default-secret-change-in-production}"
       TSI_EXPORT_PATH: "${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}"
-      VLLM_URL: "${VLLM_URL:-http://192.168.1.77:8001}"
-      VLLM_MODEL: "${VLLM_MODEL:-gemma-4-26B-A4B-it}"
+      LLM_PROVIDER: "${LLM_PROVIDER:-openai-compatible}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-http://192.168.1.77:8001}"
+      LLM_MODEL: "${LLM_MODEL:-gemma-4-26B-A4B-it}"
+      LLM_API_KEY: "${LLM_API_KEY:-}"
+      LLM_CHAT_PATH: "${LLM_CHAT_PATH:-}"
+      LLM_AUTH_HEADER: "${LLM_AUTH_HEADER:-}"
+      LLM_API_VERSION: "${LLM_API_VERSION:-2023-06-01}"
+      # Legacy names remain wired for backward-compatible deployments.
+      VLLM_URL: "${VLLM_URL:-}"
+      VLLM_MODEL: "${VLLM_MODEL:-}"
     
     volumes:
       - "tsi_reports_data:${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}:rw"

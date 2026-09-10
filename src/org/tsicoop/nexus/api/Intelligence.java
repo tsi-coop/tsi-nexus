@@ -1,6 +1,6 @@
 package org.tsicoop.nexus.api;
 
-import org.tsicoop.nexus.framework.HttpClient;
+import org.tsicoop.nexus.framework.LLMClient;
 import org.tsicoop.nexus.framework.PoolDB;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -11,22 +11,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 /**
- * Calls a vLLM-hosted model via its OpenAI-compatible /v1/chat/completions endpoint.
- * Configure via environment variables:
- *   VLLM_URL   — base URL of the vLLM server (e.g. http://192.168.1.10:8000)
- *   VLLM_MODEL — model name as registered in vLLM (e.g. google/gemma-4-E4B-it)
+ * Provider-neutral LLM helpers for templates, forms, and card narratives.
  */
 public class Intelligence {
-
-    private static final String VLLM_URL;
-    private static final String VLLM_MODEL;
-
-    static {
-        String url = System.getenv("VLLM_URL");
-        String model = System.getenv("VLLM_MODEL");
-        VLLM_URL = (url != null && !url.isEmpty()) ? url.replaceAll("/$", "") : null;
-        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : null;
-    }
 
     // Conversational Intelligence v0.2 - generic, institution-agnostic narrator used by
     // Commentary.java to explain any rendered Liquid card in plain English. Deliberately
@@ -50,7 +37,7 @@ public class Intelligence {
      */
     @SuppressWarnings("unchecked")
     public static String generateCardNarrative(String cardType, JSONObject payload) {
-        if (VLLM_URL == null || VLLM_MODEL == null) return "";
+        if (!LLMClient.isConfigured()) return "";
         try {
             String vocab = loadVocabSection();
             String systemPrompt = CARD_NARRATIVE_PROMPT +
@@ -70,39 +57,26 @@ public class Intelligence {
             messages.add(userMsg);
 
             JSONObject body = new JSONObject();
-            body.put("model", VLLM_MODEL);
             body.put("messages", messages);
             // Reasoning models can spend much of the budget on reasoning_content before ever
             // emitting the narrative itself - keep this generous.
             body.put("max_tokens", 900);
             body.put("temperature", 0.4);
 
-            System.out.println("[Intelligence] generateCardNarrative POST " + VLLM_URL + "/v1/chat/completions model=" + VLLM_MODEL + " cardType=" + cardType);
-            HttpClient http = new HttpClient();
-            JSONObject response = http.sendPost(
-                VLLM_URL + "/v1/chat/completions",
-                body,
-                "Authorization", "Bearer dummy"
-            );
+            System.out.println("[Intelligence] generateCardNarrative provider=" + LLMClient.provider() + " model=" + LLMClient.model() + " cardType=" + cardType);
+            JSONObject response = LLMClient.chat(body);
 
-            JSONArray choices = (JSONArray) response.get("choices");
-            if (choices != null && !choices.isEmpty()) {
-                JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-                if (message != null) {
-                    String content = (String) message.get("content");
-                    return content != null ? content.trim() : "";
-                }
-            }
-            return "";
+            String content = LLMClient.extractContent(response);
+            return content != null ? content.trim() : "";
         } catch (Exception e) {
-            System.err.println("[Intelligence] generateCardNarrative ERROR calling vLLM: " + e.getMessage());
+            System.err.println("[Intelligence] generateCardNarrative ERROR calling LLM: " + e.getMessage());
             return "";
         }
     }
 
     @SuppressWarnings("unchecked")
     public static JSONObject generateTemplate(String userPrompt, String entityType, String attributes) {
-        if (VLLM_URL == null || VLLM_MODEL == null) return null;
+        if (!LLMClient.isConfigured()) return null;
         try {
             String vocab = loadVocabSection();
             String systemPrompt =
@@ -133,21 +107,12 @@ public class Intelligence {
             messages.add(userMsg);
 
             JSONObject body = new JSONObject();
-            body.put("model", VLLM_MODEL);
             body.put("messages", messages);
             body.put("temperature", 0.7);
 
-            HttpClient http = new HttpClient();
-            JSONObject response = http.sendPost(VLLM_URL + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
+            JSONObject response = LLMClient.chat(body);
 
-            JSONArray choices = (JSONArray) response.get("choices");
-            if (choices != null && !choices.isEmpty()) {
-                JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-                if (message != null) {
-                    String content = (String) message.get("content");
-                    return extractJson(content);
-                }
-            }
+            return extractJson(LLMClient.extractContent(response));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -156,7 +121,7 @@ public class Intelligence {
 
     @SuppressWarnings("unchecked")
     public static JSONObject generateSchema(String userPrompt, String entityType, String attributes) {
-        if (VLLM_URL == null || VLLM_MODEL == null) return null;
+        if (!LLMClient.isConfigured()) return null;
         try {
             String vocab = loadVocabSection();
             String systemPrompt =
@@ -191,27 +156,19 @@ public class Intelligence {
             messages.add(userMsg);
 
             JSONObject body = new JSONObject();
-            body.put("model", VLLM_MODEL);
             body.put("messages", messages);
             body.put("temperature", 0.3);
             body.put("max_tokens", 2048);
 
-            HttpClient http = new HttpClient();
-            System.out.println("[Intelligence] generateSchema POST " + VLLM_URL + "/v1/chat/completions model=" + VLLM_MODEL);
-            JSONObject response = http.sendPost(VLLM_URL + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
+            System.out.println("[Intelligence] generateSchema provider=" + LLMClient.provider() + " model=" + LLMClient.model());
+            JSONObject response = LLMClient.chat(body);
             System.out.println("[Intelligence] generateSchema response keys=" + response.keySet());
 
-            JSONArray choices = (JSONArray) response.get("choices");
-            if (choices == null || choices.isEmpty()) {
-                System.err.println("[Intelligence] generateSchema: no choices in response: " + response.toJSONString());
+            String content = LLMClient.extractContent(response);
+            if (content == null || content.isBlank()) {
+                System.err.println("[Intelligence] generateSchema: empty content in response: " + response.toJSONString());
                 return null;
             }
-            JSONObject message = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-            if (message == null) {
-                System.err.println("[Intelligence] generateSchema: null message in first choice");
-                return null;
-            }
-            String content = (String) message.get("content");
             System.out.println("[Intelligence] generateSchema raw content: " + content);
             JSONObject parsed = extractJson(content);
             if (parsed == null) System.err.println("[Intelligence] generateSchema: extractJson returned null");

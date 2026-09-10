@@ -37,16 +37,6 @@ public class Analytics implements Action {
     private static final int MAX_COLUMNS         = 12;
     private static final int MAX_CELL_CHARS      = 500;
 
-    private static final String VLLM_URL;
-    private static final String VLLM_MODEL;
-
-    static {
-        String url   = System.getenv("VLLM_URL");
-        String model = System.getenv("VLLM_MODEL");
-        VLLM_URL   = (url   != null && !url.isEmpty())   ? url.replaceAll("/$", "") : null;
-        VLLM_MODEL = (model != null && !model.isEmpty()) ? model : null;
-    }
-
     private static final String[] BANNED_KEYWORDS = {
         "INSERT","UPDATE","DELETE","DROP","ALTER","TRUNCATE","GRANT","REVOKE",
         "CREATE","EXECUTE","CALL","COPY","VACUUM","REINDEX","SET","RESET","LISTEN","NOTIFY",
@@ -244,7 +234,7 @@ public class Analytics implements Action {
     @SuppressWarnings("unchecked")
     private JSONObject generateSql(Connection conn, String question, String systemPrompt) throws Exception {
         JSONObject empty = new JSONObject();
-        if (VLLM_URL == null || VLLM_MODEL == null) return empty;
+        if (!LLMClient.isConfigured()) return empty;
 
         String schemaContext = buildSchemaContext(conn);
         String vocabSection   = loadVocabSection(conn);
@@ -259,7 +249,6 @@ public class Analytics implements Action {
         JSONObject usr = new JSONObject(); usr.put("role", "user");   usr.put("content", userMsg.toString()); messages.add(usr);
 
         JSONObject body = new JSONObject();
-        body.put("model", VLLM_MODEL);
         body.put("messages", messages);
         // Reasoning models can spend a large share of the budget on reasoning_content before
         // ever emitting the SQL/recap JSON - keep this generous rather than tuned to answer size.
@@ -275,9 +264,8 @@ public class Analytics implements Action {
         // this discourages the repetition pattern itself if it still occurs for other reasons.
         body.put("frequency_penalty", 0.4);
 
-        System.out.println("[Analytics] generateSql POST " + VLLM_URL + "/v1/chat/completions model=" + VLLM_MODEL + " question=\"" + question + "\"");
-        HttpClient http = new HttpClient();
-        JSONObject llmResponse = http.sendPost(VLLM_URL + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
+        System.out.println("[Analytics] generateSql provider=" + LLMClient.provider() + " model=" + LLMClient.model() + " question=\"" + question + "\"");
+        JSONObject llmResponse = LLMClient.chat(body);
         String content = extractContent(llmResponse);
         if (content == null || content.isBlank()) {
             // Observed on this deployment's (heavily quantized) reasoning model: it can reach
@@ -304,14 +292,7 @@ public class Analytics implements Action {
     }
 
     private String extractReasoningContent(JSONObject llmResponse) {
-        try {
-            JSONArray choices = (JSONArray) llmResponse.get("choices");
-            if (choices != null && !choices.isEmpty()) {
-                JSONObject msg = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-                if (msg != null) return (String) msg.get("reasoning_content");
-            }
-        } catch (Exception ignore) {}
-        return null;
+        return LLMClient.extractReasoningContent(llmResponse);
     }
 
     // Takes the LAST SELECT/WITH ... LIMIT n statement mentioned in a reasoning trace - the
@@ -358,7 +339,7 @@ public class Analytics implements Action {
 
     @SuppressWarnings("unchecked")
     private JSONArray reRank(String question, JSONArray pool) throws Exception {
-        if (VLLM_URL == null || VLLM_MODEL == null || pool.isEmpty()) return pool;
+        if (!LLMClient.isConfigured() || pool.isEmpty()) return pool;
 
         JSONArray messages = new JSONArray();
         JSONObject sys = new JSONObject(); sys.put("role", "system"); sys.put("content", RERANK_PROMPT); messages.add(sys);
@@ -368,13 +349,11 @@ public class Analytics implements Action {
         messages.add(usr);
 
         JSONObject body = new JSONObject();
-        body.put("model", VLLM_MODEL);
         body.put("messages", messages);
         body.put("max_tokens", 2048);
         body.put("temperature", 0.2);
 
-        HttpClient http = new HttpClient();
-        JSONObject llmResponse = http.sendPost(VLLM_URL + "/v1/chat/completions", body, "Authorization", "Bearer dummy");
+        JSONObject llmResponse = LLMClient.chat(body);
         String content = extractContent(llmResponse);
         if (content == null) return new JSONArray();
 
@@ -558,14 +537,7 @@ public class Analytics implements Action {
     /* ── LLM response parsing ────────────────────────────────────────────── */
 
     private String extractContent(JSONObject llmResponse) {
-        try {
-            JSONArray choices = (JSONArray) llmResponse.get("choices");
-            if (choices != null && !choices.isEmpty()) {
-                JSONObject msg = (JSONObject) ((JSONObject) choices.get(0)).get("message");
-                if (msg != null) return (String) msg.get("content");
-            }
-        } catch (Exception ignore) {}
-        return null;
+        return LLMClient.extractContent(llmResponse);
     }
 
     private JSONObject extractJson(String content) {

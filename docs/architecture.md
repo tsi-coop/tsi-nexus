@@ -212,17 +212,17 @@ Step 4 produces:
 ```
 
 ### MockServer (external, lives in repo)
-`mock/MockServer.java` - standalone single-file Java app (no WAR dependency):
+`examples/integrations/MockServer.java` - standalone single-file Java app (no WAR dependency), the mock integration server:
 - **PULL mode** (always on): Serves `GET /{entityType}/{externalId}` with stable pseudo-random values (`new Random(externalId.hashCode())`)
 - **INGEST push mode** (when `nexus_ingest_url` present): Scheduled thread per entity type, every `ingest_interval_seconds` picks a random `external_id`, generates synthetic field values, POSTs to Nexus `/api/ingest`. Uses varied RNG (`externalId.hashCode() ^ currentTimeMillis`) so each push produces different values.
 - Auth header validation on PULL requests
-- Compile and run: `javac mock/MockServer.java && java -cp mock MockServer`
+- Compile and run: `javac examples/integrations/MockServer.java && java -cp examples/integrations MockServer`
 - Startup log shows both PULL routes and INGEST push schedules
 
 ### Admin demo flow after seeding
 1. Run seeding with domain context
 2. Download mock config from seeding page
-3. Place in `mock/`, run `java mock/MockServer.java`
+3. Place in `examples/integrations/`, run `java -cp examples/integrations MockServer`
 4. PULL services already registered, Liquid shows `{{ entity.live.* }}` immediately
 5. INGEST push thread starts automatically, every 30s terminal shows `[INGEST] ... HTTP 200`
 6. `GET /api/ingest` - ingest history stream; entity context cards show real-time external updates
@@ -284,7 +284,7 @@ Vocabulary source: `root_organisation.domain_slang` JSONB - key/value pairs mapp
 | `web/liquid/liquid.html` | Liquid two-panel adaptive interface |
 | `web/admin/intelligence_tuning.html` | Vocabulary, model config, command builder |
 | `web/admin/policy_manifest.html` | Guardrails admin with right-panel explanation |
-| `mock/MockServer.java` | External standalone mock server: PULL (serves GET) + INGEST push (scheduled POST to Nexus) |
+| `examples/integrations/MockServer.java` | External standalone mock integration server: PULL (serves GET) + INGEST push (scheduled POST to Nexus) |
 
 ---
 
