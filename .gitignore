@@ -9,3 +9,11 @@
 /server/.env
 *.swp
 
+# Python
+__pycache__/
+*.py[cod]
+
+# Codex local state
+/.codex/
+/.codex-cache/
+/.codex-session/
