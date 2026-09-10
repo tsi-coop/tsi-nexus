@@ -4,6 +4,7 @@
 .env
 .help
 .help2
+/.antigravitycli/
 /.claude/
 /server/.env
 *.swp
