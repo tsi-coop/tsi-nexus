@@ -145,6 +145,37 @@ This starts a PULL server on port 9090 and a background INGEST push thread. With
 
 Open `http://localhost:8084/liquid` and start exploring your entities. Search by name or ID, view context cards with live external data, and submit forms to record actions.
 
+### 4. Run example agents
+
+The `examples/agents/` directory contains small Python test agents for each seeded domain. They exercise the headless Intelligence API by resolving natural language, loading entity context, checking guardrails, and discovering capture forms.
+
+Create an API key from Admin UI → API Keys with these scopes:
+
+```json
+["intent:read", "context:read", "governance:read", "capture:write"]
+```
+
+Export the connection details:
+
+```bash
+export NEXUS_BASE_URL=http://localhost:8084
+export NEXUS_API_KEY=nxs_your_key
+export NEXUS_API_SECRET=your_secret
+```
+
+Run the agent that matches your seeded domain:
+
+```bash
+python3 examples/agents/run_domain_agent.py microfinance
+python3 examples/agents/run_domain_agent.py healthcare
+python3 examples/agents/run_domain_agent.py manufacturing
+python3 examples/agents/run_domain_agent.py edtech
+python3 examples/agents/run_domain_agent.py services
+python3 examples/agents/run_domain_agent.py hr_services
+```
+
+See [`examples/agents/README.md`](examples/agents/README.md) for details.
+
 
 ## Development
 
