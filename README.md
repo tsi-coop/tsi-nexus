@@ -29,7 +29,7 @@ So what does the system actually need?
 
 Different industries, but the same seven requirements underneath. It perfectly aligns with our philosophy of sovereign composable data infrastructure, and we have created an open-source tool. It's called TSI Nexus, an Apache 2.0 licensed institutional intelligence platform for small & medium organisations that enables an AI operator to listen, understand, and act.
 
-These seven requirements map directly onto the platform's [six architectural pillars](docs/architecture.md#six-pillars) - Connected View is the Context Graph, Tunable Intelligence and the Reasoning Engine are handled by Intelligence Tuning, Adaptable Interface is Liquid, Memory Layer is the Interaction Stream, Integration Gateway is the Service Registry, and Control & Audit Layer is Guardrails (extended with HITL escalation and regulatory reporting).
+These seven requirements map directly onto the platform's six architectural pillars - Connected View is the Context Graph, Tunable Intelligence and the Reasoning Engine are handled by Intelligence Tuning, Adaptable Interface is Liquid, Memory Layer is the Interaction Stream, Integration Gateway is the Service Registry, and Control & Audit Layer is Guardrails (extended with HITL escalation and regulatory reporting).
 
 ## What it does
 
@@ -55,6 +55,8 @@ These seven requirements map directly onto the platform's [six architectural pil
 **Policy evaluation:** Before any command executes, TSI Nexus checks it against the live context and business rules stored in the knowledge graph. It either approves, blocks, or flags for escalation - keeping every action within the institution's defined guardrails.
 
 ## Architecture
+
+![TSI Nexus architecture diagram](docs/tsi-nexus-architecture-diagram.webp)
 
 See [`docs/architecture.md`](docs/architecture.md) for a full breakdown of the six pillars, service registry patterns, seeder pipeline, LLM integration points, and database schema.
 
@@ -196,7 +198,7 @@ src/          Java source (Jakarta EE, no framework dependencies)
 web/          Frontend - admin UI and Liquid interface (plain HTML/JS)
 db/           init.sql - full schema, applied on first DB start
 mock/         MockServer.java - standalone mock PULL/INGEST server
-docs/         architecture.md, integration-guide.md, api-client-sdk.md
+docs/         Documentation, integration guides, seed guides, and diagrams
 ```
 
 
