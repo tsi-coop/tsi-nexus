@@ -1,6 +1,6 @@
 # TSI Nexus
 
-A sovereign institutional intelligence platform for small and medium enterprises enabling an AI Assistant to listen, understand, and act. 
+An open-source, sovereign institutional intelligence platform that lets your AI Assistant listen, understand, and act.
 
 It provides a private "company brain" - a single system that stores every entity, relationship, rule, and interaction, and surfaces them through a natural language interface.
 
