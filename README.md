@@ -149,7 +149,8 @@ Once running, the platform is accessible at these URLs (default port `8084`):
 | Tool | URL | Purpose |
 |---|---|---|
 | Setup wizard | `http://localhost:8084/setup` | First-run account creation |
-| Seed tool | `http://localhost:8084/seed` | Bootstrap a demo institution |
+| Seed tool | `http://localhost:8084/seed` | Bootstrap a demo institution with synthetic data |
+| Onboard tool | `http://localhost:8084/onboard` | Set up a real project's structure - entity types, templates, forms, guardrails - with no synthetic data |
 | Liquid interface | `http://localhost:8084/liquid` | End-user natural language search and forms |
 | Admin UI | `http://localhost:8084/admin` | Configure entities, templates, policies, and services |
 
@@ -256,21 +257,6 @@ docker compose up -d
 See Step 4 in [First-time setup](#3-first-time-setup). The mock integration server (`examples/integrations/MockServer.java`) serves as a standalone PULL endpoint and INGEST push source - no real external systems needed for a full demo.
 
 
-## Integrating external systems
-
-TSI Nexus integrates via three patterns registered in the Admin UI:
-
-| Pattern | Direction | Use case |
-|---|---|---|
-| **PULL** | Nexus → your system | Enrich entity context at read time (credit scores, live balances, HR data) |
-| **PUSH** | Nexus → your system | Notify your system after a form is submitted |
-| **INGEST** | Your system → Nexus | Push state updates into Nexus from an external source |
-
-See [`docs/integration-guide.md`](docs/integration-guide.md) for the full API contract, request/response examples, and registration instructions.
-
-For headless access to the intelligence API from external apps or AI agents, see [`docs/api-client-sdk.md`](docs/api-client-sdk.md).
-
-
 ## Project structure
 
 ```
@@ -280,6 +266,14 @@ db/           init.sql - full schema, applied on first DB start
 examples/     Python domain agents (examples/agents/) and the mock integration server (examples/integrations/)
 docs/         Documentation, integration guides, seed guides, and diagrams
 ```
+
+
+## Integrating TSI Nexus into your project
+
+Ready to move beyond the mock integration server and example agents and connect
+real systems? See [`docs/integrating-your-project.md`](docs/integrating-your-project.md)
+for the recommended fresh-installation sequence, connecting real backend
+systems via the Service Registry, and headless access to the intelligence API.
 
 
 ## License & Contributions
