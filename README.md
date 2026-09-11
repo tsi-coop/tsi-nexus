@@ -150,7 +150,6 @@ Once running, the platform is accessible at these URLs (default port `8084`):
 |---|---|---|
 | Setup wizard | `http://localhost:8084/setup` | First-run account creation |
 | Seed tool | `http://localhost:8084/seed` | Bootstrap a demo institution with synthetic data |
-| Onboard tool | `http://localhost:8084/onboard` | Set up a real project's structure - entity types, templates, forms, guardrails - with no synthetic data |
 | Liquid interface | `http://localhost:8084/liquid` | End-user natural language search and forms |
 | Admin UI | `http://localhost:8084/admin` | Configure entities, templates, policies, and services |
 

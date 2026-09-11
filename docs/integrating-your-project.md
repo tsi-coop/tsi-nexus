@@ -59,8 +59,9 @@ Don't build your real deployment on top of a database that was used for the
    a fresh database - and complete the setup wizard at `/setup` to create your
    admin account. See [Getting started](../README.md#getting-started) if you
    haven't done this yet.
-2. **Onboard your project.** Open `/onboard` and describe your organisation.
-   This generates entity types, context card templates, input manifests,
+2. **Onboard your project.** Open the Onboard tool at
+   `http://localhost:8084/onboard` and describe your organisation. This
+   generates entity types, context card templates, input manifests,
    commands, and guardrails from that description - no synthetic digital
    twins, relationships, interaction history, or mock service registrations
    are created. Load your real entities afterward via INGEST or a direct
