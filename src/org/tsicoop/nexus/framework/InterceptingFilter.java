@@ -22,6 +22,8 @@ public class InterceptingFilter implements Filter {
         API_KEY_SCOPES.put("/api/capture",    "capture:write");
         API_KEY_SCOPES.put("/api/entities",   "context:read");
         API_KEY_SCOPES.put("/api/graph",      "context:read");
+        API_KEY_SCOPES.put("/api/twins",         "context:write");
+        API_KEY_SCOPES.put("/api/relationships", "context:write");
     }
 
     private static final Set<String> ADMIN_ONLY_PATHS = new HashSet<>(Arrays.asList(
