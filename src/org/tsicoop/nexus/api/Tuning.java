@@ -44,6 +44,7 @@ public class Tuning implements Action {
             out.put("llm_url",      LLMClient.baseUrl());
             out.put("llm_model",    LLMClient.model());
             out.put("llm_api_key_configured", LLMClient.apiKeyConfigured());
+            if (llmStatus.get("error") != null) out.put("llm_error", llmStatus.get("error"));
             // Backward-compatible fields for existing admin UI code.
             out.put("vllm_online", online);
             out.put("vllm_url",    LLMClient.baseUrl());

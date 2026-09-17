@@ -83,11 +83,18 @@ public class LLMClient {
             user.put("role", "user");
             user.put("content", "Reply with OK.");
             messages.add(user);
-            JSONObject response = chat(messages, 16, 0.0);
+            // Reasoning models (Gemini "thinking" variants, Sarvam's reasoning models)
+            // spend part of the token budget on internal reasoning before emitting
+            // visible text, and can burn 500+ tokens of reasoning before the answer -
+            // a small budget cuts them off at MAX_TOKENS/length with no visible output.
+            JSONObject response = chat(messages, 1024, 0.0);
             String content = extractContent(response);
+            String reasoning = extractReasoningContent(response);
 
             JSONObject out = new JSONObject();
-            out.put("success", content != null && !content.isBlank());
+            boolean success = (content != null && !content.isBlank())
+                    || (reasoning != null && !reasoning.isBlank());
+            out.put("success", success);
             out.put("provider", provider());
             out.put("base_url", baseUrl());
             out.put("model", model());

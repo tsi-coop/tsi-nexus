@@ -103,6 +103,9 @@ public class HttpClient {
         }
 
         HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 400) {
+            throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+        }
         return (JSONObject) parser.parse(response.body());
     }
 }
