@@ -16,4 +16,16 @@
 	<dispatcher>REQUEST</dispatcher>
 	<dispatcher>FORWARD</dispatcher>
 </filter-mapping>
+
+<servlet>
+	<servlet-name>default</servlet-name>
+	<init-param>
+		<param-name>dirAllowed</param-name>
+		<param-value>false</param-value>
+	</init-param>
+</servlet>
+
+<welcome-file-list>
+	<welcome-file>index.html</welcome-file>
+</welcome-file-list>
 </web-app>

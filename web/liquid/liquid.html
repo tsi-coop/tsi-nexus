@@ -209,28 +209,25 @@
             font-size: 13px;
         }
 
-        /* ── Action pane ────────────────────────────── */
-        #action-pane {
-            width: 420px;
-            flex-shrink: 0;
-            background: #ffffff;
-            border-left: 1px solid #e2e8f0;
-            display: flex;
+        /* ── Action view: replaces the chat view in the same pane while input is needed ── */
+        #action-view {
+            flex: 1;
+            display: none;
             flex-direction: column;
             overflow: hidden;
-            transition: width .2s ease;
+            background: #ffffff;
         }
-        #action-pane.collapsed { width: 44px; }
-        #action-pane.collapsed .action-pane-header-label,
-        #action-pane.collapsed #action-pane-body { display: none; }
+        #right.action-open #action-view { display: flex; }
+        #right.action-open #chat-viewport { display: none; }
         .action-pane-header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 20px 18px 14px;
+            gap: 10px;
+            padding: 20px 28px 14px;
             flex-shrink: 0;
             cursor: pointer;
             user-select: none;
+            border-bottom: 1px solid #f1f5f9;
         }
         .action-pane-header-label {
             font-size: 9px;
@@ -239,18 +236,17 @@
             letter-spacing: .3em;
             color: #4f46e5;
         }
-        .action-pane-toggle {
+        .action-pane-back {
             width: 14px; height: 14px;
             color: #94a3b8;
             flex-shrink: 0;
-            transition: transform .2s ease;
         }
-        #action-pane.collapsed .action-pane-toggle { transform: rotate(180deg); }
         #action-pane-body {
             flex: 1;
             overflow-y: auto;
-            padding: 4px 18px 24px;
+            padding: 24px 28px 32px;
         }
+        #action-pane-body > * { max-width: 720px; margin: 0 auto; }
         #action-pane-body::-webkit-scrollbar { width: 3px; }
         #action-pane-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
         .action-pane-empty {
@@ -773,15 +769,13 @@
             </div>
         </div>
 
-        <aside id="action-pane">
-            <div class="action-pane-header" onclick="toggleActionPane()">
+        <section id="action-view">
+            <div class="action-pane-header" onclick="closeActionPane()" title="Back to results">
+                <svg class="action-pane-back" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
                 <span class="action-pane-header-label">Action</span>
-                <svg class="action-pane-toggle" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
             </div>
-            <div id="action-pane-body">
-                <div class="action-pane-empty">Confirmations and forms that need your input will appear here.</div>
-            </div>
-        </aside>
+            <div id="action-pane-body"></div>
+        </section>
     </main>
 
 </div><!-- #shell -->
@@ -982,35 +976,23 @@
     }
 
     /* ── Action pane ──────────────────────────── */
-    const ACTION_PANE_STATE_KEY = 'nexus_action_pane_collapsed';
-    const actionPane = document.getElementById('action-pane');
+    const rightPane = document.getElementById('right');
     const actionPaneBody = document.getElementById('action-pane-body');
 
-    function initActionPane() {
-        const collapsed = localStorage.getItem(ACTION_PANE_STATE_KEY) === '1';
-        actionPane.classList.toggle('collapsed', collapsed);
-    }
-
-    function toggleActionPane() {
-        const collapsed = actionPane.classList.toggle('collapsed');
-        localStorage.setItem(ACTION_PANE_STATE_KEY, collapsed ? '1' : '0');
-    }
-
-    initActionPane();
-
-    // Populates the action pane with an element that needs the user's input (a confirm
-    // card or a capture form) and makes sure the pane is visible even if collapsed.
+    // Shows an element that needs the user's input (a confirm card or a capture form) in
+    // the main pane, in place of the chat/display cards.
     function openActionPane(el) {
         actionPaneBody.innerHTML = '';
         actionPaneBody.appendChild(el);
-        actionPane.classList.remove('collapsed');
-        localStorage.setItem(ACTION_PANE_STATE_KEY, '0');
+        rightPane.classList.add('action-open');
     }
 
-    // Restores the action pane to its idle state - called once whatever was pending
-    // (a confirmation or a form) has been resolved, since the outcome lives in chat.
+    // Returns the main pane to the chat/display cards - called once whatever was pending
+    // (a confirmation or a form) has been resolved or dismissed; the outcome lives in chat.
     function closeActionPane() {
-        actionPaneBody.innerHTML = `<div class="action-pane-empty">Confirmations and forms that need your input will appear here.</div>`;
+        rightPane.classList.remove('action-open');
+        actionPaneBody.innerHTML = '';
+        scrollChatToBottom();
     }
 
     /* ── Chat transcript ──────────────────────── */
@@ -1027,6 +1009,7 @@
 
 
     function appendUserMessage(text) {
+        closeActionPane();  // a new request supersedes any pending form/confirmation
         const turn = document.createElement('div');
         turn.className = 'chat-turn fade-in';
         const bubble = document.createElement('div');
@@ -1123,18 +1106,69 @@
     // Everything else: generic titlecase from snake_case.
     const prettyKey = k => k === 'name' ? null : k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
 
-    const prettyVal = (k, v) => {
-        const s = String(v ?? '');
-        // Universal status badges — domain-agnostic labels
-        const badge = {
-            Active:'#dcfce7:#166534', Verified:'#dcfce7:#166534', Completed:'#dcfce7:#166534',
-            Inactive:'#f1f5f9:#475569', Pending:'#fef3c7:#92400e', Blocked:'#fee2e2:#991b1b'
-        }[s];
-        if (badge) {
-            const [bg, color] = badge.split(':');
-            return `<span style="background:${bg};color:${color};padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block;">${s}</span>`;
+    // ── Value presentation: nothing is shown raw. Formatting is driven by value shape and
+    // generic key-name suffixes (never by domain). Internal ids are hidden.
+    const isHiddenKey = k => /(^|_)(external_id|id|uuid)$/.test(k) || k === 'confidence';
+    const labelFor = k => (prettyKey(k) || String(k).replace(/_/g,' ')).replace(/\s+(Current|Table)$/i, '').replace(/\s+Percent$/i, ' %').trim();
+    const fmtNum = n => Number.isInteger(n) ? n.toLocaleString('en-IN') : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    const fmtDate = str => { const d = new Date(str + (str.length === 10 ? 'T00:00:00' : '')); return isNaN(d) ? str
+        : d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); };
+    const badgeHtml = (txt, bg, color) => `<span style="background:${bg};color:${color};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;">${esc(txt)}</span>`;
+    const STATUS_TONES = [
+        [/^(active|verified|completed|arrived|settled|received|accepted|confirmed|paid|final|matched|true)$/i, '#dcfce7', '#166534'],
+        [/^(pending|awaiting.*|in.?transit|advance|partial|open)$/i, '#fef3c7', '#92400e'],
+        [/^(blocked|declined|rejected|failed|cancelled|overdue|false)$/i, '#fee2e2', '#991b1b'],
+        [/^(inactive)$/i, '#f1f5f9', '#475569']
+    ];
+    const fmtScalar = (k, v) => {
+        if (v === null || v === undefined || v === '') return '<span style="color:#94a3b8;">—</span>';
+        if (typeof v === 'boolean') return badgeHtml(v ? 'Yes' : 'No', v ? '#dcfce7' : '#f1f5f9', v ? '#166534' : '#475569');
+        if (typeof v === 'number') {
+            if (/percent|pct/i.test(k)) return `<span class="state-val">${esc(fmtNum(v))}%</span>`;
+            return `<span class="state-val">${esc(fmtNum(v))}</span>`;
         }
-        return `<span class="state-val">${esc(s)}</span>`;
+        const str = String(v);
+        if (/^\d{4}-\d{2}-\d{2}([T ][\d:.]+Z?)?$/.test(str)) return `<span class="state-val">${esc(fmtDate(str))}</span>`;
+        const label = prettyType(str);
+        for (const [rx, bg, c] of STATUS_TONES) if (rx.test(str.trim().replace(/\s+/g,'_')) || rx.test(str.trim())) return badgeHtml(label, bg, c);
+        if (/(^|_)(status|state|type|grade|stage)$/.test(k)) return badgeHtml(label, '#eef2ff', '#3730a3');
+        return `<span class="state-val">${esc(str)}</span>`;
+    };
+    const isEmptyVal = v => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0)
+        || (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+
+    const structVal = (v, depth = 0, key = '') => {
+        if (v === null || typeof v !== 'object') return fmtScalar(key, v);
+        const cell = 'padding:5px 10px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top;font-size:12px;';
+        if (Array.isArray(v)) {
+            const items = v.filter(x => !isEmptyVal(x));
+            if (!items.length) return fmtScalar(key, '');
+            if (items.every(r => r && typeof r === 'object' && !Array.isArray(r))) {
+                // drop columns that are empty (or zero-only "unset") in every row, and internal ids
+                const cols = [...new Set(items.flatMap(r => Object.keys(r)))]
+                    .filter(c => !isHiddenKey(c) && items.some(r => !isEmptyVal(r[c]) && r[c] !== 0));
+                return `<div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;"><table style="border-collapse:collapse;width:100%;">
+                    <thead><tr style="background:#f8fafc;">${cols.map(c => `<th style="${cell}color:#64748b;font-weight:600;white-space:nowrap;">${esc(labelFor(c))}</th>`).join('')}</tr></thead>
+                    <tbody>${items.map(r => `<tr>${cols.map(c => `<td style="${cell}">${structVal(r[c], depth + 1, c)}</td>`).join('')}</tr>`).join('')}</tbody>
+                </table></div>`;
+            }
+            return items.map(x => structVal(x, depth + 1, key)).join(' ');
+        }
+        const entries = Object.entries(v).filter(([ek, ev]) => !isHiddenKey(ek) && !isEmptyVal(ev));
+        if (!entries.length) return fmtScalar(key, '');
+        return `<div style="display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;align-items:start;${depth ? 'padding:8px 10px;background:#f8fafc;border-radius:8px;' : ''}">
+            ${entries.map(([ek, ev]) => `<div style="color:#64748b;font-size:12px;">${esc(labelFor(ek))}</div><div>${structVal(ev, depth + 1, ek)}</div>`).join('')}
+        </div>`;
+    };
+
+    const prettyVal = (k, v) => {
+        if (typeof v === 'string') {
+            const t = v.trim();
+            if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
+                try { v = JSON.parse(t); } catch (_) { /* leave as text */ }
+            }
+        }
+        return structVal(v, 0, k);
     };
 
     const prettyRel  = t => String(t || '').toLowerCase().replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
@@ -1143,11 +1177,24 @@
 
     // Shared by renderContextCard and the post-action "record updated" refresh, so both
     // present entity state fields the same way.
+    // Structured values (tables / record cards) span the full grid width so they stack
+    // one below another instead of squeezing into a half-width column.
+    const isComplexVal = v => {
+        if (typeof v === 'string') {
+            const t = v.trim();
+            if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
+                try { v = JSON.parse(t); } catch (_) { return false; }
+            }
+        }
+        return v !== null && typeof v === 'object';
+    };
+    const spanStyle = v => isComplexVal(v) ? ' style="grid-column:1 / -1;"' : '';
+
     const buildStateGridItemsHtml = state => Object.entries(state)
-        .filter(([k]) => prettyKey(k) !== null && k !== 'name')
+        .filter(([k, v]) => prettyKey(k) !== null && k !== 'name' && !isHiddenKey(k) && !isEmptyVal(v))
         .map(([k,v]) => `
-        <div>
-            <div class="state-key">${esc(prettyKey(k))}</div>
+        <div${spanStyle(v)}>
+            <div class="state-key" ${isComplexVal(v) ? 'style="margin-bottom:6px;"' : ''}>${esc(labelFor(k))}</div>
             <div>${prettyVal(k,v)}</div>
         </div>`).join('');
 
@@ -1403,7 +1450,9 @@
         let out = template;
         for (const [k, v] of Object.entries(data)) {
             const rx = new RegExp(`\\{\\{\\s*${k.replace(/\./g,'\\.')}\\s*\\}\\}`, 'g');
-            out = out.replace(rx, String(v));
+            let rv = v;
+            if (typeof rv === 'string' && /^\s*[\[{]/.test(rv)) { try { rv = JSON.parse(rv); } catch (_) {} }
+            out = out.replace(rx, () => (rv && typeof rv === 'object') ? structVal(rv) : String(v));
         }
         return out.replace(/\{\{\s*[\w.]+\s*\}\}/g, '');
     }
@@ -1467,8 +1516,8 @@
                     liveWrap.innerHTML = `<div class="sec-label" style="margin-bottom:8px;color:#059669;">Live Data</div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;">
                             ${Object.entries(live).map(([k,v]) => `
-                                <div>
-                                    <div class="state-key">${esc(prettyKey(k) || k.replace(/_/g,' '))}</div>
+                                <div${spanStyle(v)}>
+                                    <div class="state-key">${esc(labelFor(k))}</div>
                                     <div>${prettyVal(k,v)}</div>
                                 </div>`).join('')}
                         </div>`;
@@ -1596,7 +1645,7 @@
         btn.onclick = () => finalizeAction(props, bubble);
         openActionPane(card);
 
-        bubble.setStructured(`<span style="color:#475569;">Confirmation needed for <strong>${esc(props.action_type)}</strong> on <strong>${esc(targetId)}</strong> - see the action panel on the right.</span>`);
+        bubble.setStructured(`<span style="color:#475569;">Confirmation needed for <strong>${esc(props.action_type)}</strong> on <strong>${esc(targetId)}</strong> - awaiting your confirmation.</span>`);
     }
 
     /* ── Finalize action - updates the same bubble in place ──────────── */
@@ -1710,7 +1759,7 @@
 
             const displayName = data.entity_name || prettyId(props.target);
             const matchedNote = props.auto_resolved_name ? ` (matched &ldquo;${esc(props.auto_resolved_name)}&rdquo;)` : '';
-            bubble.setStructured(`<span style="color:#475569;">Opening the <strong>${esc(displayName)}</strong> interaction form${matchedNote} in the action panel on the right.</span>`);
+            bubble.setStructured(`<span style="color:#475569;">Opening the <strong>${esc(displayName)}</strong> interaction form${matchedNote}.</span>`);
 
             if (data.schemas.length === 1) {
                 renderSchemaForm(data.schemas[0], props.target, displayName, bubble);
