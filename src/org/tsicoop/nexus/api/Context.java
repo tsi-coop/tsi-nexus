@@ -32,6 +32,10 @@ public class Context implements Action {
             String externalId = (String) input.get("external_id");
             String cleanId = externalId.startsWith("@") ? externalId.substring(1) : externalId;
             JSONObject result = assembleFullContext(cleanId);
+            if (Boolean.TRUE.equals(result.get("archived"))) {
+                OutputProcessor.apiError(res, 409, "twin_archived", "Twin is archived: " + cleanId);
+                return;
+            }
             if (InputProcessor.isApiKeyRequest(req)) {
                 JSONObject ctx = (JSONObject) result.get("context");
                 if (ctx != null) ctx.remove("template_html");
@@ -56,16 +60,21 @@ public class Context implements Action {
             
             // Universal Query: Joins the Twin with its Graph Relationships
             // Uses a Left Join to ensure we get the twin even if it has no links yet.
-            String sql = "SELECT t.id, t.type, t.current_state, t.updated_at, " +
-                         "(SELECT json_agg(json_build_object(" +
-                         "'type', r.relationship_type, " +
-                         "'to', t2.external_id, " +
-                         "'to_type', t2.type, " +
-                         "'to_name', COALESCE(NULLIF(t2.current_state->>'name',''), NULLIF(t2.current_state->>'system_name',''), " +
-                         "NULLIF(t2.current_state->>'label',''), NULLIF(t2.current_state->>'title',''), " +
-                         "NULLIF(t2.current_state->>'role',''), t2.external_id))) " +
-                          "FROM twin_relationships r JOIN digital_twins t2 ON r.to_twin_id = t2.id " +
-                          "WHERE r.from_twin_id = t.id) as out_links " +
+            String nameOf = "COALESCE(NULLIF(%s.current_state->>'name',''), NULLIF(%s.current_state->>'system_name',''), " +
+                            "NULLIF(%s.current_state->>'label',''), NULLIF(%s.current_state->>'title',''), " +
+                            "NULLIF(%s.current_state->>'role',''), %s.external_id)";
+            nameOf = nameOf.replace("%s", "t2");
+            String sql = "SELECT t.id, t.type, t.current_state, t.updated_at, t.status, " +
+                         "(SELECT json_agg(l) FROM (" +
+                         "SELECT json_build_object('direction', 'out', 'type', r.relationship_type, " +
+                         "'to', t2.external_id, 'to_type', t2.type, 'to_name', " + nameOf + ") AS l " +
+                         "FROM twin_relationships r JOIN digital_twins t2 ON r.to_twin_id = t2.id " +
+                         "WHERE r.from_twin_id = t.id AND t2.status = 'active' " +
+                         "UNION ALL " +
+                         "SELECT json_build_object('direction', 'in', 'type', r.relationship_type, " +
+                         "'from', t2.external_id, 'from_type', t2.type, 'from_name', " + nameOf + ") " +
+                         "FROM twin_relationships r JOIN digital_twins t2 ON r.from_twin_id = t2.id " +
+                         "WHERE r.to_twin_id = t.id AND t2.status = 'active') x) as out_links " +
                          "FROM digital_twins t WHERE t.external_id = ?";
 
             pstmt = conn.prepareStatement(sql);
@@ -73,6 +82,11 @@ public class Context implements Action {
             rs = pstmt.executeQuery();
 
             if (rs.next()) {
+                if (!"active".equals(rs.getString("status"))) {
+                    response.put("success", false);
+                    response.put("archived", true);
+                    return response;
+                }
                 UUID internalId = (UUID) rs.getObject("id");
                 context.put("twin_id", internalId.toString());
                 context.put("target", "@" + externalId);
@@ -80,7 +94,7 @@ public class Context implements Action {
                 context.put("state", rs.getString("current_state"));
                 context.put("last_updated", rs.getTimestamp("updated_at").toString());
                 
-                // Attach Graph Data (The 'Links' that define institutional role)
+                // Attach Graph Data: outgoing (direction:"out", to*) and incoming (direction:"in", from*) edges
                 context.put("graph_links", rs.getString("out_links"));
 
                 // Attach Interaction Stream (The 'History' that builds trust)

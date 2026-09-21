@@ -487,11 +487,13 @@ public class Seeding implements Action {
             String type  = str(t, "type");
             JSONObject state = objOf(t, "state");
             if (extId == null || !extId.startsWith("SEED_")) continue;
+            String storedType = normalizeType(type != null ? type : "entity");
+            EntityTypes.registerType(conn, storedType);
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO digital_twins (external_id, type, current_state) VALUES (?, ?, ?::jsonb) " +
                     "ON CONFLICT (external_id) DO NOTHING")) {
                 ps.setString(1, extId);
-                ps.setString(2, type != null ? type : "entity");
+                ps.setString(2, storedType);
                 ps.setString(3, state.toJSONString());
                 inserted += ps.executeUpdate();
             }
@@ -547,15 +549,17 @@ public class Seeding implements Action {
                         String     tType = str(t, "type");
                         JSONObject state = objOf(t, "state");
                         if (extId == null || !extId.startsWith("SEED_")) continue;
+                        String storedType = normalizeType(tType != null ? tType : type);
+                        EntityTypes.registerType(conn, storedType);
                         try (PreparedStatement ps = conn.prepareStatement(
                                 "INSERT INTO digital_twins (external_id, type, current_state) VALUES (?, ?, ?::jsonb) " +
                                 "ON CONFLICT (external_id) DO NOTHING RETURNING external_id")) {
                             ps.setString(1, extId);
-                            ps.setString(2, tType != null ? tType : type);
+                            ps.setString(2, storedType);
                             ps.setString(3, state.toJSONString());
                             try (ResultSet rs = ps.executeQuery()) {
                                 if (rs.next()) {
-                                    inserted.add(new String[]{ extId, tType != null ? tType : type });
+                                    inserted.add(new String[]{ extId, storedType });
                                     batchInserted++;
                                 }
                             }
@@ -569,6 +573,10 @@ public class Seeding implements Action {
             }
         }
         return inserted;
+    }
+
+    private static String normalizeType(String t) {
+        return t.trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
     }
 
     private static final int REL_BATCH      = 30; // "spoke" entities per relationship AI call
@@ -652,6 +660,8 @@ public class Seeding implements Action {
                     type = type.toUpperCase();
                     if (!isPlausibleRelationship(typeById.get(from), type, typeById.get(to))) continue;
 
+                    String fromType = typeById.get(from), toType = typeById.get(to);
+                    if (fromType != null && toType != null) EntityTypes.registerRel(conn, fromType, type, toType);
                     try (PreparedStatement ps = conn.prepareStatement(
                             "INSERT INTO twin_relationships (from_twin_id, to_twin_id, relationship_type, metadata) " +
                             "SELECT f.id, t.id, ?, ?::jsonb " +

@@ -22,5 +22,9 @@ public interface Action {
 
     void put(HttpServletRequest req, HttpServletResponse res);
 
+    default void patch(HttpServletRequest req, HttpServletResponse res) {
+        res.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+    }
+
     boolean validate(String method, HttpServletRequest req, HttpServletResponse res);
 }

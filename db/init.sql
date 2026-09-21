@@ -30,6 +30,8 @@ CREATE TABLE digital_twins (
     external_id TEXT UNIQUE NOT NULL,  -- The @handle (e.g., @officer_rahul)
     current_state JSONB NOT NULL DEFAULT '{}', 
     version_count INTEGER DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'archived' (soft delete)
+    archived_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -44,6 +46,7 @@ CREATE TABLE twin_relationships (
     metadata JSONB DEFAULT '{}',       -- Stores "How-to" tribal knowledge
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX uq_twin_rel ON twin_relationships (from_twin_id, to_twin_id, relationship_type);
 
 -- 4. EXTERNAL SERVICE REGISTRY
 -- Manages API Gateways and Health Checks

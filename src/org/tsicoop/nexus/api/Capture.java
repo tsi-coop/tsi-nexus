@@ -49,6 +49,10 @@ public class Capture implements Action {
                 OutputProcessor.errorResponse(res, 404, "Not found", "Entity not found: " + cleanId, req.getRequestURI());
                 return;
             }
+            if (isArchived(conn, cleanId)) {
+                OutputProcessor.apiError(res, 409, "twin_archived", "Twin is archived: " + cleanId);
+                return;
+            }
             String entityType = entityMeta[0];
             String entityName = entityMeta[1]; // may be null
             String schemaId   = req.getParameter("schema_id");
@@ -139,6 +143,11 @@ public class Capture implements Action {
             UUID actorId = (actorTwinId != null && !actorTwinId.isBlank())
                            ? UUID.fromString(actorTwinId) : null;
 
+            if (isArchived(conn, externalId)) {
+                OutputProcessor.apiError(res, 409, "twin_archived", "Twin is archived: " + externalId);
+                return;
+            }
+
             // 1. Load the schema row
             JSONObject schema = loadSchema(conn, schemaId);
             if (schema == null) {
@@ -199,6 +208,14 @@ public class Capture implements Action {
     }
 
     /* ── DB helpers ───────────────────────────────────────────────────────── */
+
+    private boolean isArchived(Connection conn, String externalId) throws Exception {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM digital_twins WHERE external_id = ? AND status <> 'active'")) {
+            ps.setString(1, externalId);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        }
+    }
 
     private String[] resolveEntityMeta(Connection conn, String externalId) throws Exception {
         String sql = "SELECT type, current_state->>'name' AS name FROM digital_twins WHERE external_id = ?";

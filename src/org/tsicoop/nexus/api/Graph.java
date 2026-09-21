@@ -17,7 +17,7 @@ import java.util.Set;
  * TSI Nexus: Digital Twin Graph API
  *
  * GET  /api/graph  → blueprints (data + registry) and relationships (data + registry)
- * POST /api/graph  { action:"define_type", type_key, attributes[] }
+ * POST /api/graph  { action:"define_type", type_key, attributes[], required[]?, optional[]? }
  * POST /api/graph  { action:"define_rel",  from_type, rel_type, to_type }
  *
  * Definitions are stored in root_organisation.config as:
@@ -101,18 +101,27 @@ public class Graph implements Action {
 
         // Check whether this is a system type — attributes can be edited, but the system flag must be preserved
         boolean isSystemType = false;
+        JSONObject existingDef = null;
         String cfgStr = loadConfig(conn);
         if (cfgStr != null) {
             JSONObject cfg     = (JSONObject) new JSONParser().parse(cfgStr);
             JSONObject typeReg = cfg.get("type_registry") instanceof JSONObject ? (JSONObject) cfg.get("type_registry") : new JSONObject();
             JSONObject existing = (JSONObject) typeReg.get(typeKey);
+            existingDef = existing;
             if (existing != null && Boolean.TRUE.equals(existing.get("system"))) isSystemType = true;
         }
 
         JSONArray attrs = input.get("attributes") instanceof JSONArray ? (JSONArray) input.get("attributes") : new JSONArray();
+        // required / optional keep their existing value when omitted; attributes always includes both
+        JSONArray required = fieldList(input, existingDef, "required");
+        JSONArray optional = fieldList(input, existingDef, "optional");
+        for (Object f : required) if (!attrs.contains(f)) attrs.add(f);
+        for (Object f : optional) if (!attrs.contains(f)) attrs.add(f);
 
         JSONObject typeDef = new JSONObject();
         typeDef.put("attributes",  attrs);
+        typeDef.put("required",    required);
+        typeDef.put("optional",    optional);
         typeDef.put("defined_at",  java.time.Instant.now().toString());
         if (isSystemType) typeDef.put("system", true);
 
@@ -131,6 +140,12 @@ public class Graph implements Action {
         result.put("success",  true);
         result.put("type_key", typeKey);
         OutputProcessor.send(res, 200, result);
+    }
+
+    private static JSONArray fieldList(JSONObject input, JSONObject existing, String key) {
+        if (input.get(key) instanceof JSONArray) return (JSONArray) input.get(key);
+        if (existing != null && existing.get(key) instanceof JSONArray) return (JSONArray) existing.get(key);
+        return new JSONArray();
     }
 
     /* ── define_rel ──────────────────────────────────────────────────────── */
@@ -180,7 +195,7 @@ public class Graph implements Action {
         Set<String> seen = new HashSet<>();
 
         String sql = "SELECT type, COUNT(*) AS cnt FROM digital_twins " +
-                     "WHERE type != 'system' GROUP BY type ORDER BY MIN(created_at)";
+                     "WHERE type != 'system' AND status = 'active' GROUP BY type ORDER BY MIN(created_at)";
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -236,6 +251,7 @@ public class Graph implements Action {
             "FROM twin_relationships tr " +
             "JOIN digital_twins ft ON ft.id = tr.from_twin_id " +
             "JOIN digital_twins tt ON tt.id = tr.to_twin_id " +
+            "WHERE ft.status = 'active' AND tt.status = 'active' " +
             "GROUP BY ft.type, tr.relationship_type, tt.type ORDER BY cnt DESC";
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -288,6 +304,7 @@ public class Graph implements Action {
             "JOIN digital_twins ft ON ft.id = tr.from_twin_id " +
             "JOIN digital_twins tt ON tt.id = tr.to_twin_id " +
             "WHERE ft.type = ? AND tr.relationship_type = ? AND tt.type = ? " +
+            "AND ft.status = 'active' AND tt.status = 'active' " +
             "GROUP BY tt.external_id, display_name " +
             "ORDER BY cnt DESC, display_name LIMIT 3";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {

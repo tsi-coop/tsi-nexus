@@ -36,7 +36,7 @@ public class Entities implements Action {
             String typesSql =
                 "SELECT type, COUNT(*) AS cnt " +
                 "FROM digital_twins " +
-                "WHERE type != 'system' " +
+                "WHERE type != 'system' AND status = 'active' " +
                 "GROUP BY type " +
                 "ORDER BY MIN(created_at)";
             try (PreparedStatement ps = conn.prepareStatement(typesSql);
@@ -92,7 +92,7 @@ public class Entities implements Action {
         String sql =
             "SELECT external_id, current_state->>'name' AS name " +
             "FROM digital_twins " +
-            "WHERE type = ? " +
+            "WHERE type = ? AND status = 'active' " +
             "ORDER BY current_state->>'name' NULLS LAST " +
             "LIMIT ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {

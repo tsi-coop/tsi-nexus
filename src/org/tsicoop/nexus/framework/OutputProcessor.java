@@ -18,6 +18,18 @@ public class OutputProcessor {
 
      private static final DateTimeFormatter ISO_INSTANT_FORMATTER = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC);
 
+    /** Twin/relationship API error envelope: {success:false, error:{code, message}}. */
+    @SuppressWarnings("unchecked")
+    public static void apiError(HttpServletResponse res, int status, String code, String message) {
+        JSONObject err = new JSONObject();
+        err.put("code", code);
+        err.put("message", message);
+        JSONObject body = new JSONObject();
+        body.put("success", false);
+        body.put("error", err);
+        send(res, status, body.toJSONString());
+    }
+
     public static void errorResponse(HttpServletResponse res,int status, String error, String message, String path) {
         JSONObject errorNode = new JSONObject();
         ServletOutputStream out = null;

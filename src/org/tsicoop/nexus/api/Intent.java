@@ -473,7 +473,7 @@ public class Intent implements Action {
             conn = pool.getConnection();
             StringBuilder sb = new StringBuilder();
             String sql = "SELECT type, external_id, current_state->>'name' AS name " +
-                         "FROM digital_twins WHERE type != 'system' ORDER BY type, external_id";
+                         "FROM digital_twins WHERE type != 'system' AND status = 'active' ORDER BY type, external_id";
             try (PreparedStatement ps = conn.prepareStatement(sql);
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -518,7 +518,7 @@ public class Intent implements Action {
             String sql =
                 "SELECT type, external_id, current_state->>'name' AS name " +
                 "FROM digital_twins " +
-                "WHERE type != 'system' " +
+                "WHERE type != 'system' AND status = 'active' " +
                 "  AND current_state->>'name' IS NOT NULL " +
                 "  AND word_similarity(?, current_state->>'name') > 0.4 " +
                 "ORDER BY word_similarity(?, current_state->>'name') DESC " +

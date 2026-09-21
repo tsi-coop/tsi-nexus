@@ -22,8 +22,25 @@ public class InterceptingFilter implements Filter {
         API_KEY_SCOPES.put("/api/capture",    "capture:write");
         API_KEY_SCOPES.put("/api/entities",   "context:read");
         API_KEY_SCOPES.put("/api/graph",      "context:read");
-        API_KEY_SCOPES.put("/api/twins",         "context:write");
-        API_KEY_SCOPES.put("/api/relationships", "context:write");
+        API_KEY_SCOPES.put("/api/entity_types", "context:read");
+    }
+
+    /** Resource paths with sub-paths (/api/twins/{id}[/restore], /api/relationships/{rel_id}). */
+    private static final List<String> RESOURCE_PATHS = Arrays.asList("/api/twins", "/api/relationships");
+
+    private static String resourceBase(String path) {
+        for (String base : RESOURCE_PATHS) {
+            if (path.equals(base) || path.startsWith(base + "/")) return base;
+        }
+        return null;
+    }
+
+    /** Scopes accepted for the twin/relationship API: twins:read for reads, twins:write for writes
+     *  (legacy context:write is still honoured for writes). */
+    private static String[] resourceScopes(String method) {
+        return "GET".equalsIgnoreCase(method)
+            ? new String[]{"twins:read", "twins:write"}
+            : new String[]{"twins:write", "context:write"};
     }
 
     private static final Set<String> ADMIN_ONLY_PATHS = new HashSet<>(Arrays.asList(
@@ -38,8 +55,26 @@ public class InterceptingFilter implements Filter {
         "/api/schema",
         "/api/registry",
         "/api/stream",
-        "/api/debug"
+        "/api/debug",
+        "/api/seeding",
+        "/api/services"
     ));
+
+    /** Paths that need no credentials at the filter (login/setup; ingest authenticates with its own source secret). */
+    private static final Set<String> PUBLIC_PATHS = new HashSet<>(Arrays.asList(
+        "/api/auth", "/api/setup", "/api/ingest"
+    ));
+
+    /** Paths where non-GET calls are ordinary end-user operations (any valid JWT / scoped API key).
+     *  Every other non-GET call on a non-resource path is configuration and needs an admin JWT. */
+    private static final Set<String> USER_WRITE_PATHS = new HashSet<>(Arrays.asList(
+        "/api/intent", "/api/context", "/api/governance", "/api/capture",
+        "/api/analytics", "/api/commentary"
+    ));
+
+    private static boolean isSafeMethod(String method) {
+        return "GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method);
+    }
     @Override
     public void destroy() {
         // Any cleanup of resources
@@ -56,6 +91,8 @@ public class InterceptingFilter implements Filter {
         HttpServletResponse res = (HttpServletResponse) response;
         String method = req.getMethod();
         String servletPath = req.getServletPath();
+        String resourceBase = resourceBase(servletPath.trim());
+        if (resourceBase != null) servletPath = resourceBase;
         String uri = req.getRequestURI();
         String classname = null;
         String operation = null;
@@ -76,20 +113,41 @@ public class InterceptingFilter implements Filter {
            
             // Check
             try {
-                 String requiredScope = API_KEY_SCOPES.get(servletPath.trim());
-                 if (requiredScope != null && req.getHeader("X-API-Key") != null) {
+                 if (resourceBase != null) {
+                     boolean authed = false;
+                     if (req.getHeader("X-API-Key") != null) {
+                         authed = InputProcessor.processClientHeader(req, res, resourceScopes(method));
+                     } else if (req.getHeader("Authorization") != null
+                             && InputProcessor.processAdminHeader(req, res)) {
+                         authed = "admin".equalsIgnoreCase(InputProcessor.getRole(req));
+                     }
+                     if (!authed) {
+                         OutputProcessor.apiError(res, 401, "unauthorized", "Admin JWT or API key with twins:read/twins:write required");
+                         return;
+                     }
+                 }
+                 String path = servletPath.trim();
+                 if (resourceBase != null || PUBLIC_PATHS.contains(path)) {
+                     // resource paths authenticated above; public paths need no credentials
+                 } else if (req.getHeader("X-API-Key") != null) {
+                     // API keys: only on scoped paths; config-style paths (graph, entities, entity_types) are read-only
+                     String requiredScope = API_KEY_SCOPES.get(path);
+                     boolean methodOk = USER_WRITE_PATHS.contains(path) || isSafeMethod(method);
+                     if (requiredScope == null || !methodOk) {
+                         OutputProcessor.errorResponse(res, 403, "Forbidden", "API key not permitted for this endpoint", req.getRequestURI());
+                         return;
+                     }
                      validheader = InputProcessor.processClientHeader(req, res, requiredScope);
-                 } else if (req.getHeader("Authorization") != null) {
-                     // Try to resolve human user from JWT (don't fail yet, let action decide if mandatory)
-                     InputProcessor.processAdminHeader(req, res);
-                     
-                     // Enforce admin-only paths
-                     if (ADMIN_ONLY_PATHS.contains(servletPath.trim())) {
-                         String role = InputProcessor.getRole(req);
-                         if (!"admin".equalsIgnoreCase(role)) {
-                             OutputProcessor.errorResponse(res, 403, "Forbidden", "Admin role required", req.getRequestURI());
-                             return;
-                         }
+                 } else {
+                     if (!InputProcessor.processAdminHeader(req, res)) {
+                         OutputProcessor.errorResponse(res, 401, "Unauthorized", "Valid credentials required", req.getRequestURI());
+                         return;
+                     }
+                     boolean adminRequired = ADMIN_ONLY_PATHS.contains(path)
+                             || (!isSafeMethod(method) && !USER_WRITE_PATHS.contains(path));
+                     if (adminRequired && !"admin".equalsIgnoreCase(InputProcessor.getRole(req))) {
+                         OutputProcessor.errorResponse(res, 403, "Forbidden", "Admin role required", req.getRequestURI());
+                         return;
                      }
                  }
 
@@ -114,6 +172,9 @@ public class InterceptingFilter implements Filter {
                          } else if (method.equalsIgnoreCase("PUT")) {
                              res.setContentType("application/json");
                              action.put(req, res);
+                         } else if (method.equalsIgnoreCase("PATCH")) {
+                             res.setContentType("application/json");
+                             action.patch(req, res);
                          } else if (method.equalsIgnoreCase("DELETE")) {
                              res.setContentType("application/json");
                              action.delete(req, res);

@@ -60,6 +60,11 @@ public class InputProcessor {
     }
 
     public static boolean processClientHeader(HttpServletRequest req, HttpServletResponse res, String requiredScope) {
+        return processClientHeader(req, res, new String[]{requiredScope});
+    }
+
+    /** Passes if the key holds ANY of the accepted scopes. */
+    public static boolean processClientHeader(HttpServletRequest req, HttpServletResponse res, String... acceptedScopes) {
         String apiKey    = req.getHeader("X-API-Key");
         String apiSecret = req.getHeader("X-API-Secret");
         if (apiKey == null || apiKey.isBlank() || apiSecret == null || apiSecret.isBlank()) return false;
@@ -84,7 +89,9 @@ public class InputProcessor {
             Array scopeArr = rs.getArray("authorized_scopes");
             if (scopeArr == null) return false;
             List<String> scopes = Arrays.asList((String[]) scopeArr.getArray());
-            if (!scopes.contains(requiredScope)) return false;
+            boolean allowed = false;
+            for (String sc : acceptedScopes) if (scopes.contains(sc)) { allowed = true; break; }
+            if (!allowed) return false;
 
             JSONObject identity = new JSONObject();
             identity.put("app_id",  rs.getString("app_id"));
