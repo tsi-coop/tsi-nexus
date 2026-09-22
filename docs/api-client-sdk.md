@@ -50,8 +50,11 @@ Request only the scopes your app needs.
 |---|---|
 | `intent:read` | `POST /api/intent` |
 | `context:read` | `POST /api/context`, `GET /api/entities`, `GET /api/graph` |
+| `context:write` | Legacy alias for `twins:write` on `/api/twins` and `/api/relationships` writes |
 | `governance:read` | `POST /api/governance` |
 | `capture:write` | `GET /api/capture`, `POST /api/capture` |
+| `twins:read` | `GET /api/twins`, `GET /api/relationships` |
+| `twins:write` | Create/update/delete twins and relationships: `POST`/`PATCH`/`DELETE /api/twins`, `POST /api/twins/{id}/restore`, `POST /api/twins/{id}/state/clear`, `POST`/`DELETE /api/relationships` |
 
 ---
 
@@ -229,6 +232,16 @@ instead of mutating state.
 > mutates `digital_twins.current_state` and appends to `action_audit_log` in a
 > single transaction, then fires any registered PUSH services asynchronously.
 > Omit `new_data` if you only want the policy check without mutation.
+
+> **Limitation:** a guardrail's `query_logic` runs against `digital_twins`,
+> `twin_relationships`, and `interaction_stream` for the *target twin*
+> identified by `external_id` - it has no visibility into the rest of the
+> `params` payload on the incoming request (e.g. a requested quantity, or a
+> second entity being compared against something other than its own state).
+> Validation that depends on the submitted payload itself, rather than on
+> the target twin's stored state, has to be pre-checked in your own app
+> before calling `/api/governance` or `/api/capture` - it can't be expressed
+> as a Nexus guardrail.
 
 ---
 
@@ -420,6 +433,113 @@ GET /api/graph
   ]
 }
 ```
+
+---
+
+## Twins & Relationships API
+
+**Scopes:** `twins:read` for reads, `twins:write` for writes (the legacy
+`context:write` scope is also honoured for writes). Unlike the endpoints
+above, these accept either a scoped API key (`X-API-Key`/`X-API-Secret`) or
+an admin JWT (`Authorization: Bearer <token>`) - use this surface when your
+app creates or manages digital twins directly, rather than only reading and
+writing their state through Intent/Context/Capture.
+
+Twin type *schemas* (attribute lists, required/optional profile fields) are
+declared separately via `POST /api/graph` (`define_type`) - see
+[config-as-code](integrating-your-project.md#2b-configure-via-direct-api-calls-config-as-code) -
+and are readable at `GET /api/entity_types`. Creating a twin requires a
+registered type, an `external_id` matching `^[a-z][a-z0-9_]{2,63}$`, and
+every required profile field for that type; a `PATCH` may not leave a
+required field blank.
+
+### List twins - `GET /api/twins`
+
+Query params: `type`, `status` (`active` default, `archived`, or `all`), `q`
+(matches `external_id` or `current_state->>'name'`), `include_system`,
+`limit` (default 50, max 200), `cursor` (opaque, from `next_cursor`).
+
+```json
+{ "success": true, "twins": [ { "external_id": "ramesh_mk_03", "type": "member", "current_state": {"...":"..."}, "status": "active", "created_at": "...", "updated_at": "..." } ], "next_cursor": null }
+```
+
+### Fetch one twin - `GET /api/twins/{external_id}`
+
+Returns the twin even if archived. 404 if it never existed.
+
+### Create a twin - `POST /api/twins`
+
+```json
+{ "external_id": "ramesh_mk_03", "type": "member", "current_state": { "name": "Ramesh Kumar" } }
+```
+
+`409 conflict` if the `external_id` is already in use by an active twin;
+`409 twin_archived` if it belongs to an archived twin (restore it instead -
+an archived `external_id` can never be reused for a new twin).
+
+### Update state - `PATCH /api/twins/{external_id}`
+
+```json
+{ "current_state": { "phone": "9876543210" } }
+```
+
+Shallow key-by-key merge into `current_state`; `type` and `external_id` are
+immutable and rejected if present. **Keys ending in `_current` are rejected**
+(`400`) - those are Capture-owned (see the state-key convention below) and
+can only be written via `POST /api/capture` or cleared via
+`POST /api/twins/{id}/state/clear`. `404` if the twin doesn't exist, `409
+twin_archived` if it's archived.
+
+### Archive / restore
+
+`DELETE /api/twins/{external_id}` soft-deletes (archives) a twin - idempotent,
+and its interaction history and relationships are hidden (not deleted) while
+archived. `POST /api/twins/{external_id}/restore` brings it back to `active`
+and restores visibility of its relationships.
+
+### Clear state keys - `POST /api/twins/{external_id}/state/clear`
+
+```json
+{ "keys": ["price_current", "sauda_book_current"] }
+```
+
+Removes the listed keys from `current_state` (typically Capture-owned
+`*_current` keys - see below). `400` if removing them would leave a required
+profile field missing.
+
+### Convention: versioned `*_current` state keys
+
+A recommended pattern for modeling an entity's evolving business state: store
+each logical piece of state under its own `*_current` key in `current_state`
+(e.g. `price_current`, `sauda_book_current`), written via `POST /api/capture`
+rather than a raw twin `PATCH`, so every state change is also appended to
+`interaction_stream` for free and queryable by guardrails and context cards.
+Nexus enforces the read side of this convention: `PATCH /api/twins/{id}`
+rejects any key ending in `_current`. Reserve raw `PATCH` for profile fields
+that aren't part of the interaction history - name, phone, margin, and
+similar attributes that change out-of-band from any recorded interaction.
+
+### Relationships - `POST` / `GET` / `DELETE /api/relationships`
+
+Relationship *kinds* are declared via `POST /api/graph` (`define_rel`); this
+endpoint creates and queries the actual edges.
+
+**Create an edge** (idempotent - creating the same edge twice returns the
+existing `rel_id` with `created:false` rather than a duplicate or an error):
+```json
+{ "from_external_id": "ramesh_mk_03", "relationship_type": "BELONGS_TO", "to_external_id": "coimbatore_01", "metadata": {} }
+```
+`404` if either end doesn't exist, `409 twin_archived` if either end is
+archived, `400` if `relationship_type` isn't registered or the endpoint types
+don't match what's registered for it.
+
+**List edges** - `GET /api/relationships?from=&to=&type=&status=`: filter on
+`to` for incoming edges, on `from` for outgoing. `status` is derived from the
+endpoints - `active` (both ends active, default), `archived` (either end
+archived - hidden with its twin, returns on restore), or `all`.
+
+**Delete an edge** - `DELETE /api/relationships/{rel_id}`: hard delete (edges
+carry no audit value, unlike twins).
 
 ---
 

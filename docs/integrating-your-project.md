@@ -6,7 +6,9 @@ than explore it with synthetic demo data. If you've already played with the
 or the [example agents](../examples/agents/README.md), those were the demo
 path - this guide covers the production path instead.
 
-There are two integration surfaces. Most real deployments use both together.
+There are two integration surfaces - the Service Registry and the headless
+Intelligence API - and you configure both via direct, script-driven API calls
+("config-as-code"). Most real deployments use both surfaces together.
 
 ---
 
@@ -48,23 +50,70 @@ endpoints those scripts call, using a real API key scoped to what it needs.
 See [`docs/api-client-sdk.md`](api-client-sdk.md) for full request/response
 examples, scopes, error envelopes, and curl snippets for every endpoint.
 
+Separately, if your app creates or manages digital twins directly (rather than
+only reading/writing their state through Intent/Context/Capture), see the
+Twins & Relationships API in
+[`docs/api-client-sdk.md`](api-client-sdk.md#twins--relationships-api):
+`POST`/`GET`/`PATCH`/`DELETE /api/twins`, `POST /api/twins/{id}/restore`,
+`POST /api/twins/{id}/state/clear`, `GET`/`POST`/`DELETE /api/relationships`.
+
+> **Limitation:** a capture-flow guardrail (`POST /api/governance` /
+> `POST /api/capture`) can only inspect the target twin's own state, not the
+> data in the incoming form submission. Validation that depends on the
+> submitted payload (e.g. "reject if the requested quantity exceeds what was
+> on offer") has to be pre-checked in your own app before calling
+> `/api/capture` - it can't be expressed as a Nexus guardrail.
+
+---
+
+## 2b. Configure via direct API calls ("config-as-code")
+
+Define entity types, relationship types, capture schemas, guardrails,
+commands, and templates yourself via direct admin-authenticated `POST`
+calls. This is useful when you want config that's reviewable, re-runnable,
+and versioned alongside your app code rather than generated once from a
+prose description.
+
+| Endpoint | Defines |
+|---|---|
+| `POST /api/graph` | Entity types (`define_type`) and relationship types (`define_rel`) |
+| `POST /api/schemas` | Capture form schemas |
+| `POST /api/policy` | Guardrails (policy manifest) |
+| `POST /api/tuning` | Vocabulary terms, and commands (`add_command`) |
+| `POST /api/templates` | Context card templates |
+
+These use the admin JWT (`POST /api/auth` with `email`/`password`, returned
+as `token`, sent as `Authorization: Bearer <token>`), not an `X-API-Key` app
+key - the two auth systems are separate and not interchangeable. Run your
+scripts in dependency order (entity/relationship types first, then schemas,
+then policy/tuning/templates, which reference them), and write them as
+idempotent upserts (`action:"upsert"`, or `ON CONFLICT` if you're inserting
+directly) so re-runs are safe.
+
+A command registered via `POST /api/tuning` (`add_command`) requires at least
+one of `linked_form` or `linked_template` - it always drives either a capture
+form or a context-card render. For a command that only reads and summarizes
+existing state, with no form and no side effect, you may not be able to
+register it as a `/command` at all: call `/api/context` directly instead and
+handle the natural-language framing in your own app.
+
 ---
 
 ## Recommended sequence: a fresh installation
 
 Don't build your real deployment on top of a database that was used for the
-`/seed` demo. Start clean:
+`/seed` demo. Start clean.
 
 1. **Fresh install.** Stand up a new instance - `docker compose up -d` against
    a fresh database - and complete the setup wizard at `/setup` to create your
    admin account. See [Getting started](../README.md#getting-started) if you
    haven't done this yet.
-2. **Onboard your project.** Open the Onboard tool at
-   `http://localhost:8084/onboard` and describe your organisation. This
-   generates entity types, context card templates, input manifests,
-   commands, and guardrails from that description - no synthetic digital
+2. **Define your entity types, schemas, guardrails, commands, and templates
+   via [config-as-code](#2b-configure-via-direct-api-calls-config-as-code).**
+   Write scripts against `/api/graph`, `/api/schemas`, `/api/policy`,
+   `/api/tuning`, `/api/templates` as idempotent upserts. No synthetic digital
    twins, relationships, interaction history, or mock service registrations
-   are created. Load your real entities afterward via INGEST or a direct
+   get created - load your real entities afterward via INGEST or a direct
    data load.
 3. **Configure the Service Registry.** Register your real PULL / PUSH /
    INGEST endpoints in Admin UI → Service Registry, following
