@@ -47,6 +47,13 @@ endpoints those scripts call, using a real API key scoped to what it needs.
    - `GET`/`POST /api/capture` - discover and submit structured interaction forms
    - `GET /api/entities`, `GET /api/graph` - discover what's deployed, for bootstrapping an integration
 
+**Bring your own language layer.** `/api/intent` is for callers who send raw
+natural language. If your agent already classifies and extracts with its own
+model, skip it. Send a structured command straight to `/api/capture` (form
+fields) or `/api/governance` (an action and params). Nexus makes no LLM call
+on that path. `/api/intent` also skips its own parsing when the input already
+starts with `/`.
+
 See [`docs/api-client-sdk.md`](api-client-sdk.md) for full request/response
 examples, scopes, error envelopes, and curl snippets for every endpoint.
 
@@ -57,12 +64,44 @@ Twins & Relationships API in
 `POST`/`GET`/`PATCH`/`DELETE /api/twins`, `POST /api/twins/{id}/restore`,
 `POST /api/twins/{id}/state/clear`, `GET`/`POST`/`DELETE /api/relationships`.
 
-> **Limitation:** a capture-flow guardrail (`POST /api/governance` /
-> `POST /api/capture`) can only inspect the target twin's own state, not the
-> data in the incoming form submission. Validation that depends on the
-> submitted payload (e.g. "reject if the requested quantity exceeds what was
-> on offer") has to be pre-checked in your own app before calling
-> `/api/capture` - it can't be expressed as a Nexus guardrail.
+### Guardrails that use the submitted data
+
+A guardrail's `query_logic` can bind fields from the request itself. Declare
+them in the policy's `param_keys`, an ordered list of field names:
+
+```json
+{ "action":"upsert", "policy_id":"QTY_CAP", "action_type":"BOOK",
+  "param_keys":["quantity"],
+  "query_logic":"SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND ?::numeric > 1000",
+  "error_message":"Quantity too large.", "execution_mode":"GUARDRAIL" }
+```
+
+- `?1` is always the target twin's `external_id` (two `@handle`s for a
+  multi-target governance call). The `param_keys` fields follow in order.
+- Values come from `form_data` on `/api/capture` and from `params` on
+  `/api/governance`. They bind as text, so cast in the SQL (`?::numeric`,
+  `(?::text)::jsonb`).
+- A missing key or JSON `null` binds `NULL`.
+- Write every param-bound guardrail NULL-safe. `GET /api/capture` runs
+  guardrails with no `form_data`, so every param is `NULL` there. A guardrail
+  must only fire when its params are present, for example
+  `... AND ?::text IS NOT NULL`. Otherwise merely opening a form is reported
+  as blocked.
+- Guardrails run before the write, so they see the twin's state as it was
+  before the submission. Compare the submitted values against stored state.
+- `upsert` validates that the placeholder count is `1 + n` (or `2 + n` for
+  multi-target), and that `query_logic` prepares. Keys must match
+  `^[a-z][a-z0-9_]*$`.
+- Omitting `param_keys` on a re-upsert keeps the stored list; send `[]` to
+  clear it.
+
+### What stays in your app
+
+- Guardrails and validity rules live in Nexus.
+- Extraction from free text, computed fields (`compiled_*` and similar),
+  candidate lists shown to the user, and specific error messages stay app-side.
+- Keep the app-side checks that produce good messages. Treat the Nexus
+  policies as the authoritative backstop for every other writer.
 
 ---
 
@@ -90,12 +129,13 @@ then policy/tuning/templates, which reference them), and write them as
 idempotent upserts (`action:"upsert"`, or `ON CONFLICT` if you're inserting
 directly) so re-runs are safe.
 
-A command registered via `POST /api/tuning` (`add_command`) requires at least
-one of `linked_form` or `linked_template` - it always drives either a capture
-form or a context-card render. For a command that only reads and summarizes
-existing state, with no form and no side effect, you may not be able to
-register it as a `/command` at all: call `/api/context` directly instead and
-handle the natural-language framing in your own app.
+A command registered via `POST /api/tuning` (`add_command`) needs one of:
+`linked_form`, `linked_template`, or an active ANALYTICS policy for its
+`action_type`. The last is a read-only command that returns a data table
+(Pattern 3 in [architecture.md](architecture.md)). Optional booleans
+`multi_target` (takes two `@handle`s) and `has_value` (takes a number) are
+stored on the command. Omitting them on a re-upsert resets them to false, so
+send them every time.
 
 ---
 
@@ -115,6 +155,12 @@ Don't build your real deployment on top of a database that was used for the
    twins, relationships, interaction history, or mock service registrations
    get created - load your real entities afterward via INGEST or a direct
    data load.
+   - Give schemas optional identifier fields (for example `leg_id`,
+     `commodity_name`) wherever a guardrail needs to pin down one specific
+     record. Without them, a guardrail can only reason at the coarser level of
+     the target twin or a supplier.
+   - Seed test state through `/api/capture`, not `PATCH /api/twins`. PATCH
+     refuses keys ending `_current`.
 3. **Configure the Service Registry.** Register your real PULL / PUSH /
    INGEST endpoints in Admin UI → Service Registry, following
    [Section 1](#1-connect-your-real-backend-systems-service-registry) above.

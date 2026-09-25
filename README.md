@@ -144,6 +144,8 @@ mvn package -q
 docker compose up -d
 ```
 
+> The Dockerfile copies `target/tsi_nexus.war`. After changing Java source, run `mvn package` before `docker compose up --build`, or the image will contain the previous build.
+
 Once running, the platform is accessible at these URLs (default port `8084`):
 
 | Tool | URL | Purpose |
@@ -241,6 +243,8 @@ Output: `target/tsi_nexus.war`
 ```bash
 docker compose up --build
 ```
+
+> The Dockerfile copies `target/tsi_nexus.war`. After changing Java source, run `mvn package` before `docker compose up --build`, or the image will contain the previous build.
 
 ### Database
 

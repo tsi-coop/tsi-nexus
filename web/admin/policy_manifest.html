@@ -424,6 +424,12 @@ LIMIT 10</pre>
             </div>
 
             <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Param Keys</label>
+                <input id="fParamKeys" type="text" class="input-field" placeholder="quantity, leg_id (optional)">
+                <p class="text-[10px] text-slate-400 mt-1.5 px-1">Comma-separated request fields bound after the target id(s), in order. Leave empty for none.</p>
+            </div>
+
+            <div>
                 <label id="errorMsgLabel" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Error / Label Message</label>
                 <input id="fErrorMessage" type="text" class="input-field" placeholder="Action Blocked: reason shown to user">
                 <p id="errorMsgHint" class="text-[10px] text-slate-400 mt-1 px-1">Shown to the user when a GUARDRAIL blocks the action. For ANALYTICS, used as the report label.</p>
@@ -584,6 +590,7 @@ function buildCard(p) {
 
       <div class="bg-slate-950 px-5 py-3.5">
         <pre class="text-[11px] text-indigo-300 leading-relaxed whitespace-pre-wrap">${esc(p.query_logic)}</pre>
+        ${(p.param_keys && p.param_keys.length) ? `<p class="text-[10px] text-slate-400 mt-2 font-mono">param_keys: ${esc(p.param_keys.join(', '))}</p>` : ''}
       </div>
 
       <div id="footer-${p.policy_id}" class="px-5 py-3.5 border-t border-slate-50 flex items-center gap-2">
@@ -694,6 +701,7 @@ function openUpsertModal(policyId) {
     if (p) setActionTypeValue(p.action_type); else { document.getElementById('fActionTypeSelect').value = ''; document.getElementById('fActionTypeCustom').classList.add('hidden'); }
     document.getElementById('fDescription').value  = p ? p.description   : '';
     document.getElementById('fQueryLogic').value   = p ? p.query_logic   : '';
+    document.getElementById('fParamKeys').value    = p && p.param_keys ? p.param_keys.join(', ') : '';
     document.getElementById('fErrorMessage').value = p ? p.error_message : '';
     document.getElementById('modeGuardrail').checked = !p || p.execution_mode === 'GUARDRAIL';
     document.getElementById('modeAnalytics').checked = p && p.execution_mode === 'ANALYTICS';
@@ -715,6 +723,7 @@ async function submitUpsert() {
     const description = document.getElementById('fDescription').value.trim();
     const queryLogic  = document.getElementById('fQueryLogic').value.trim();
     const errorMsg    = document.getElementById('fErrorMessage').value.trim();
+    const paramKeys   = document.getElementById('fParamKeys').value.split(',').map(k => k.trim()).filter(Boolean);
     const execMode    = document.querySelector('input[name="execMode"]:checked').value;
     const btn         = document.getElementById('upsertBtn');
 
@@ -728,7 +737,7 @@ async function submitUpsert() {
         const res  = await fetch('/api/policy', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'upsert', policy_id: policyId, action_type: actionType,
-                description, query_logic: queryLogic, error_message: errorMsg, execution_mode: execMode })
+                description, query_logic: queryLogic, error_message: errorMsg, execution_mode: execMode, param_keys: paramKeys })
         });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.message || 'Save failed');

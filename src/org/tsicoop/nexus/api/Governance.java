@@ -73,7 +73,9 @@ public class Governance implements Action {
             if ("ANALYTICS".equals(executionMode)) {
                 JSONObject result = executeAnalysis(conn, actionType, params);
                 String tId = params.get("target_1") != null ? (String) params.get("target_1") : (String) params.get("target_external_id");
-                logAudit(conn, actorUuid, userUuid, tId, intentDisplay, actionType, "ANALYTICS", true, null);
+                logAudit(conn, actorUuid, userUuid, tId, intentDisplay, actionType, "ANALYTICS",
+                        Boolean.TRUE.equals(result.get("success")),
+                        Boolean.TRUE.equals(result.get("success")) ? null : (String) result.get("reason"));
                 conn.commit();
                 return result;
             }
@@ -181,7 +183,7 @@ public class Governance implements Action {
                         JSONObject err = new JSONObject();
                         err.put("success", false);
                         err.put("reason", multiTarget
-                                ? "This command needs two @handles" : "This command needs a target @handle");
+                                ? "This command needs two @handles" : "This command needs a target @handle (two for commands that compare two entities)");
                         return err;
                     }
                     if (multiTarget) {
