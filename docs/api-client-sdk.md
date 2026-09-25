@@ -411,7 +411,8 @@ No body, no query parameters.
 To register a command, `POST /api/tuning` with `action:"add_command"` and the
 fields `command_verb`, `label`, `entity_type`, `action_type`, `component_type`,
 `hint`, `args_hint`, `linked_form`, `linked_template`, `multi_target` (boolean)
-and `has_value` (boolean). One of `linked_form`, `linked_template`, or an
+and `has_value` (boolean; descriptive only, returned by `/api/entities` and not
+currently used to change parsing). One of `linked_form`, `linked_template`, or an
 active ANALYTICS policy for the `action_type` is required. Omitting
 `multi_target` / `has_value` on a re-upsert resets them to `false`.
 
