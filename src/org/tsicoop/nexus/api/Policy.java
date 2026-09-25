@@ -58,7 +58,7 @@ public class Policy implements Action {
             long total = 0, active = 0, guardrail = 0, analytics = 0;
 
             String sql = "SELECT policy_id, action_type, COALESCE(description,'') AS description, " +
-                         "query_logic, error_message, execution_mode, is_active " +
+                         "query_logic, error_message, execution_mode, is_active, param_keys::text AS param_keys " +
                          "FROM policy_manifest ORDER BY action_type, policy_id";
             try (PreparedStatement ps = conn.prepareStatement(sql);
                  ResultSet rs = ps.executeQuery()) {
@@ -73,6 +73,9 @@ public class Policy implements Action {
                     p.put("error_message",  rs.getString("error_message"));
                     p.put("execution_mode", mode);
                     p.put("is_active",      isActive);
+                    JSONArray pkArr = new JSONArray();
+                    pkArr.addAll(PolicyBinder.parseKeys(rs.getString("param_keys")));
+                    p.put("param_keys",     pkArr);
                     policies.add(p);
                     total++;
                     if (isActive)                active++;
@@ -150,13 +153,40 @@ public class Policy implements Action {
 
         ensureDescriptionColumn(conn);
 
+        JSONArray paramKeys = new JSONArray();
+        Object pk = in.get("param_keys");
+        if (pk != null) {
+            if (!(pk instanceof JSONArray)) {
+                OutputProcessor.errorResponse(res, 400, "Bad request", "param_keys must be an array of strings", req.getRequestURI()); return;
+            }
+            for (Object k : (JSONArray) pk) {
+                if (!(k instanceof String) || !((String) k).matches("^[a-z][a-z0-9_]*$")) {
+                    OutputProcessor.errorResponse(res, 400, "Bad request",
+                        "Invalid param_keys entry (must match ^[a-z][a-z0-9_]*$): " + k, req.getRequestURI()); return;
+                }
+                paramKeys.add(k);
+            }
+        }
+
+        int n = paramKeys.size();
+        try (PreparedStatement chk = conn.prepareStatement(queryLogic)) {
+            int count = chk.getParameterMetaData().getParameterCount();
+            if (count != 1 + n && count != 2 + n) {
+                OutputProcessor.errorResponse(res, 400, "Bad request",
+                    "query_logic has " + count + " placeholder(s) but param_keys has " + n +
+                    " key(s); expected " + (1 + n) + " (single target) or " + (2 + n) + " (multi-target)", req.getRequestURI()); return;
+            }
+        } catch (java.sql.SQLException e) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "query_logic is invalid: " + e.getMessage(), req.getRequestURI()); return;
+        }
+
         String sql =
-            "INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode, is_active) " +
-            "VALUES (?, ?, ?, ?, ?, ?, TRUE) " +
+            "INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode, is_active, param_keys) " +
+            "VALUES (?, ?, ?, ?, ?, ?, TRUE, ?::jsonb) " +
             "ON CONFLICT (policy_id) DO UPDATE SET " +
             "  action_type = EXCLUDED.action_type, description = EXCLUDED.description, " +
             "  query_logic = EXCLUDED.query_logic, error_message = EXCLUDED.error_message, " +
-            "  execution_mode = EXCLUDED.execution_mode";
+            "  execution_mode = EXCLUDED.execution_mode, param_keys = EXCLUDED.param_keys";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, policyId);
@@ -165,6 +195,7 @@ public class Policy implements Action {
             ps.setString(4, queryLogic);
             ps.setString(5, errorMsg);
             ps.setString(6, execMode);
+            ps.setString(7, paramKeys.toJSONString());
             ps.executeUpdate();
         }
 
@@ -225,21 +256,24 @@ public class Policy implements Action {
             OutputProcessor.errorResponse(res, 400, "Bad request", "policy_id and test_id are required", req.getRequestURI()); return;
         }
 
-        String queryLogic, errorMessage, execMode;
+        String queryLogic, errorMessage, execMode, paramKeysJson;
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT query_logic, error_message, execution_mode FROM policy_manifest WHERE policy_id = ?")) {
+                "SELECT query_logic, error_message, execution_mode, param_keys::text AS param_keys FROM policy_manifest WHERE policy_id = ?")) {
             ps.setString(1, policyId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) { OutputProcessor.errorResponse(res, 404, "Not found", policyId, req.getRequestURI()); return; }
                 queryLogic   = rs.getString("query_logic");
                 errorMessage = rs.getString("error_message");
                 execMode     = rs.getString("execution_mode");
+                paramKeysJson = rs.getString("param_keys");
             }
         }
 
         JSONObject result = new JSONObject();
         try (PreparedStatement ps = conn.prepareStatement(queryLogic)) {
-            ps.setString(1, testId);
+            Object tp = in.get("test_params");
+            PolicyBinder.bind(ps, new String[]{testId}, PolicyBinder.parseKeys(paramKeysJson),
+                    tp instanceof JSONObject ? (JSONObject) tp : null);
             try (ResultSet rs = ps.executeQuery()) {
                 int count = rs.next() ? rs.getInt(1) : 0;
                 boolean blocked = "GUARDRAIL".equals(execMode) && count > 0;
@@ -428,6 +462,10 @@ public class Policy implements Action {
     private void ensureDescriptionColumn(Connection conn) {
         try (PreparedStatement ps = conn.prepareStatement(
                 "ALTER TABLE policy_manifest ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''")) {
+            ps.execute();
+        } catch (Exception ignore) {}
+        try (PreparedStatement ps = conn.prepareStatement(
+                "ALTER TABLE policy_manifest ADD COLUMN IF NOT EXISTS param_keys JSONB NOT NULL DEFAULT '[]'::jsonb")) {
             ps.execute();
         } catch (Exception ignore) {}
     }

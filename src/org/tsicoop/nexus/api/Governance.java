@@ -129,7 +129,7 @@ public class Governance implements Action {
     }
 
     private String checkPolicyManifest(Connection conn, String action, JSONObject params) throws SQLException {
-        String sql = "SELECT query_logic, error_message FROM policy_manifest WHERE action_type = ? AND is_active = TRUE";
+        String sql = "SELECT query_logic, error_message, param_keys::text AS param_keys FROM policy_manifest WHERE action_type = ? AND is_active = TRUE";
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, action.toUpperCase());
@@ -139,19 +139,19 @@ public class Governance implements Action {
                     String error = rs.getString("error_message");
 
                     try (PreparedStatement guardPstmt = conn.prepareStatement(query)) {
+                        java.util.List<String> keys = PolicyBinder.parseKeys(rs.getString("param_keys"));
                         boolean multiTarget = params.containsKey("target_1");
                         if (multiTarget) {
                             String t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
                             String t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
-                            guardPstmt.setString(1, t1);
-                            guardPstmt.setString(2, t2);
+                            PolicyBinder.bind(guardPstmt, new String[]{t1, t2}, keys, params);
                         } else {
                             Object targetObj = params.get("target_external_id");
                             if (targetObj == null) {
                                 throw new SQLException("Target ID is missing for action: " + action);
                             }
                             String targetId = ((String) targetObj).replaceFirst("^@", "");
-                            guardPstmt.setString(1, targetId);
+                            PolicyBinder.bind(guardPstmt, new String[]{targetId}, keys, params);
                         }
 
                         try (ResultSet guardRs = guardPstmt.executeQuery()) {
@@ -166,7 +166,7 @@ public class Governance implements Action {
 
     @SuppressWarnings("unchecked")
     private JSONObject executeAnalysis(Connection conn, String action, JSONObject params) throws SQLException {
-        String sql = "SELECT query_logic, error_message FROM policy_manifest WHERE action_type = ? AND is_active = TRUE LIMIT 1";
+        String sql = "SELECT query_logic, error_message, param_keys::text AS param_keys FROM policy_manifest WHERE action_type = ? AND is_active = TRUE LIMIT 1";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, action.toUpperCase());
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -176,6 +176,14 @@ public class Governance implements Action {
                     JSONArray rows = new JSONArray();
                     boolean multiTarget = params.containsKey("target_1");
                     String t1 = null, t2 = null, targetId = null;
+                    if ((multiTarget && params.get("target_2") == null)
+                            || (!multiTarget && params.get("target_external_id") == null)) {
+                        JSONObject err = new JSONObject();
+                        err.put("success", false);
+                        err.put("reason", multiTarget
+                                ? "This command needs two @handles" : "This command needs a target @handle");
+                        return err;
+                    }
                     if (multiTarget) {
                         t1 = ((String) params.get("target_1")).replaceFirst("^@", "");
                         t2 = ((String) params.get("target_2")).replaceFirst("^@", "");
@@ -183,12 +191,9 @@ public class Governance implements Action {
                         targetId = ((String) params.get("target_external_id")).replaceFirst("^@", "");
                     }
                     try (PreparedStatement analysisPstmt = conn.prepareStatement(query)) {
-                        if (multiTarget) {
-                            analysisPstmt.setString(1, t1);
-                            analysisPstmt.setString(2, t2);
-                        } else {
-                            analysisPstmt.setString(1, targetId);
-                        }
+                        java.util.List<String> keys = PolicyBinder.parseKeys(rs.getString("param_keys"));
+                        PolicyBinder.bind(analysisPstmt,
+                                multiTarget ? new String[]{t1, t2} : new String[]{targetId}, keys, params);
                         try (ResultSet dataRs = analysisPstmt.executeQuery()) {
                             ResultSetMetaData meta = dataRs.getMetaData();
                             int colCount = meta.getColumnCount();

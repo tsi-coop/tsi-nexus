@@ -132,7 +132,8 @@ CREATE TABLE policy_manifest (
     query_logic TEXT NOT NULL,         -- The SQL enforced at runtime
     error_message TEXT NOT NULL,       -- Liquid feedback on denial
     execution_mode TEXT NOT NULL DEFAULT 'GUARDRAIL',
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN DEFAULT TRUE,
+    param_keys JSONB NOT NULL DEFAULT '[]'::jsonb  -- ordered request fields bound after the target id(s)
 );
 
 -- 9. NEXUS USERS (Admin & Staff Accounts)

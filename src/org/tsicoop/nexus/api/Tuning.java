@@ -10,6 +10,7 @@ import org.json.simple.parser.JSONParser;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  * GET  /api/tuning  → LLM connectivity status + institutional vocabulary
@@ -269,17 +270,19 @@ public class Tuning implements Action {
         if (entityType.isEmpty()) {
             OutputProcessor.errorResponse(res, 400, "Bad request", "entity_type is required", req.getRequestURI()); return;
         }
-        if (linkedForm.isEmpty() && linkedTemplate.isEmpty()) {
-            OutputProcessor.errorResponse(res, 400, "Bad request", "At least one of linked_form or linked_template is required", req.getRequestURI()); return;
-        }
         if (actionType.isEmpty()) actionType = verb.toUpperCase();
+        if (linkedForm.isEmpty() && linkedTemplate.isEmpty() && !hasAnalyticsPolicy(conn, actionType)) {
+            OutputProcessor.errorResponse(res, 400, "Bad request", "linked_form, linked_template, or an ANALYTICS policy for this action_type is required", req.getRequestURI()); return;
+        }
+        boolean multiTarget = Boolean.TRUE.equals(in.get("multi_target"));
+        boolean hasValue    = Boolean.TRUE.equals(in.get("has_value"));
         if (componentType.isEmpty()) componentType = linkedForm.isEmpty() ? "universal_action_confirm" : "interaction_capture_form";
 
-        String sql = "INSERT INTO command_manifest (command_verb, label, action_type, entity_type, component_type, hint, args_hint, linked_form, linked_template) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::uuid) " +
+        String sql = "INSERT INTO command_manifest (command_verb, label, action_type, entity_type, component_type, hint, args_hint, linked_form, linked_template, multi_target, has_value) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::uuid, ?, ?) " +
                      "ON CONFLICT (command_verb) DO UPDATE SET label=EXCLUDED.label, action_type=EXCLUDED.action_type, " +
                      "entity_type=EXCLUDED.entity_type, component_type=EXCLUDED.component_type, hint=EXCLUDED.hint, args_hint=EXCLUDED.args_hint, " +
-                     "linked_form=EXCLUDED.linked_form, linked_template=EXCLUDED.linked_template RETURNING command_id::text";
+                     "linked_form=EXCLUDED.linked_form, linked_template=EXCLUDED.linked_template, multi_target=EXCLUDED.multi_target, has_value=EXCLUDED.has_value RETURNING command_id::text";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, verb);
             ps.setString(2, label);
@@ -290,12 +293,22 @@ public class Tuning implements Action {
             ps.setString(7, argsHint);
             ps.setString(8, linkedForm.isEmpty() ? null : linkedForm);
             ps.setString(9, linkedTemplate.isEmpty() ? null : linkedTemplate);
+            ps.setBoolean(10, multiTarget);
+            ps.setBoolean(11, hasValue);
             try (ResultSet rs = ps.executeQuery()) { rs.next(); }
         }
         JSONObject result = new JSONObject();
         result.put("success", true);
         result.put("command_verb", verb);
         OutputProcessor.send(res, 200, result);
+    }
+
+    private boolean hasAnalyticsPolicy(Connection conn, String actionType) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM policy_manifest WHERE action_type = ? AND execution_mode = 'ANALYTICS' AND is_active = TRUE LIMIT 1")) {
+            ps.setString(1, actionType);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        }
     }
 
     /* ── link command to form/template ──────────────────────────────────── */
