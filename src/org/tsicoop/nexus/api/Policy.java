@@ -155,7 +155,8 @@ public class Policy implements Action {
 
         JSONArray paramKeys = new JSONArray();
         Object pk = in.get("param_keys");
-        if (pk != null) {
+        boolean keysProvided = pk != null;
+        if (keysProvided) {
             if (!(pk instanceof JSONArray)) {
                 OutputProcessor.errorResponse(res, 400, "Bad request", "param_keys must be an array of strings", req.getRequestURI()); return;
             }
@@ -165,6 +166,16 @@ public class Policy implements Action {
                         "Invalid param_keys entry (must match ^[a-z][a-z0-9_]*$): " + k, req.getRequestURI()); return;
                 }
                 paramKeys.add(k);
+            }
+        }
+
+        if (!keysProvided) {
+            // omitted: validate against the stored value (empty for a new row)
+            try (PreparedStatement sel = conn.prepareStatement("SELECT param_keys::text AS param_keys FROM policy_manifest WHERE policy_id = ?")) {
+                sel.setString(1, policyId);
+                try (ResultSet rs = sel.executeQuery()) {
+                    if (rs.next()) paramKeys.addAll(PolicyBinder.parseKeys(rs.getString("param_keys")));
+                }
             }
         }
 
@@ -182,11 +193,11 @@ public class Policy implements Action {
 
         String sql =
             "INSERT INTO policy_manifest (policy_id, action_type, description, query_logic, error_message, execution_mode, is_active, param_keys) " +
-            "VALUES (?, ?, ?, ?, ?, ?, TRUE, ?::jsonb) " +
+            "VALUES (?, ?, ?, ?, ?, ?, TRUE, COALESCE(?::jsonb, '[]'::jsonb)) " +
             "ON CONFLICT (policy_id) DO UPDATE SET " +
             "  action_type = EXCLUDED.action_type, description = EXCLUDED.description, " +
             "  query_logic = EXCLUDED.query_logic, error_message = EXCLUDED.error_message, " +
-            "  execution_mode = EXCLUDED.execution_mode, param_keys = EXCLUDED.param_keys";
+            "  execution_mode = EXCLUDED.execution_mode, param_keys = COALESCE(?::jsonb, policy_manifest.param_keys)";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, policyId);
@@ -195,7 +206,9 @@ public class Policy implements Action {
             ps.setString(4, queryLogic);
             ps.setString(5, errorMsg);
             ps.setString(6, execMode);
-            ps.setString(7, paramKeys.toJSONString());
+            String keysJson = keysProvided ? paramKeys.toJSONString() : null;
+            ps.setString(7, keysJson);
+            ps.setString(8, keysJson);
             ps.executeUpdate();
         }
 

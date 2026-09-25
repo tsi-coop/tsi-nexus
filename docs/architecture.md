@@ -48,6 +48,8 @@ Context Cards are HTML templates with Liquid variable substitution:
 
 **GUARDRAIL mode** - a pre-action gate. `query_logic` must return `COUNT(*)`. `Capture.java` runs every GUARDRAIL policy for the `action_type` before committing anything; if COUNT > 0, the action is blocked and `error_message` is returned to the user. Zero hardcoded logic.
 
+**GUARDRAIL policies can bind request fields via `param_keys`.** An ordered list of field names from `form_data` (`/api/capture`) or `params` (`/api/governance`) is bound after the target id(s), so a guardrail can compare submitted values against stored state. See [Guardrails that use the submitted data](integrating-your-project.md#guardrails-that-use-the-submitted-data).
+
 **ANALYTICS mode** - a query-as-command. `query_logic` returns meaningful rows with named columns (not a COUNT). `Capture.java` ignores ANALYTICS policies entirely; they only fire when `Governance.java` receives a POST for that `action_type`. Instead of blocking or mutating state, `Governance.java` runs the SQL, collects the result rows, and returns them as data. The `error_message` field is repurposed as a display label for the result set. This is how slash commands like `/report @entity` return a data table rather than triggering an action.
 
 See **Command Patterns** below for how to wire these into the Liquid interface.
@@ -74,11 +76,11 @@ Opens a schema-driven form. On submit, `Capture.java` validates fields, checks G
 
 **Wiring:**
 
-| Table | Key columns | Example value |
-|---|---|---|
-| `command_manifest` | `command_verb`, `component_type`, `linked_form` | `kyc`, `interaction_capture_form`, `<schema_id>` |
-| `interaction_schema` | `schema_id`, `action_type`, `fields`, `state_patch`, `stream_tmpl` | `KYC_MEMBER_CAPTURE`, fields array, `{"kyc":"Verified"}`, `"KYC completed for {name}"` |
-| `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `KYC_MEMBER_CAPTURE`, `GUARDRAIL`, `SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'='Verified'`, `"Member already verified"` |
+| Table | Key columns | Example value | param_keys |
+|---|---|---|---|
+| `command_manifest` | `command_verb`, `component_type`, `linked_form` | `kyc`, `interaction_capture_form`, `<schema_id>` | |
+| `interaction_schema` | `schema_id`, `action_type`, `fields`, `state_patch`, `stream_tmpl` | `KYC_MEMBER_CAPTURE`, fields array, `{"kyc":"Verified"}`, `"KYC completed for {name}"` | |
+| `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `KYC_MEMBER_CAPTURE`, `GUARDRAIL`, `SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'='Verified'`, `"Member already verified"` | `[]` |
 
 `linked_form` in `command_manifest` must match the `schema_id` in `interaction_schema`. The policy `action_type` must match the schema `action_type`. The GUARDRAIL policy is optional - omit it if the form should always be submittable.
 
@@ -92,10 +94,10 @@ Shows a confirmation card with the target entity and action details. On confirm,
 
 **Wiring:**
 
-| Table | Key columns | Example value |
-|---|---|---|
-| `command_manifest` | `command_verb`, `component_type`, `action_type` | `disburse`, `action` (default), `DISBURSE` |
-| `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `DISBURSE`, `GUARDRAIL`, `SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'!='Verified'`, `"KYC must be completed before disbursement"` |
+| Table | Key columns | Example value | param_keys |
+|---|---|---|---|
+| `command_manifest` | `command_verb`, `component_type`, `action_type` | `disburse`, `action` (default), `DISBURSE` | |
+| `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `DISBURSE`, `GUARDRAIL`, `SELECT COUNT(*) FROM digital_twins WHERE external_id=? AND current_state->>'kyc'!='Verified'`, `"KYC must be completed before disbursement"` | `[]` |
 
 `interaction_schema` is not needed for this pattern. Multiple GUARDRAIL policies can share the same `action_type` - all are checked and any violation blocks the action.
 
@@ -109,12 +111,12 @@ Shows a confirmation card, but instead of mutating state the command runs a SQL 
 
 **Wiring:**
 
-| Table | Key columns | Example value |
-|---|---|---|
-| `command_manifest` | `command_verb`, `component_type`, `action_type` | `report`, `action` (default), `LOAN_REPORT` |
-| `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `LOAN_REPORT`, `ANALYTICS`, `SELECT disbursed_on, amount, status FROM loans WHERE member_id=?`, `"Loan History"` |
+| Table | Key columns | Example value | param_keys |
+|---|---|---|---|
+| `command_manifest` | `command_verb`, `component_type`, `action_type` | `report`, `action` (default), `LOAN_REPORT` | |
+| `policy_manifest` | `action_type`, `execution_mode`, `query_logic`, `error_message` | `LOAN_REPORT`, `ANALYTICS`, `SELECT disbursed_on, amount, status FROM loans WHERE member_id=?`, `"Loan History"` | `[]` |
 
-`execution_mode = 'ANALYTICS'` is the only switch. `Capture.java` skips ANALYTICS rows entirely; `Governance.java` detects the mode and returns rows instead of executing a guard. The `error_message` field becomes the table label in the UI. `query_logic` may return any columns - use named columns for readable output.
+No `linked_form` or `linked_template` is needed if the `action_type` has an ANALYTICS policy. `execution_mode = 'ANALYTICS'` is the only switch. `Capture.java` skips ANALYTICS rows entirely; `Governance.java` detects the mode and returns rows instead of executing a guard. The `error_message` field becomes the table label in the UI. `query_logic` may return any columns - use named columns for readable output.
 
 ---
 
@@ -298,7 +300,7 @@ Vocabulary source: `root_organisation.domain_slang` JSONB - key/value pairs mapp
 | `liquid_templates` | Context Card HTML: entity_type, html_content, condition_sql |
 | `interaction_schema` | Input Manifest definitions: schema_id, fields JSONB, action_type, state_patch, stream_tmpl |
 | `command_manifest` | Slash commands: verb, action_type, component_type, linked_form |
-| `policy_manifest` | Guardrails: action_type, query_logic (SQL), error_message, execution_mode |
+| `policy_manifest` | Guardrails: action_type, query_logic (SQL), error_message, execution_mode, param_keys |
 | `service_registry` | External services: identifier, api_base_url, auth_config, service_type (PULL/PUSH/INGEST), entity_type, trigger_action, stream_tmpl |
 | `root_organisation` | Config: domain_slang JSONB, llm settings |
 | `seeding_sessions` | Seeding history + mock_data JSONB (downloadable mock config) |

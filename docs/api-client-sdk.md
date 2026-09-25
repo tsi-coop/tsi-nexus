@@ -233,17 +233,34 @@ instead of mutating state.
 > single transaction, then fires any registered PUSH services asynchronously.
 > Omit `new_data` if you only want the policy check without mutation.
 
-> **Limitation:** a guardrail's `query_logic` runs against `digital_twins`,
-> `twin_relationships`, and `interaction_stream` for the *target twin*
-> identified by `external_id` - it has no visibility into the rest of the
-> `params` payload on the incoming request (e.g. a requested quantity, or a
-> second entity being compared against something other than its own state).
-> Validation that depends on the submitted payload itself, rather than on
-> the target twin's stored state, has to be pre-checked in your own app
-> before calling `/api/governance` or `/api/capture` - it can't be expressed
-> as a Nexus guardrail.
+`params` keys named in a policy's `param_keys` are bound after the target(s), in
+order, as text (missing or `null` binds `NULL`). See
+[Policy upsert](#policy-upsert---post-apipolicy) for how to declare them.
 
 ---
+
+### Policy upsert - `POST /api/policy`
+
+Admin-authenticated (Bearer JWT, not an API key). Creates or updates a guardrail.
+
+```json
+{ "action":"upsert", "policy_id":"QTY_CAP", "action_type":"BOOK",
+  "param_keys":["quantity"],
+  "query_logic":"SELECT COUNT(*) FROM digital_twins WHERE external_id = ? AND ?::numeric > 1000",
+  "error_message":"Quantity too large.", "execution_mode":"GUARDRAIL" }
+```
+
+- `param_keys` is an ordered list of request fields (`form_data` on
+  `/api/capture`, `params` on `/api/governance`) bound after the target
+  `external_id`(s). Keys must match `^[a-z][a-z0-9_]*$`.
+- Placeholder rule: `query_logic` must have `1 + n` placeholders (`2 + n` for
+  multi-target), where `n` is the number of keys, and must prepare.
+- Values bind as text; cast in the SQL (`?::numeric`, `(?::text)::jsonb`).
+- NULL rule: a missing key or JSON `null` binds `NULL`, and `GET /api/capture`
+  runs guardrails with no `form_data`, so every param is `NULL` there. Write
+  guardrails NULL-safe (e.g. `... AND ?::text IS NOT NULL`) so they only fire
+  when their params are present.
+- Omitting `param_keys` on an existing policy keeps the stored list; `[]` clears it.
 
 ### 4. Interaction Capture - `GET /api/capture` and `POST /api/capture`
 
@@ -390,6 +407,13 @@ No body, no query parameters.
   ]
 }
 ```
+
+To register a command, `POST /api/tuning` with `action:"add_command"` and the
+fields `command_verb`, `label`, `entity_type`, `action_type`, `component_type`,
+`hint`, `args_hint`, `linked_form`, `linked_template`, `multi_target` (boolean)
+and `has_value` (boolean). One of `linked_form`, `linked_template`, or an
+active ANALYTICS policy for the `action_type` is required. Omitting
+`multi_target` / `has_value` on a re-upsert resets them to `false`.
 
 ---
 
