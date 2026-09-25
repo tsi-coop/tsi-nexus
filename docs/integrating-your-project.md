@@ -133,7 +133,8 @@ A command registered via `POST /api/tuning` (`add_command`) needs one of:
 `linked_form`, `linked_template`, or an active ANALYTICS policy for its
 `action_type`. The last is a read-only command that returns a data table
 (Pattern 3 in [architecture.md](architecture.md)). Optional booleans
-`multi_target` (takes two `@handle`s) and `has_value` (takes a number) are
+`multi_target` (takes two `@handle`s) and `has_value` (descriptive only: returned by
+`/api/entities`, not currently used to change parsing) are
 stored on the command. Omitting them on a re-upsert resets them to false, so
 send them every time.
 
