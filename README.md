@@ -56,7 +56,7 @@ These seven requirements map directly onto the platform's six architectural pill
 
 ## Architecture
 
-![TSI Nexus architecture diagram](docs/tsi-nexus-architecture-diagram.webp)
+![TSI Nexus architecture diagram](docs/tsi-nexus-architecture-diagram.png)
 
 See [`docs/architecture.md`](docs/architecture.md) for a full breakdown of the six pillars, service registry patterns, seeder pipeline, LLM integration points, and database schema.
 
