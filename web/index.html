@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=/admin/">
+<noscript><meta http-equiv="refresh" content="0; url=/admin/"></noscript>
 <title>TSI Nexus</title>
+<script>
+    // Fresh instance goes to first-time setup; otherwise to the admin login
+    fetch('/api/setup').then(r => r.json()).then(d => {
+        window.location.replace(d && d.initialized === false ? '/setup/index.html' : '/admin/');
+    }).catch(() => window.location.replace('/admin/'));
+</script>
 </head>
 <body><a href="/admin/">TSI Nexus</a></body>
 </html>

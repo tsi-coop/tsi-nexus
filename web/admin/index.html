@@ -63,6 +63,11 @@
 </div>
 
 <script>
+    // Fresh instance: send the visitor to first-time setup instead of a login that cannot succeed
+    fetch('/api/setup').then(r => r.json()).then(d => {
+        if (d && d.initialized === false) window.location.replace('/setup/index.html');
+    }).catch(() => {});
+
     document.addEventListener('DOMContentLoaded', () => {
         // Redirect if already authenticated
         const _token = localStorage.getItem('nexus_token');
