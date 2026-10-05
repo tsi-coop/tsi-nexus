@@ -492,6 +492,17 @@ if (!_token || _user.role !== 'admin') {
     window.location.href = 'index.html';
 }
 
+// /api/* is admin-only: attach the JWT to every API call that does not already carry credentials
+const _fetch = window.fetch.bind(window);
+window.fetch = (url, opts = {}) => {
+    if (typeof url === 'string' && url.startsWith('/api/')) {
+        const h = new Headers(opts.headers || {});
+        if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + _token);
+        opts = { ...opts, headers: h };
+    }
+    return _fetch(url, opts);
+};
+
 /* ── state ──────────────────────────────────────────────────────────── */
 let allPolicies  = [];
 const policyMap  = {};

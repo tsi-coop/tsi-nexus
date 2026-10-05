@@ -489,7 +489,7 @@ async function openDrillDown(type) {
     openModal('drillModal');
 
     try {
-        const res = await fetch(`/api/reports?type=twins&entity_type=${type}`);
+        const res = await fetch(`/api/reports?type=twins&entity_type=${type}`, { headers: { 'Authorization': 'Bearer ' + _token } });
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Fetch failed');
 
@@ -552,7 +552,7 @@ async function openRelDrillDown(from, rel, to) {
     openModal('relDrillModal');
 
     try {
-        const res = await fetch(`/api/reports?type=relationships&from_type=${from}&rel_type=${rel}&to_type=${to}`);
+        const res = await fetch(`/api/reports?type=relationships&from_type=${from}&rel_type=${rel}&to_type=${to}`, { headers: { 'Authorization': 'Bearer ' + _token } });
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Fetch failed');
 

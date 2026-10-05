@@ -156,9 +156,10 @@ LLM_API_KEY=AIza...
 ### 2. Build and run
 
 ```bash
-mvn package -q
-docker compose up -d
+./build.sh
 ```
+
+This runs `mvn package -q` and then `docker compose up -d --build`.
 
 > The Dockerfile copies `target/tsi_nexus.war`. After changing Java source, run `mvn package` before `docker compose up --build`, or the image will contain the previous build.
 
