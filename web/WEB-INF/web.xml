@@ -17,8 +17,31 @@
 	<dispatcher>FORWARD</dispatcher>
 </filter-mapping>
 
+<!--
+  Server-side gate for the static console pages. Previously they were served to any HTTP
+  client, relying on client-side JS to redirect after the page had been delivered.
+  Requires the session cookie set at login (see User.handleAuth).
+  Login pages (/admin/index.html, /liquid/index.html) are exempted inside the filter.
+-->
+<filter>
+	<filter-name>CONSOLE_AUTH_FILTER</filter-name>
+	<filter-class>org.tsicoop.nexus.framework.ConsoleAuthFilter</filter-class>
+</filter>
+
+<filter-mapping>
+	<filter-name>CONSOLE_AUTH_FILTER</filter-name>
+	<url-pattern>/admin/*</url-pattern>
+	<url-pattern>/onboard/*</url-pattern>
+	<url-pattern>/seed/*</url-pattern>
+	<url-pattern>/liquid/*</url-pattern>
+	<dispatcher>REQUEST</dispatcher>
+	<dispatcher>FORWARD</dispatcher>
+</filter-mapping>
+
+<!-- Overrides dirAllowed=true from Jetty's webdefault so directories with no welcome file are not listed. -->
 <servlet>
 	<servlet-name>default</servlet-name>
+	<servlet-class>org.eclipse.jetty.ee10.servlet.DefaultServlet</servlet-class>
 	<init-param>
 		<param-name>dirAllowed</param-name>
 		<param-value>false</param-value>

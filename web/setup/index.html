@@ -77,6 +77,14 @@
         </div>
 
         <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Setup Token</label>
+            <input type="password" id="setupToken" required autocomplete="off"
+                class="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none transition-all text-sm font-semibold input-focus"
+                placeholder="TSI_NEXUS_BOOTSTRAP_TOKEN value">
+            <p class="mt-2 px-1 text-[11px] text-slate-400">The value of the TSI_NEXUS_BOOTSTRAP_TOKEN environment variable set on this server. Ask whoever deployed the platform.</p>
+        </div>
+
+        <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Password</label>
             <input type="password" id="password" required minlength="8"
                 class="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none transition-all text-sm font-semibold input-focus"
@@ -152,6 +160,7 @@
                         institution_name: document.getElementById('instName').value.trim(),
                         admin_name:       document.getElementById('adminName').value.trim(),
                         admin_email:      document.getElementById('adminEmail').value.trim().toLowerCase(),
+                        setup_token:      document.getElementById('setupToken').value,
                         password
                     })
                 });

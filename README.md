@@ -1,6 +1,6 @@
 # TSI Nexus
 
-An open-source, sovereign institutional intelligence platform helping your AI Assistants listen, understand, and act.
+An open-source, sovereign institutional intelligence platform powering AI assistants.
 
 It provides a private "company brain" - a single system that stores every entity, relationship, rule, and interaction, and surfaces them through a natural language interface.
 
@@ -9,13 +9,13 @@ Zero sector-specific logic is hardcoded. Every domain concept - entity types, te
 
 ## Why TSI Nexus
 
-AI is changing how people use software. We are moving away from menus and forms to just asking by voice and getting things done. This shift is happening fast, and it goes beyond building a chat window on top of existing software. If users are going to ask in plain language, the system underneath has to understand the business and enforce business rules. Our current systems are not built to do that.
+AI is changing how people use software. We are moving away from menus and forms to just asking by voice and getting things done. This shift is happening fast, and it goes beyond building a chat window on top of existing software. If people are going to ask an AI agent in plain language, the system underneath has to understand the business and enforce business rules. Our current systems are not built to do that.
 
 So what does the system actually need?
 
 1. **Connected View** - Every person, asset, branch, and relationship between them needs to be organised in one place.
 2. **Tunable Intelligence** - Every organisation has its own terms & slang, job titles, and shorthand. The system needs to understand that vocabulary.
-3. **Adaptable Interface** - Instead of menu-driven form interfaces, the users should be able to say or type what they need.
+3. **Adaptable Interface** - Instead of menu-driven form interfaces, end users should be able to say or type what they need to an AI agent.
 4. **Memory Layer** - Every daily update needs to be recorded automatically.
 5. **Reasoning Engine** - To connect the dots, compare options, and explain why it happened.
 6. **Integration Gateway** - To plug in and pull data in from / push actions out to LLMs, CRMs, HR systems, industrial automation gateways, whatever an organisation already runs.
@@ -29,17 +29,22 @@ So what does the system actually need?
 
 Different industries, but the same seven requirements underneath. It perfectly aligns with our philosophy of sovereign composable data infrastructure, and we have created an open-source tool. It's called TSI Nexus, an Apache 2.0 licensed institutional intelligence platform for small & medium organisations that enables an AI operator to listen, understand, and act.
 
-These seven requirements map directly onto the platform's six architectural pillars - Connected View is the Context Graph, Tunable Intelligence and the Reasoning Engine are handled by Intelligence Tuning, Adaptable Interface is Liquid, Memory Layer is the Interaction Stream, Integration Gateway is the Service Registry, and Control & Audit Layer is Guardrails (extended with HITL escalation and regulatory reporting).
+These seven requirements map directly onto the platform's six architectural pillars - Connected View is the Context Graph, Tunable Intelligence and the Reasoning Engine are handled by Intelligence Tuning, Adaptable Interface is the agent-facing Intelligence API plus Liquid (the console for operations users), Memory Layer is the Interaction Stream, Integration Gateway is the Service Registry, and Control & Audit Layer is Guardrails (extended with HITL escalation and regulatory reporting).
 
 ## What it does
 
-**For end users (the Liquid interface)**
+**For end users (through AI agents)**
+- Field staff, customers, and other end users talk to an AI agent (WhatsApp, voice, chat) in plain language
+- The agent calls the Intelligence API to resolve the request, load entity context, check guardrails, and record the action
+- End users never see Nexus directly
+
+**For operations users (the Liquid interface)**
 - Search for any entity by name, ID, or voice, using plain English
 - View a live context card showing the entity's current state, graph relationships, and external data
-- Submit structured forms (Input Manifests) to record actions and update state
-- All actions are logged to an append-only interaction stream
+- Submit structured forms (Input Manifests) to record or correct data and update state
+- Review the interaction stream, including what the agent did, and approve escalated (HITL) actions
 
-**For admins (the Admin UI)**
+**For operations admins (the Admin UI)**
 - Define entity types, relationships, and their data shapes
 - Build context cards (HTML templates with live variable substitution)
 - Create input forms for data capture
@@ -50,7 +55,7 @@ These seven requirements map directly onto the platform's six architectural pill
 
 ## How organisations use it
 
-**Intent to command:** Field staff type or speak natural language requests. TSI Nexus maps them to exact registered command verbs like `/disburse_loan` or `/verify_kyc`, with no ambiguity and no drift from institutional policy.
+**Intent to command:** Field staff type or speak natural language requests to their AI agent. TSI Nexus maps them to exact registered command verbs like `/disburse_loan` or `/verify_kyc`, with no ambiguity and no drift from institutional policy.
 
 **Policy evaluation:** Before any command executes, TSI Nexus checks it against the live context and business rules stored in the knowledge graph. It either approves, blocks, or flags for escalation - keeping every action within the institution's defined guardrails.
 
@@ -77,6 +82,15 @@ Copy the example env file and edit it:
 cp .env.example .env
 ```
 
+Generate the two required secrets and write them into `.env`. This is a mandatory security step:
+
+```bash
+sed -i "s/^TSI_NEXUS_JWT_SECRET=.*/TSI_NEXUS_JWT_SECRET=$(openssl rand -hex 32)/" .env
+sed -i "s/^TSI_NEXUS_BOOTSTRAP_TOKEN=.*/TSI_NEXUS_BOOTSTRAP_TOKEN=$(openssl rand -hex 32)/" .env
+```
+
+Keep the bootstrap token handy: the setup page asks for it in [First-time setup](#3-first-time-setup).
+
 Key variables:
 
 | Variable | Default | Description |
@@ -89,6 +103,8 @@ Key variables:
 | `DB_PORT_MAP` | `5436:5432` | Postgres port mapping |
 | `POSTGRES_PASSWD` | `secure_dev_password` | Change for production |
 | `TSI_NEXUS_JWT_SECRET` | **Required** | Generate with `openssl rand -hex 32`. Container refuses to start without it. |
+| `TSI_NEXUS_BOOTSTRAP_TOKEN` | **Required for first-run setup** | Generate with `openssl rand -hex 32`. Entered on the setup page; with it unset, `/setup` is disabled. |
+| `TSI_NEXUS_ENV` | `development` | Set to `production` behind HTTPS so the console session cookie is `Secure`. |
 
 #### LLM providers
 
@@ -152,14 +168,14 @@ Once running, the platform is accessible at these URLs (default port `8084`):
 |---|---|---|
 | Setup wizard | `http://localhost:8084/setup` | First-run account creation |
 | Seed tool | `http://localhost:8084/seed` | Bootstrap a demo institution with synthetic data |
-| Liquid interface | `http://localhost:8084/liquid` | End-user natural language search and forms |
+| Liquid interface | `http://localhost:8084/liquid` | Operations-user console: entity search, context cards, forms, HITL review |
 | Admin UI | `http://localhost:8084/admin` | Configure entities, templates, policies, and services |
 
 ### 3. First-time setup
 
 **Step 1 - Create your admin account**
 
-Open `http://localhost:8084/setup` and complete the wizard.
+Open `http://localhost:8084/setup` and complete the wizard. It asks for the `TSI_NEXUS_BOOTSTRAP_TOKEN` value you set in `.env`.
 
 **Step 2 - Explore the admin console**
 
@@ -279,9 +295,16 @@ for the recommended fresh-installation sequence, connecting real backend
 systems via the Service Registry, and headless access to the intelligence API.
 
 
+## Release notes
+
+See [`RELEASE_NOTES.md`](RELEASE_NOTES.md) for what's new in v0.2, including upgrade steps and new environment variables.
+
+
 ## License & Contributions
 
 This project is fully open-source and distributed under the **Apache 2.0 License**. You are completely free to fork, modify, and customize the codebase to fit your specific technical or enterprise needs without any restriction.
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md). Contributors are covered by the [Code of Conduct](CODE_OF_CONDUCT.md); see also [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Contributing Back to the Main Project
 If you have built an optimization, bug fix, or feature extension that you believe would add value to the core platform, we would love to review it. To ensure the main repository remains highly stable and securely managed, direct commits to the `main` branch are restricted.

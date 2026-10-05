@@ -67,6 +67,8 @@
         // Redirect if already authenticated
         const _token = localStorage.getItem('nexus_token');
         const _user  = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+        // Signed out (or never signed in): drop any stale server-side console session cookie
+        if (!_token) fetch('/api/auth', { method: 'DELETE' }).catch(() => {});
         
         if (_token) {
             if (_user.role === 'admin') {

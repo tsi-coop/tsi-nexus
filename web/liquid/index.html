@@ -68,7 +68,7 @@
                 <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Email Address</label>
                 <input type="email" id="email" required
                     class="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none transition-all text-sm input-focus"
-                    placeholder="officer@tsicoop.org">
+                    placeholder="ops@yourorg.com">
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Password</label>
@@ -88,6 +88,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         // Redirect if already authenticated
         const existingToken = localStorage.getItem('nexus_token');
+        // Signed out (or never signed in): drop any stale server-side console session cookie
+        if (!existingToken) fetch('/api/auth', { method: 'DELETE' }).catch(() => {});
         if (existingToken) {
             window.location.href = 'liquid.html';
             return;

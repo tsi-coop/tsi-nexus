@@ -54,6 +54,12 @@ services:
       POSTGRES_RO_USER: "${POSTGRES_RO_USER:-nexus_readonly}"
       POSTGRES_RO_PASSWD: "${POSTGRES_RO_PASSWD:-changeme_ro}"
       TSI_NEXUS_JWT_SECRET: "${TSI_NEXUS_JWT_SECRET:-tsi-nexus-preview-default-secret-change-in-production}"
+      # No default on purpose: gates POST /api/setup, the one-time first-admin creation endpoint.
+      # Unset disables setup entirely (503). Set it before first boot, then complete /setup.
+      TSI_NEXUS_BOOTSTRAP_TOKEN: "${TSI_NEXUS_BOOTSTRAP_TOKEN:-}"
+      # "development" or "local" omits the Secure flag on the console session cookie so plain-http dev works.
+      # Set to "production" (any other value) behind HTTPS.
+      TSI_NEXUS_ENV: "${TSI_NEXUS_ENV:-development}"
       TSI_EXPORT_PATH: "${TSI_EXPORT_PATH:-/var/lib/tsi/exports/}"
       LLM_PROVIDER: "${LLM_PROVIDER:-openai-compatible}"
       LLM_BASE_URL: "${LLM_BASE_URL:-http://192.168.1.77:8001}"

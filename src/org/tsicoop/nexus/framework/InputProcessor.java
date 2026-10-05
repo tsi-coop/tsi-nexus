@@ -41,6 +41,37 @@ public class InputProcessor {
         }
     }
 
+    /** Session cookie that ConsoleAuthFilter checks before serving the static console pages. */
+    public static final String CONSOLE_SESSION_COOKIE = "console_session";
+    private static final long CONSOLE_SESSION_MAX_AGE_SECONDS = 864000L; // 10 days, matches JWTUtil expiry
+
+    /** Secure is omitted only for explicit local/dev environments so plain-http dev keeps working. */
+    private static boolean secureCookies() {
+        String env = System.getenv("TSI_NEXUS_ENV");
+        return !("development".equalsIgnoreCase(env) || "local".equalsIgnoreCase(env));
+    }
+
+    /**
+     * Sets the HttpOnly session cookie used to gate the static console pages. Built as a raw
+     * header because Servlet 5.0's Cookie API has no SameSite support.
+     */
+    public static void setConsoleSessionCookie(HttpServletResponse res, String token) {
+        StringBuilder cookie = new StringBuilder();
+        cookie.append(CONSOLE_SESSION_COOKIE).append('=').append(token)
+                .append("; Path=/; Max-Age=").append(CONSOLE_SESSION_MAX_AGE_SECONDS)
+                .append("; HttpOnly; SameSite=Strict");
+        if (secureCookies()) cookie.append("; Secure");
+        res.addHeader("Set-Cookie", cookie.toString());
+    }
+
+    /** Expires the console session cookie. */
+    public static void clearConsoleSessionCookie(HttpServletResponse res) {
+        StringBuilder cookie = new StringBuilder();
+        cookie.append(CONSOLE_SESSION_COOKIE).append("=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict");
+        if (secureCookies()) cookie.append("; Secure");
+        res.addHeader("Set-Cookie", cookie.toString());
+    }
+
     public static boolean isApiKeyRequest(HttpServletRequest req) {
         JSONObject token = (JSONObject) req.getAttribute(AUTH_TOKEN);
         return token != null && token.containsKey("app_id");

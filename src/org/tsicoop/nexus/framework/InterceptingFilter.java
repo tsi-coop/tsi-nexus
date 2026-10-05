@@ -65,7 +65,7 @@ public class InterceptingFilter implements Filter {
         "/api/auth", "/api/setup", "/api/ingest"
     ));
 
-    /** Paths where non-GET calls are ordinary end-user operations (any valid JWT / scoped API key).
+    /** Paths where non-GET calls are ordinary non-admin operations (any valid JWT / scoped API key).
      *  Every other non-GET call on a non-resource path is configuration and needs an admin JWT. */
     private static final Set<String> USER_WRITE_PATHS = new HashSet<>(Arrays.asList(
         "/api/intent", "/api/context", "/api/governance", "/api/capture",
@@ -204,6 +204,6 @@ public class InterceptingFilter implements Filter {
         System.out.println("Loaded TSI App Config");
         JSONSchemaValidator.createInstance(filterConfig.getServletContext());
         System.out.println("Loaded TSI Schema Validator");
-        System.out.println("TSI Privacy Vault started in "+System.getenv("TSI_PRIVACY_VAULT_ENV")+" environment");
+        System.out.println("TSI Nexus started in "+System.getenv("TSI_NEXUS_ENV")+" environment");
     }
 }

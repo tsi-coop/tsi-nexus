@@ -32,6 +32,8 @@ Every entity is a **Digital Twin** (`digital_twins` table: `external_id`, `type`
 - Define command manifests (`command_manifest` table): slash commands that map institutional verbs to forms, context cards, and guardrails
 
 ### 3. Liquid - Adaptive Interface
+The console for operations users. End users (field staff, customers) reach Nexus through AI agents calling the Intelligence API instead.
+
 Two-panel UI:
 - **Left panel**: intent (natural language + command shortcuts)
 - **Right panel**: materialises Context Cards, Input Manifest forms, or action confirmations

@@ -5,6 +5,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.simple.JSONObject;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,9 +16,19 @@ import java.sql.ResultSet;
  *
  * GET  /api/nexus/setup            → { initialized: bool } — used by setup.html on load
  * POST /api/nexus/setup            → create root org + first admin user
- * POST /api/nexus/auth             → verify credentials, return JWT
+ * POST /api/nexus/auth             → verify credentials, return JWT (also sets the console session cookie)
+ * DELETE /api/nexus/auth           → clear the console session cookie
+ *
+ * Setup requires the deployment-configured TSI_NEXUS_BOOTSTRAP_TOKEN; with it unset the
+ * endpoint refuses every request rather than allowing unauthenticated admin creation.
  */
 public class User implements Action {
+
+    private static final String BOOTSTRAP_TOKEN_ENV = "TSI_NEXUS_BOOTSTRAP_TOKEN";
+
+    private static boolean constantTimeEquals(String a, String b) {
+        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
+    }
 
     /* ── GET /api/nexus/setup : initialization probe ─────────────────────── */
 
@@ -59,8 +71,23 @@ public class User implements Action {
         PoolDB pool = null;
         Connection conn = null;
         try {
-            pool = new PoolDB();
+            String bootstrapToken = System.getenv(BOOTSTRAP_TOKEN_ENV);
+            if (bootstrapToken == null || bootstrapToken.isEmpty()) {
+                OutputProcessor.errorResponse(res, 503, "Setup disabled", "Initial setup is disabled: " + BOOTSTRAP_TOKEN_ENV + " is not configured on the server.", req.getRequestURI());
+                return;
+            }
+
             JSONObject input = InputProcessor.getInput(req);
+
+            // Checked before any DB access so a caller without the token learns nothing
+            // about whether the platform has already been initialized.
+            String providedToken = (String) input.get("setup_token");
+            if (providedToken == null || !constantTimeEquals(providedToken, bootstrapToken)) {
+                OutputProcessor.errorResponse(res, 401, "Unauthorized", "Invalid or missing setup token.", req.getRequestURI());
+                return;
+            }
+
+            pool = new PoolDB();
 
             String institutionName = (String) input.get("institution_name");
             String adminName       = (String) input.get("admin_name");
@@ -76,9 +103,13 @@ public class User implements Action {
             }
 
             conn = pool.getConnection();
+            // SERIALIZABLE closes the check-then-insert race: two requests that both see an
+            // empty nexus_users can no longer both succeed (Postgres aborts the loser, 40001).
             conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
             if (isInitialized(conn)) {
+                conn.rollback();
                 OutputProcessor.errorResponse(res, 409, "Conflict", "Platform is already initialized", req.getRequestURI());
                 return;
             }
@@ -107,9 +138,19 @@ public class User implements Action {
 
         } catch (Exception e) {
             try { if (conn != null) conn.rollback(); } catch (Exception ignore) {}
+            if (e instanceof java.sql.SQLException && "40001".equals(((java.sql.SQLException) e).getSQLState())) {
+                OutputProcessor.errorResponse(res, 409, "Conflict", "Platform is already initialized", req.getRequestURI());
+                return;
+            }
             e.printStackTrace();
             OutputProcessor.errorResponse(res, 500, "Setup failed", e.getMessage(), req.getRequestURI());
         } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                } catch (Exception ignore) {}
+            }
             if (pool != null) pool.cleanup(null, null, conn);
         }
     }
@@ -154,6 +195,7 @@ public class User implements Action {
                     }
 
                     String token = JWTUtil.generateToken(email.trim().toLowerCase(), name, role, twinId, userId);
+                    InputProcessor.setConsoleSessionCookie(res, token);
                     JSONObject result = new JSONObject();
                     result.put("success", true);
                     result.put("token",   token);
@@ -183,6 +225,13 @@ public class User implements Action {
     }
 
     @Override public void put(HttpServletRequest q, HttpServletResponse s) {}
-    @Override public void delete(HttpServletRequest q, HttpServletResponse s) {}
+    /** DELETE /api/auth : sign-out — expires the console session cookie. */
+    @Override
+    public void delete(HttpServletRequest req, HttpServletResponse res) {
+        InputProcessor.clearConsoleSessionCookie(res);
+        JSONObject result = new JSONObject();
+        result.put("success", true);
+        OutputProcessor.send(res, 200, result);
+    }
     @Override public boolean validate(String m, HttpServletRequest q, HttpServletResponse s) { return true; }
 }

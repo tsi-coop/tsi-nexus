@@ -21,7 +21,7 @@ The header name and secret value are chosen by the admin at registration time. A
 ## PULL - Enrich entity context at read time
 
 **Direction**: Nexus → your system  
-**When**: every time a user opens an entity in the Liquid interface
+**When**: every time an operations user opens an entity in the Liquid interface
 
 Implement a `GET` endpoint. Nexus will call:
 
