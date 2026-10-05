@@ -1296,6 +1296,23 @@ public class Seeding implements Action {
         System.out.println("[Seeding] LLM provider=" + LLMClient.provider() + " model=" + LLMClient.model());
         JSONObject response = LLMClient.chat(body);
         String content = LLMClient.extractContent(response);
+        if (content == null || content.isBlank()) {
+            // Reasoning models can spend the whole token budget thinking (finish_reason=length),
+            // and provider errors (rate limit, quota) come back as a body with no choices.
+            String finish = null;
+            try {
+                JSONArray choices = (JSONArray) response.get("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    finish = String.valueOf(((JSONObject) choices.get(0)).get("finish_reason"));
+                }
+            } catch (Exception ignore) {}
+            String reasoning = LLMClient.extractReasoningContent(response);
+            String raw = String.valueOf(response);
+            System.out.println("[Seeding] LLM returned no content. finish_reason=" + finish
+                    + " reasoning_chars=" + (reasoning == null ? 0 : reasoning.length())
+                    + " usage=" + response.get("usage") + " error=" + response.get("error")
+                    + (finish == null ? " response head: " + raw.substring(0, Math.min(400, raw.length())) : ""));
+        }
         return content != null ? content.trim() : "";
     }
 
